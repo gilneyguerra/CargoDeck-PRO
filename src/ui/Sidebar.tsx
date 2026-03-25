@@ -1,4 +1,4 @@
-import { UploadCloud, FileType, AlertCircle } from 'lucide-react';
+import { UploadCloud, FileType, AlertCircle, Trash2 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useManifestUpload } from '@/features/useManifestUpload';
 import { useRef } from 'react';
@@ -7,48 +7,67 @@ import { useDraggable } from '@dnd-kit/core';
 import type { Cargo } from '@/domain/Cargo';
 
 function DraggableCargo({ cargo }: { cargo: Cargo }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: cargo.id,
-  });
-  
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+     id: cargo.id,
+   });
+   const { deleteCargo } = useCargoStore();
+   
+   const style = transform ? {
+     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+   } : undefined;
 
-  return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...listeners} 
-      {...attributes}
-      className={cn(
-        "bg-neutral-800 border border-neutral-700 rounded p-3 flex flex-col gap-2 transition-colors cursor-grab select-none",
-        isDragging ? "opacity-50" : "hover:border-indigo-500/50 active:cursor-grabbing"
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col items-start gap-1.5">
-          <span className="text-sm font-medium text-neutral-200 leading-tight pr-2">{cargo.description}</span>
-        </div>
-        <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
-          {cargo.observations === 'BACKLOAD' && (
-            <span className="text-[9px] bg-amber-500/20 text-amber-500 px-1 py-0.5 rounded uppercase font-bold tracking-wider">Backload</span>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2 text-xs text-neutral-400 mt-1">
-        <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{cargo.weightTonnes.toFixed(1)} t</span>
-        <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{cargo.lengthMeters}x{cargo.widthMeters} m</span>
-        <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20">{cargo.category}</span>
-      </div>
-    </div>
-  )
-}
+   const handleDelete = async () => {
+     await deleteCargo(cargo.id);
+   };
+
+   return (
+     <div 
+       ref={setNodeRef} 
+       style={style} 
+       {...listeners} 
+       {...attributes}
+       className={cn(
+         "bg-neutral-800 border border-neutral-700 rounded p-3 flex flex-col gap-2 transition-colors cursor-grab select-none",
+         isDragging ? "opacity-50" : "hover:border-indigo-500/50 active:cursor-grabbing"
+       )}
+     >
+       <div className="flex items-start justify-between">
+         <div className="flex flex-col items-start gap-1.5">
+           <span className="text-sm font-medium text-neutral-200 leading-tight pr-2">{cargo.description}</span>
+         </div>
+         <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
+           {cargo.observations === 'BACKLOAD' && (
+             <span className="text-[9px] bg-amber-500/20 text-amber-500 px-1 py-0.5 rounded uppercase font-bold tracking-wider">Backload</span>
+           )}
+         </div>
+         <button 
+           onClick={handleDelete}
+           className="text-red-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-900/20"
+           title="Excluir carga"
+         >
+           <Trash2 className="w-4 h-4" />
+         </button>
+       </div>
+       <div className="flex flex-wrap gap-2 text-xs text-neutral-400 mt-1">
+         <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{cargo.weightTonnes.toFixed(1)} t</span>
+         <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{cargo.lengthMeters}x{cargo.widthMeters} m</span>
+         <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20">{cargo.category}</span>
+       </div>
+     </div>
+   )
+ }
 
 export function Sidebar() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { unallocatedCargoes, manifestsLoaded } = useCargoStore();
-  const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
+   const fileInputRef = useRef<HTMLInputElement>(null);
+   const { unallocatedCargoes, manifestsLoaded } = useCargoStore();
+   const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
+   const [searchTerm, setSearchTerm] = useState('');
+   
+   // Filter unallocated cargoes based on search term
+   const filteredUnallocatedCargoes = unallocatedCargoes.filter(cargo =>
+     cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     cargo.description.toLowerCase().includes(searchTerm.toLowerCase())
+   );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

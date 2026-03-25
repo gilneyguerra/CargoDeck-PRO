@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
-import { Settings, Plus } from 'lucide-react';
+import { Settings, Plus, Trash2, Search } from 'lucide-react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import type { Bay } from '@/domain/Bay';
@@ -40,34 +40,48 @@ function LocationTab({ loc, isActive, onClick }: { loc: CargoLocation, isActive:
 }
 
 function DraggableAllocatedCargo({ cargo }: { cargo: Cargo }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: cargo.id,
-  });
-  
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+     id: cargo.id,
+   });
+   const { deleteCargo } = useCargoStore();
+   
+   const style = transform ? {
+     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+   } : undefined;
 
-  return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...listeners} 
-      {...attributes}
-      className={cn(
-        "bg-[#242436] border border-[#3b3b55] hover:border-indigo-400 cursor-grab active:cursor-grabbing rounded p-1.5 text-xs text-neutral-200 shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex flex-col items-center min-w-[70px] transition-transform relative z-20",
-        isDragging ? "opacity-30 scale-105" : "hover:scale-105"
-      )}
-    >
-      <span className="font-medium text-center text-[10px] mt-1 leading-tight line-clamp-2 w-full px-1">
-        {cargo.description}
-      </span>
-      <span className="text-[9px] text-[#6c6c8c] mt-auto mb-1 bg-black/30 px-1 rounded">
-        {cargo.weightTonnes}t | {cargo.lengthMeters}x{cargo.widthMeters}m
-      </span>
-    </div>
-  )
-}
+   const handleDelete = async () => {
+     await deleteCargo(cargo.id);
+   };
+
+   return (
+     <div 
+       ref={setNodeRef} 
+       style={style} 
+       {...listeners} 
+       {...attributes}
+       className={cn(
+         "bg-[#242436] border border-[#3b3b55] hover:border-indigo-400 cursor-grab active:cursor-grabbing rounded p-1.5 text-xs text-neutral-200 shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex flex-col items-center min-w-[70px] transition-transform relative z-20",
+         isDragging ? "opacity-30 scale-105" : "hover:scale-105"
+       )}
+     >
+       <div className="flex items-center justify-between w-full">
+         <span className="font-medium text-center text-[10px] mt-1 leading-tight line-clamp-2 w-full px-1">
+           {cargo.description}
+         </span>
+         <button 
+           onClick={handleDelete}
+           className="text-red-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-900/20"
+           title="Excluir carga"
+         >
+           <Trash2 className="w-4 h-4" />
+         </button>
+       </div>
+       <span className="text-[9px] text-[#6c6c8c] mt-auto mb-1 bg-black/30 px-1 rounded">
+         {cargo.weightTonnes}t | {cargo.lengthMeters}x{cargo.widthMeters}m
+       </span>
+     </div>
+   )
+ }
 
 function DroppableBaySide({ bay, side, isLast, deckConfig }: { bay: Bay, side: 'port'|'center'|'starboard', isLast: boolean, deckConfig: any }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -157,37 +171,52 @@ function DroppableBay({ bay, activeLocation }: { bay: Bay, activeLocation: Cargo
 }
 
 export function DeckArea() {
-  const { locations, activeLocationId, setActiveLocation, addLocation } = useCargoStore();
-  const activeLocation = locations.find(l => l.id === activeLocationId);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const { locations, activeLocationId, setActiveLocation, addLocation, unallocatedCargoes } = useCargoStore();
+   const activeLocation = locations.find(l => l.id === activeLocationId);
+   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleAddLocation = () => {
-    const name = prompt('Nome do novo local: (ex. Porão 1)');
-    if (name) addLocation(name);
-  };
+   const handleAddLocation = () => {
+     const name = prompt('Nome do novo local: (ex. Porão 1)');
+     if (name) addLocation(name);
+   };
 
-  if (!activeLocation) return <div className="text-white p-6">Nenhum local ativo.</div>;
-  const { bays } = activeLocation;
+   if (!activeLocation) return <div className="text-white p-6">Nenhum local ativo.</div>;
+   const { bays } = activeLocation;
+   
+   // Filter unallocated cargoes based on search term
+   const filteredUnallocatedCargoes = unallocatedCargoes.filter(cargo =>
+     cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     cargo.description.toLowerCase().includes(searchTerm.toLowerCase())
+   );
 
-  return (
-    <div className="flex flex-col h-full w-full">
-      {/* Tabs / Sub-nav */}
-      <div className="flex items-center gap-1 mb-4 border-b border-neutral-800 pb-2 overflow-x-auto shrink-0 scrollbar-hide">
-        {locations.map(loc => (
-          <LocationTab 
-            key={loc.id} 
-            loc={loc} 
-            isActive={activeLocationId === loc.id} 
-            onClick={() => setActiveLocation(loc.id)} 
-          />
-        ))}
-        <button 
-          onClick={handleAddLocation}
-          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-500 hover:text-indigo-400 transition-colors ml-2"
-        >
-          <Plus className="w-4 h-4" /> Novo Local
-        </button>
-      </div>
+   return (
+     <div className="flex flex-col h-full w-full">
+       {/* Tabs / Sub-nav */}
+       <div className="flex items-center gap-1 mb-4 border-b border-neutral-800 pb-2 overflow-x-auto shrink-0 scrollbar-hide relative">
+         {locations.map(loc => (
+           <LocationTab 
+             key={loc.id} 
+             loc={loc} 
+             isActive={activeLocationId === loc.id} 
+             onClick={() => setActiveLocation(loc.id)} 
+           />
+         ))}
+         <div className="relative flex-1 min-w-0">
+           <input
+             type="text"
+             placeholder="Buscar cargas por identificador..."
+             className="absolute inset-0 px-4 py-2 pl-10 text-sm bg-neutral-800/50 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-neutral-100"
+           />
+           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+         </div>
+         <button 
+           onClick={handleAddLocation}
+           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-500 hover:text-indigo-400 transition-colors ml-2"
+         >
+           <Plus className="w-4 h-4" /> Novo Local
+         </button>
+       </div>
 
       <div className="flex items-center justify-between mb-4">
         <div>

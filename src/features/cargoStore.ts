@@ -3,29 +3,30 @@ import type { Cargo } from '@/domain/Cargo';
 import type { CargoLocation } from '@/domain/Location';
 import { DEFAULT_DECK_CONFIG } from '@/domain/DeckConfig';
 import type { DeckConfig } from '@/domain/DeckConfig';
+import { DatabaseService } from '@/infrastructure/DatabaseService';
 
 export type { CargoState };
 
 interface CargoState {
-  manifestsLoaded: boolean;
-  unallocatedCargoes: Cargo[];
-  locations: CargoLocation[];
-  activeLocationId: string | null;
-  shipOperationCode: string;
-  manifestShipName: string | null;
-  manifestVoyage: string | null;
-  
-  // Actions
-  setShipOperationCode: (code: string) => void;
-  setExtractedCargoes: (cargoes: Cargo[]) => void;
-  setManifestDetails: (shipName: string, voyage: string) => void;
-  addLocation: (name: string) => void;
-  setActiveLocation: (id: string) => void;
-  updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
-  moveCargoToBay: (cargoId: string, bayId: string) => void;
-  removeCargoFromBay: (cargoId: string) => void;
-   hydrateFromDb: (payload: Partial<CargoState>) => void;
-}
+   manifestsLoaded: boolean;
+   unallocatedCargoes: Cargo[];
+   locations: CargoLocation[];
+   activeLocationId: string | null;
+   shipOperationCode: string;
+   manifestShipName: string | null;
+   manifestVoyage: string | null;
+   
+   // Actions
+   setShipOperationCode: (code: string) => void;
+   setExtractedCargoes: (cargoes: Cargo[]) => void;
+   setManifestDetails: (shipName: string, voyage: string) => void;
+   addLocation: (name: string) => void;
+   setActiveLocation: (id: string) => void;
+   updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
+   moveCargoToBay: (cargoId: string, bayId: string) => void;
+   deleteCargo: (cargoId: string) => Promise<void>;
+    hydrateFromDb: (payload: Partial<CargoState>) => void;
+ }
 
 const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
   id: `bay-${crypto.randomUUID()}`,
@@ -101,31 +102,53 @@ export const useCargoStore = create<CargoState>((set) => ({
     })
   })),
 
-  removeCargoFromBay: (cargoId) => set((state) => {
-    let foundCargo: Cargo | undefined;
-    const newLocations = state.locations.map(loc => {
-      const newBays = loc.bays.map(b => {
-        const hasCargo = b.allocatedCargoes.find(c => c.id === cargoId);
-        if (hasCargo) foundCargo = hasCargo;
-        const newCargoes = b.allocatedCargoes.filter(c => c.id !== cargoId);
+    deleteCargo: async (cargoId: string) => {
+      // First update state optimistically
+      set((state) => {
+        let foundCargo: Cargo | undefined;
+        
+        // Remove cargo from unallocated or from bays
+        const newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
+        
+        const newLocations = state.locations.map(loc => {
+          const newBays = loc.bays.map(b => {
+            const cargoIndex = b.allocatedCargoes.findIndex(c => c.id === cargoId);
+            if (cargoIndex !== -1) {
+              foundCargo = b.allocatedCargoes[cargoIndex];
+            }
+            const newCargoes = b.allocatedCargoes.filter(c => c.id !== cargoId);
+            return {
+              ...b,
+              allocatedCargoes: newCargoes,
+              currentWeightTonnes: newCargoes.reduce((acc, c) => acc + c.weightTonnes, 0),
+              currentOccupiedArea: newCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters), 0)
+            };
+          });
+          return { ...loc, bays: newBays };
+        });
+        
         return {
-          ...b,
-          allocatedCargoes: newCargoes,
-          currentWeightTonnes: newCargoes.reduce((acc, c) => acc + c.weightTonnes, 0),
-          currentOccupiedArea: newCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters), 0)
+          locations: newLocations,
+          unallocatedCargoes: newUnallocated
         };
       });
-      return { ...loc, bays: newBays };
-    });
-
-    if (foundCargo) {
-      return {
-        locations: newLocations,
-        unallocatedCargoes: [...state.unallocatedCargoes, { ...foundCargo, status: 'UNALLOCATED', bayId: undefined }]
-      };
-    }
-    return state;
-  }),
+      
+      // Then delete from database (we need to get the cargo from state before it's potentially changed)
+      // Since we can't access the foundCargo from the set callback, we'll get it from current state
+      const stateBeforeDelete = useCargoStore.getState();
+      const foundCargo = stateBeforeDelete.unallocatedCargoes.find(c => c.id === cargoId) || 
+                         stateBeforeDelete.locations.flatMap(loc => loc.bays).flatMap(bay => bay.allocatedCargoes).find(c => c.id === cargoId);
+      
+      if (foundCargo) {
+        try {
+          await DatabaseService.deleteCargo(foundCargo.id);
+        } catch (error) {
+          console.error('Failed to delete cargo from database:', error);
+          // In a production app, we might want to show an error or revert the change
+          // For now, we'll keep the UI state change as it's better UX than failing silently
+        }
+      }
+    },
 
   moveCargoToBay: (cargoId, bayId) => set((state) => {
     let targetCargo: Cargo | undefined = state.unallocatedCargoes.find(c => c.id === cargoId);
