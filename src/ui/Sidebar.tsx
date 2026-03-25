@@ -59,15 +59,8 @@ function DraggableCargo({ cargo }: { cargo: Cargo }) {
 
 export function Sidebar() {
    const fileInputRef = useRef<HTMLInputElement>(null);
-   const { unallocatedCargoes, manifestsLoaded } = useCargoStore();
+   const { unallocatedCargoes, manifestsLoaded, searchTerm, setSearchTerm } = useCargoStore();
    const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
-   const [searchTerm, setSearchTerm] = useState('');
-   
-   // Filter unallocated cargoes based on search term
-   const filteredUnallocatedCargoes = unallocatedCargoes.filter(cargo =>
-     cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     cargo.description.toLowerCase().includes(searchTerm.toLowerCase())
-   );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -124,15 +117,20 @@ export function Sidebar() {
           </span>
         </div>
 
-        {!manifestsLoaded && !isProcessing && (
-           <div className="text-sm text-neutral-600 text-center mt-10 p-4 border border-dashed border-neutral-800 rounded-lg">
-             Aguardando carga...
-           </div>
-        )}
-
-        {unallocatedCargoes.map(cargo => (
-          <DraggableCargo key={cargo.id} cargo={cargo} />
-        ))}
+         {!manifestsLoaded && !isProcessing && (
+            <div className="text-sm text-neutral-600 text-center mt-10 p-4 border border-dashed border-neutral-800 rounded-lg">
+              Aguardando carga...
+            </div>
+         )}
+         
+         {unallocatedCargoes
+           .filter(cargo =>
+             cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             cargo.description.toLowerCase().includes(searchTerm.toLowerCase())
+           )
+           .map(cargo => (
+             <DraggableCargo key={cargo.id} cargo={cargo} />
+           ))}
       </div>
     </aside>
   );

@@ -15,6 +15,7 @@ interface CargoState {
    shipOperationCode: string;
    manifestShipName: string | null;
    manifestVoyage: string | null;
+   searchTerm: string;
    
    // Actions
    setShipOperationCode: (code: string) => void;
@@ -25,6 +26,7 @@ interface CargoState {
    updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
    moveCargoToBay: (cargoId: string, bayId: string) => void;
    deleteCargo: (cargoId: string) => Promise<void>;
+   setSearchTerm: (term: string) => void;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
  }
 
@@ -42,22 +44,24 @@ const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
 const initialLocationId = crypto.randomUUID();
 
 export const useCargoStore = create<CargoState>((set) => ({
-  manifestsLoaded: false,
-  unallocatedCargoes: [],
-  shipOperationCode: 'NS44', // Default from example
-  manifestShipName: null,
-  manifestVoyage: null,
-  locations: [
-    {
-      id: initialLocationId,
-      name: 'Convés Principal',
-      config: DEFAULT_DECK_CONFIG,
-      bays: createInitialBays()
-    }
-  ],
-  activeLocationId: initialLocationId,
+   manifestsLoaded: false,
+   unallocatedCargoes: [],
+   shipOperationCode: 'NS44', // Default from example
+   manifestShipName: null,
+   manifestVoyage: null,
+   locations: [
+     {
+       id: initialLocationId,
+       name: 'Convés Principal',
+       config: DEFAULT_DECK_CONFIG,
+       bays: createInitialBays()
+     }
+   ],
+   activeLocationId: initialLocationId,
+   searchTerm: '',
 
-  setShipOperationCode: (code) => set({ shipOperationCode: code.toUpperCase() }),
+   setShipOperationCode: (code) => set({ shipOperationCode: code.toUpperCase() }),
+   setSearchTerm: (term) => set({ searchTerm: term }),
 
   setManifestDetails: (shipName, voyage) => set({ manifestShipName: shipName, manifestVoyage: voyage }),
 
@@ -105,17 +109,13 @@ export const useCargoStore = create<CargoState>((set) => ({
     deleteCargo: async (cargoId: string) => {
       // First update state optimistically
       set((state) => {
-        let foundCargo: Cargo | undefined;
-        
         // Remove cargo from unallocated or from bays
         const newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
         
         const newLocations = state.locations.map(loc => {
           const newBays = loc.bays.map(b => {
-            const cargoIndex = b.allocatedCargoes.findIndex(c => c.id === cargoId);
-            if (cargoIndex !== -1) {
-              foundCargo = b.allocatedCargoes[cargoIndex];
-            }
+            // Find cargo index (we don't need to use it, just need to know if it exists)
+            b.allocatedCargoes.findIndex(c => c.id === cargoId);
             const newCargoes = b.allocatedCargoes.filter(c => c.id !== cargoId);
             return {
               ...b,
@@ -133,8 +133,7 @@ export const useCargoStore = create<CargoState>((set) => ({
         };
       });
       
-      // Then delete from database (we need to get the cargo from state before it's potentially changed)
-      // Since we can't access the foundCargo from the set callback, we'll get it from current state
+      // Then delete from database
       const stateBeforeDelete = useCargoStore.getState();
       const foundCargo = stateBeforeDelete.unallocatedCargoes.find(c => c.id === cargoId) || 
                          stateBeforeDelete.locations.flatMap(loc => loc.bays).flatMap(bay => bay.allocatedCargoes).find(c => c.id === cargoId);

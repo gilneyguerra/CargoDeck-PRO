@@ -171,7 +171,7 @@ function DroppableBay({ bay, activeLocation }: { bay: Bay, activeLocation: Cargo
 }
 
 export function DeckArea() {
-   const { locations, activeLocationId, setActiveLocation, addLocation, unallocatedCargoes } = useCargoStore();
+   const { locations, activeLocationId, setActiveLocation, addLocation } = useCargoStore();
    const activeLocation = locations.find(l => l.id === activeLocationId);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
@@ -185,10 +185,6 @@ export function DeckArea() {
    const { bays } = activeLocation;
    
    // Filter unallocated cargoes based on search term
-   const filteredUnallocatedCargoes = unallocatedCargoes.filter(cargo =>
-     cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     cargo.description.toLowerCase().includes(searchTerm.toLowerCase())
-   );
 
    return (
      <div className="flex flex-col h-full w-full">
@@ -205,6 +201,8 @@ export function DeckArea() {
          <div className="relative flex-1 min-w-0">
            <input
              type="text"
+             value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
              placeholder="Buscar cargas por identificador..."
              className="absolute inset-0 px-4 py-2 pl-10 text-sm bg-neutral-800/50 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-neutral-100"
            />
