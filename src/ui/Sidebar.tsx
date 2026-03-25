@@ -59,7 +59,7 @@ function DraggableCargo({ cargo }: { cargo: Cargo }) {
 
 export function Sidebar() {
    const fileInputRef = useRef<HTMLInputElement>(null);
-   const { unallocatedCargoes, manifestsLoaded, searchTerm, setSearchTerm } = useCargoStore();
+   const { unallocatedCargoes, manifestsLoaded, searchTerm } = useCargoStore();
    const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

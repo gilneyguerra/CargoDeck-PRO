@@ -8,26 +8,27 @@ import { DatabaseService } from '@/infrastructure/DatabaseService';
 export type { CargoState };
 
 interface CargoState {
-   manifestsLoaded: boolean;
-   unallocatedCargoes: Cargo[];
-   locations: CargoLocation[];
-   activeLocationId: string | null;
-   shipOperationCode: string;
-   manifestShipName: string | null;
-   manifestVoyage: string | null;
-   searchTerm: string;
-   
-   // Actions
-   setShipOperationCode: (code: string) => void;
-   setExtractedCargoes: (cargoes: Cargo[]) => void;
-   setManifestDetails: (shipName: string, voyage: string) => void;
-   addLocation: (name: string) => void;
-   setActiveLocation: (id: string) => void;
-   updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
-   moveCargoToBay: (cargoId: string, bayId: string) => void;
-   deleteCargo: (cargoId: string) => Promise<void>;
-   setSearchTerm: (term: string) => void;
-    hydrateFromDb: (payload: Partial<CargoState>) => void;
+    manifestsLoaded: boolean;
+    unallocatedCargoes: Cargo[];
+    locations: CargoLocation[];
+    activeLocationId: string | null;
+    shipOperationCode: string;
+    manifestShipName: string | null;
+    manifestVoyage: string | null;
+    searchTerm: string;
+    
+    // Actions
+    setShipOperationCode: (code: string) => void;
+    setExtractedCargoes: (cargoes: Cargo[]) => void;
+    setManifestDetails: (shipName: string, voyage: string) => void;
+    addLocation: (name: string) => void;
+    setActiveLocation: (id: string) => void;
+    updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
+    moveCargoToBay: (cargoId: string, bayId: string) => void;
+    deleteCargo: (cargoId: string) => Promise<void>;
+    setSearchTerm: (term: string) => void;
+    getAllCargo: () => Cargo[];
+     hydrateFromDb: (payload: Partial<CargoState>) => void;
  }
 
 const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
@@ -43,22 +44,32 @@ const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
 
 const initialLocationId = crypto.randomUUID();
 
-export const useCargoStore = create<CargoState>((set) => ({
-   manifestsLoaded: false,
-   unallocatedCargoes: [],
-   shipOperationCode: 'NS44', // Default from example
-   manifestShipName: null,
-   manifestVoyage: null,
-   locations: [
-     {
-       id: initialLocationId,
-       name: 'Convés Principal',
-       config: DEFAULT_DECK_CONFIG,
-       bays: createInitialBays()
-     }
-   ],
-   activeLocationId: initialLocationId,
-   searchTerm: '',
+export const useCargoStore = create<CargoState>((set, get) => ({
+    manifestsLoaded: false,
+    unallocatedCargoes: [],
+    shipOperationCode: 'NS44', // Default from example
+    manifestShipName: null,
+    manifestVoyage: null,
+    locations: [
+      {
+        id: initialLocationId,
+        name: 'Convés Principal',
+        config: DEFAULT_DECK_CONFIG,
+        bays: createInitialBays()
+      }
+    ],
+    activeLocationId: initialLocationId,
+    searchTerm: '',
+    getAllCargo: () => {
+      const state = get();
+      const allCargo = [...state.unallocatedCargoes];
+      state.locations.forEach(loc => {
+        loc.bays.forEach(bay => {
+          allCargo.push(...bay.allocatedCargoes);
+        });
+      });
+      return allCargo;
+    },
 
    setShipOperationCode: (code) => set({ shipOperationCode: code.toUpperCase() }),
    setSearchTerm: (term) => set({ searchTerm: term }),

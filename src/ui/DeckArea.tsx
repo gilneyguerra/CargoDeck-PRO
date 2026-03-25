@@ -171,83 +171,76 @@ function DroppableBay({ bay, activeLocation }: { bay: Bay, activeLocation: Cargo
 }
 
 export function DeckArea() {
-   const { locations, activeLocationId, setActiveLocation, addLocation } = useCargoStore();
-   const activeLocation = locations.find(l => l.id === activeLocationId);
-   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-   const [searchTerm, setSearchTerm] = useState('');
+    const { locations, activeLocationId, setActiveLocation, addLocation } = useCargoStore();
+    const activeLocation = locations.find(l => l.id === activeLocationId);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-   const handleAddLocation = () => {
-     const name = prompt('Nome do novo local: (ex. Porão 1)');
-     if (name) addLocation(name);
-   };
+    const handleAddLocation = () => {
+        const name = prompt('Nome do novo local: (ex. Porão 1)');
+        if (name) addLocation(name);
+    };
 
-   if (!activeLocation) return <div className="text-white p-6">Nenhum local ativo.</div>;
-   const { bays } = activeLocation;
-   
-   // Filter unallocated cargoes based on search term
+    if (!activeLocation) return <div className="text-white p-6">Nenhum local ativo.</div>;
+    const { bays } = activeLocation;
 
-   return (
-     <div className="flex flex-col h-full w-full">
-       {/* Tabs / Sub-nav */}
-       <div className="flex items-center gap-1 mb-4 border-b border-neutral-800 pb-2 overflow-x-auto shrink-0 scrollbar-hide relative">
-         {locations.map(loc => (
-           <LocationTab 
-             key={loc.id} 
-             loc={loc} 
-             isActive={activeLocationId === loc.id} 
-             onClick={() => setActiveLocation(loc.id)} 
-           />
-         ))}
-         <div className="relative flex-1 min-w-0">
-           <input
-             type="text"
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             placeholder="Buscar cargas por identificador..."
-             className="absolute inset-0 px-4 py-2 pl-10 text-sm bg-neutral-800/50 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-neutral-100"
-           />
-           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-         </div>
-         <button 
-           onClick={handleAddLocation}
-           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-500 hover:text-indigo-400 transition-colors ml-2"
-         >
-           <Plus className="w-4 h-4" /> Novo Local
-         </button>
-       </div>
+    return (
+        <div className="flex flex-col h-full w-full">
+            {/* Tabs / Sub-nav */}
+            <div className="flex items-center gap-1 mb-4 border-b border-neutral-800 pb-2 overflow-x-auto shrink-0 scrollbar-hide">
+                {locations.map(loc => (
+                    <LocationTab 
+                      key={loc.id} 
+                      loc={loc} 
+                      isActive={activeLocationId === loc.id} 
+                      onClick={() => setActiveLocation(loc.id)} 
+                    />
+                ))}
+                <button 
+                  onClick={handleAddLocation}
+                  className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-500 hover:text-indigo-400 transition-colors ml-2"
+                >
+                  <Plus className="w-4 h-4" /> Novo Local
+                </button>
+            </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-neutral-100 tracking-tight">{activeLocation.name}</h2>
-          <p className="text-sm text-neutral-500">Arraste as cargas para as baias abaixo.</p>
+            <div className="flex items-center justify-between mb-4 relative">
+                <div>
+                  <h2 className="text-xl font-semibold text-neutral-100 tracking-tight">{activeLocation.name}</h2>
+                  <p className="text-sm text-neutral-500">Arraste as cargas para as baias abaixo.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      placeholder="Buscar cargas por identificador..."
+                      className="flex-1 min-w-0 px-4 py-2 text-sm bg-neutral-800/50 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-neutral-100"
+                    />
+                    <Search className="left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                    <button 
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-3 py-1.5 rounded-md text-sm transition-colors border border-neutral-700 shadow-sm"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Configurar Deck</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div className="flex-1 bg-[#101014] border border-neutral-800/50 rounded-xl p-6 relative flex flex-col items-center overflow-auto shadow-inner">
+                <div className="w-full max-w-[800px] min-h-[800px] h-full bg-[#18181f] border border-neutral-800 rounded-t-[100px] rounded-b-xl relative flex flex-col p-6 shadow-2xl">
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Proa</div>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Popa</div>
+                    <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Bombordo</div>
+                    <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 rotate-90 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Boreste</div>
+                    
+                    <div className="flex-1 mt-6 mb-4 flex flex-col gap-3 relative z-10 w-full">
+                        {bays.map(bay => (
+                            <DroppableBay key={bay.id} bay={bay} activeLocation={activeLocation} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+            
+            <DeckSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         </div>
-        <button 
-          onClick={() => setIsSettingsOpen(true)}
-          className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-3 py-1.5 rounded-md text-sm transition-colors border border-neutral-700 shadow-sm"
-        >
-          <Settings className="w-4 h-4" />
-          <span>Configurar Deck</span>
-        </button>
-      </div>
-
-      <div className="flex-1 bg-[#101014] border border-neutral-800/50 rounded-xl p-6 relative flex flex-col items-center overflow-auto shadow-inner">
-        <div className="w-full max-w-[800px] min-h-[800px] h-full bg-[#18181f] border border-neutral-800 rounded-t-[100px] rounded-b-xl relative flex flex-col p-6 shadow-2xl">
-          
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Proa</div>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Popa</div>
-          <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Bombordo</div>
-          <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 rotate-90 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Boreste</div>
-
-          <div className="flex-1 mt-6 mb-4 flex flex-col gap-3 relative z-10 w-full">
-            {bays.map(bay => (
-              <DroppableBay key={bay.id} bay={bay} activeLocation={activeLocation} />
-            ))}
-          </div>
-
-        </div>
-      </div>
-
-      <DeckSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-    </div>
-  );
+    );
 }
