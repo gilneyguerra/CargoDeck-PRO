@@ -1,0 +1,181 @@
+import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle } from 'lucide-react';
+import { useCargoStore } from '@/features/cargoStore';
+import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/infrastructure/DatabaseService';
+import { AuthModal } from './AuthModal';
+
+export function Header() {
+  const { locations, manifestsLoaded, shipOperationCode, setShipOperationCode, manifestShipName, manifestVoyage } = useCargoStore();
+
+  const [user, setUser] = useState<any>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleExport = () => {
+    PdfGeneratorService.executeExport(locations, manifestShipName || "STARNAV HYDRA", manifestVoyage || "509467921");
+  };
+
+  const handleSaveToCloud = async () => {
+     if (!user) {
+        setIsAuthOpen(true);
+        return;
+     }
+     setSaving(true);
+     try {
+       await DatabaseService.saveStowagePlan();
+       alert('Manifesto Salvo! Os dados atuais foram gravados no banco de dados com segurança.');
+     } catch(err: any) {
+       alert('Erro ao salvar no banco: ' + err.message);
+     } finally {
+       setSaving(false);
+     }
+  };
+
+  let totalPort = 0;
+  let totalStarboard = 0;
+  let totalTopHeavyMoment = 0;
+  let currentTotalWeight = 0;
+
+  locations.forEach(loc => {
+    const elev = loc.config.elevationMeters !== undefined ? loc.config.elevationMeters : 30;
+    loc.bays.forEach(bay => {
+      bay.allocatedCargoes.forEach(c => {
+         currentTotalWeight += c.weightTonnes;
+         if (c.positionInBay === 'port') totalPort += c.weightTonnes;
+         else if (c.positionInBay === 'starboard') totalStarboard += c.weightTonnes;
+
+         const cargoHeight = c.heightMeters || 2.5; 
+         const centerOfGravityZ = elev + (cargoHeight / 2);
+         totalTopHeavyMoment += (c.weightTonnes * centerOfGravityZ);
+      });
+    });
+  });
+
+  const listDiff = Math.abs(totalPort - totalStarboard);
+  const isListing = listDiff > 50; 
+  const isTopHeavy = totalTopHeavyMoment > 100000; // Adjusted limit for new mathematical scale
+
+  return (
+    <header className="flex items-center h-14 px-6 border-b border-neutral-800 bg-neutral-900 shrink-0">
+      <div className="flex items-center gap-3">
+        <div className="bg-indigo-500/10 p-1.5 rounded-md">
+          <Ship className="h-5 w-5 text-indigo-400" />
+        </div>
+        <h1 className="font-semibold text-lg tracking-tight text-neutral-100">CargaDeck PRO</h1>
+      </div>
+
+      <div className="flex items-center gap-6 ml-10">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Navio Atual:</span>
+          <input 
+            type="text" 
+            value={shipOperationCode}
+            onChange={(e) => setShipOperationCode(e.target.value)}
+            className="bg-neutral-950 border border-neutral-700 text-neutral-200 text-sm rounded px-3 py-1 w-24 uppercase focus:border-indigo-500 outline-none"
+            placeholder="Sigla"
+            title="Sigla exata do navio como consta no manifesto"
+          />
+        </div>
+      </div>
+
+      {(totalPort > 0 || totalStarboard > 0) && (
+          <div className="flex-1 flex justify-center items-center gap-8 px-4 border-x border-neutral-800/50 mx-6">
+            <div className="flex flex-col items-center gap-1 min-w-[200px]">
+              <span className="text-[9px] text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1">
+                 <ListCollapse size={10} /> BANDA (TRANSVERSAL)
+              </span>
+              <div className="flex items-center gap-2 text-xs font-mono">
+                 <span className={totalPort > totalStarboard + 50 ? "text-red-400 font-bold" : "text-neutral-400"}>BB: {totalPort.toFixed(1)}t</span>
+                 <div className="w-24 h-1.5 bg-black border border-neutral-800 rounded-full relative overflow-hidden flex">
+                    <div className="flex-1 border-r border-neutral-600 relative">
+                       <div className={`absolute top-0 bottom-0 right-0 transition-all ${isListing && totalPort > totalStarboard ? "bg-red-500" : "bg-indigo-500"}`}
+                            style={{ width: `${Math.min(100, (listDiff / (totalPort+totalStarboard+1)) * 100)}%`, opacity: totalPort > totalStarboard ? 1 : 0 }} />
+                    </div>
+                    <div className="flex-1 relative">
+                       <div className={`absolute top-0 bottom-0 left-0 transition-all ${isListing && totalStarboard > totalPort ? "bg-red-500" : "bg-indigo-500"}`}
+                            style={{ width: `${Math.min(100, (listDiff / (totalPort+totalStarboard+1)) * 100)}%`, opacity: totalStarboard > totalPort ? 1 : 0 }} />
+                    </div>
+                 </div>
+                 <span className={totalStarboard > totalPort + 50 ? "text-red-400 font-bold" : "text-neutral-400"}>BE: {totalStarboard.toFixed(1)}t</span>
+              </div>
+            </div>
+
+            {totalTopHeavyMoment > 0 && (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[9px] text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1"><Weight size={10} /> CENTRO GAL (VCG)</span>
+                <span className={`text-[10px] font-mono font-bold ${isTopHeavy ? "text-red-500" : "text-emerald-500"}`}>
+                   M: {totalTopHeavyMoment.toFixed(0)} <span className="opacity-50">tm</span> {isTopHeavy && '(⚠️)'}
+                </span>
+              </div>
+            )}
+          </div>
+      )}
+
+      <div className="ml-auto flex items-center gap-6 text-sm text-neutral-400">
+        <div className="flex items-center gap-2">
+          <span>Total Planejado:</span>
+          <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">{currentTotalWeight.toFixed(1)} t</span>
+        </div>
+
+        <div className="h-4 w-px bg-neutral-700" />
+
+        <div className="flex items-center gap-3">
+          <button 
+            className="flex items-center gap-2 text-neutral-400 hover:text-red-400 transition-colors"
+            onClick={() => window.location.reload()} 
+            title="Limpar Planejamento"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          
+          <button 
+             onClick={handleExport}
+             disabled={!manifestsLoaded}
+             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-indigo-500 disabled:border-neutral-700 shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            <span>Gerar PDF</span>
+          </button>
+
+          <button 
+             onClick={handleSaveToCloud}
+             disabled={saving}
+             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-emerald-500 disabled:border-neutral-700 shadow-sm ml-2"
+          >
+            <CloudUpload className="w-4 h-4" />
+            <span>{saving ? 'Salvando...' : 'Salvar Cloud'}</span>
+          </button>
+
+          <div className="h-4 w-px bg-neutral-700 ml-2 mr-2" />
+
+          {user ? (
+            <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors" title="Sair da Conta">
+               <UserCircle className="w-5 h-5 text-emerald-400" />
+            </button>
+          ) : (
+            <button onClick={() => setIsAuthOpen(true)} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
+               <LogIn className="w-4 h-4" />
+               <span>Login</span>
+            </button>
+          )}
+
+        </div>
+      </div>
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+    </header>
+  );
+}
