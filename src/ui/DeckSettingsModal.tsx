@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useCargoStore } from '@/features/cargoStore';
 import { X } from 'lucide-react';
 

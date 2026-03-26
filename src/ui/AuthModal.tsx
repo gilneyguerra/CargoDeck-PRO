@@ -25,8 +25,8 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
         alert("Conta criada! Verifique seu e-mail.");
       }
       onClose();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }

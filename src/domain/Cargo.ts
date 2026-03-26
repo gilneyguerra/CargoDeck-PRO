@@ -17,4 +17,7 @@ export interface Cargo {
   positionInBay?: 'port' | 'center' | 'starboard'; // Transversal Stowage Tracking
   observations?: string;
   alerts?: string[];
+  isRemovable?: boolean; // If true, can be removed during operation (e.g., risers lowered into water)
+  color?: string; // Hex color for visual representation
+  format?: 'Retangular' | 'Quadrado' | 'Tubular'; // Shape format for graphical representation
 }

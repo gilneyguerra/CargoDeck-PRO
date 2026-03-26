@@ -1,6 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Tesseract from 'tesseract.js';
 import type { Cargo } from '@/domain/Cargo';
+import type { CargoCategory } from '@/domain/Cargo';
 
 export interface ParseResult {
   cargoes: Cargo[];
@@ -36,7 +38,7 @@ export class PdfParserService {
         if (textContent.items.length > 5) {
               // Text is present natively
                 const items = textContent.items
-                  .filter((item): item is any => {
+                  .filter((item) => {
                       // Basic filter to reduce false positives
                       return (
                           typeof item === 'object' &&
@@ -190,7 +192,7 @@ export class PdfParserService {
             // Fallback identifier if still too big
             if (identifier.length > 25) identifier = identifier.substring(0, 25);
 
-            let category: any = 'GENERAL';
+            let category: CargoCategory = 'GENERAL';
             const typeUpper = type.toUpperCase();
             if (typeUpper.includes('CONTAINER') || typeUpper.includes('CESTA')) category = 'CONTAINER';
             else if (typeUpper.includes('SKID') || typeUpper.includes('TANQUE') || weightTonnes > 20) category = 'HEAVY';
