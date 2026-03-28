@@ -6,9 +6,7 @@ import type { DeckConfig } from '@/domain/DeckConfig';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { v4 as uuidv4 } from 'uuid';
 
-export type { CargoState };
-
-interface CargoState {
+export interface CargoState {
     manifestsLoaded: boolean;
     unallocatedCargoes: Cargo[];
     locations: CargoLocation[];
@@ -28,7 +26,7 @@ interface CargoState {
     updateCargo: (id: string, updates: Partial<Cargo>) => void;
     setActiveLocation: (id: string) => void;
     updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
-    moveCargoToBay: (cargoId: string, bayId: string) => void;
+    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard') => void;
     deleteCargo: (cargoId: string) => Promise<void>;
     setSearchTerm: (term: string) => void;
     getAllCargo: () => Cargo[];
@@ -113,15 +111,18 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         );
         const newLocations = state.locations.map(loc => ({
             ...loc,
-            bays: loc.bays.map(bay => ({
-                ...bay,
-                allocatedCargoes: bay.allocatedCargoes.map(c => 
+            bays: loc.bays.map(bay => {
+                const updatedCargoes = bay.allocatedCargoes.map(c =>
                     c.id === id ? { ...c, ...updates } : c
-                ),
-                currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) => 
-                    acc + (c.weightTonnes * c.quantity), 0),
-                currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) => 
-                    acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
+                );
+                return {
+                    ...bay,
+                    allocatedCargoes: updatedCargoes,
+                    currentWeightTonnes: updatedCargoes.reduce((acc, c) =>
+                        acc + (c.weightTonnes * c.quantity), 0),
+                    currentOccupiedArea: updatedCargoes.reduce((acc, c) =>
+                        acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
+                };
             }))
         }));
         return {
@@ -202,7 +203,7 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         }))
     })),
 
-    moveCargoToBay: (cargoId: string, bayId: string) => set((state) => {
+    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard') => set((state) => {
         // Step 1: Find the cargo and its current location (if any)
         let cargoToMove: Cargo | undefined = undefined;
         let sourceBayId: string | undefined = undefined;
@@ -277,7 +278,8 @@ export const useCargoStore = create<CargoState>((set, get) => ({
                             allocatedCargoes: [...bay.allocatedCargoes, {
                                 ...cargoToMove,
                                 bayId: bay.id,
-                                status: 'ALLOCATED'
+                                status: 'ALLOCATED',
+                                positionInBay: positionInBay ?? 'center'
                             }],
                             currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0) + (cargoToMove.weightTonnes * cargoToMove.quantity),
                             currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0) + (cargoToMove.lengthMeters * cargoToMove.widthMeters * cargoToMove.quantity)

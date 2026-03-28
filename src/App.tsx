@@ -49,13 +49,13 @@ function App() {
       
       if (over && over.id) {
         const fullId = String(over.id);
-        // Extract the bay ID from format "{bayId}-{side}" where side is port/center/starboard
+        // Extract the bay ID and side from format "{bayId}-{side}" where side is port/center/starboard
         if (fullId.endsWith('-port') || fullId.endsWith('-center') || fullId.endsWith('-starboard')) {
-          // Find the last hyphen to separate bayId from side
           const lastHyphenIndex = fullId.lastIndexOf('-');
           if (lastHyphenIndex > 0) {
             const bayId = fullId.substring(0, lastHyphenIndex);
-            moveCargoToBay(String(active.id), bayId);
+            const side = fullId.substring(lastHyphenIndex + 1) as 'port' | 'center' | 'starboard';
+            moveCargoToBay(String(active.id), bayId, side);
           }
         }
       }
