@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { Settings, Plus, Search, Trash2, Edit } from 'lucide-react';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import type { Bay } from '@/domain/Bay';
 import type { Cargo } from '@/domain/Cargo';
@@ -10,78 +9,11 @@ import { DeckSettingsModal } from './DeckSettingsModal';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import { CargoPreview } from './CargoPreview';
 import { getCargoFontSize, getCargoIconSize, getScaledDimensions } from '@/lib/scaling';
+import DraggableCargo from './DraggableCargo';
+import { useDragStore } from '@/features/dragStore';
+import { useDragRotation } from '@/hooks/useDragRotation';
 
-function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighlight?: boolean, onEdit: (cargo: Cargo) => void }) {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-      id: cargo.id,
-    });
-    const { deleteCargo } = useCargoStore();
-    
-    // Calculate the pixel dimensions for this cargo using our scaling system
-    const { width: cargoWidthPx, height: cargoHeightPx } = getScaledDimensions(cargo);
-    
-    const style = transform ? {
-      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      width: `${cargoWidthPx}px`,
-      height: `${cargoHeightPx}px`,
-    } : {
-      width: `${cargoWidthPx}px`,
-      height: `${cargoHeightPx}px`,
-    };
-    
-    const handleDelete = async () => {
-      await deleteCargo(cargo.id);
-    };
-    
-     // Use consistent scaling system for fonts and icons
-    const fontSize = getCargoFontSize(cargo);
-    const buttonSize = getCargoIconSize(cargo);
-    
-    return (
-      <div 
-        ref={setNodeRef} 
-        style={style} 
-        {...listeners} 
-        {...attributes}
-        className={cn(
-          "border border-neutral-700 rounded flex flex-col gap-2 transition-colors cursor-grab select-none box-border",
-          isDragging ? "opacity-50" : "hover:border-indigo-500/50 active:cursor-grabbing",
-          isHighlight ? "bg-yellow-900/50 border-yellow-400" : ""
-        )}
-      >
-        <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} weightTonnes={cargo.weightTonnes} cargo={cargo} />
-        <div className="text-xs text-neutral-400 mt-1 text-center" style={{ fontSize: `${fontSize * 0.8}px` }}>{cargo.quantity} x {cargo.weightTonnes.toFixed(1)} t</div>
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col items-start gap-1.5">
-             <span className="font-medium text-neutral-200 leading-tight pr-2" style={{ fontSize: `${fontSize}px` }}>{cargo.description}</span>
-          </div>
-          <div className="flex items-end gap-1 shrink-0 mt-1">
-            <button 
-              onClick={() => onEdit(cargo)}
-              className="text-blue-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-900/20"
-              title="Editar carga"
-              style={{ width: `${buttonSize}px`, height: `${buttonSize}px` }}
-            >
-              <Edit style={{ width: `${buttonSize * 0.8}px`, height: `${buttonSize * 0.8}px` }} />
-            </button>
-            <button 
-              onClick={handleDelete}
-              className="text-red-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-900/20"
-              title="Excluir carga"
-              style={{ width: `${buttonSize}px`, height: `${buttonSize}px` }}
-            >
-              <Trash2 style={{ width: `${buttonSize * 0.8}px`, height: `${buttonSize * 0.8}px` }} />
-            </button>
-          </div>
-        </div>
-         <div className="flex flex-wrap gap-2 text-xs text-neutral-400 mt-1" style={{ fontSize: `${fontSize * 0.8}px` }}>
-            <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{cargo.weightTonnes.toFixed(1)} t</span>
-            <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{cargo.lengthMeters}x{cargo.widthMeters} m</span>
-            <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20">{cargo.category}</span>
-         </div>
-       </div>
-     )
-   }
+
 
 function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoLocation, isActive: boolean, onClick: () => void, onEdit: (loc: CargoLocation) => void, onDelete: (id: string) => void }) {
    const { setNodeRef } = useDroppable({

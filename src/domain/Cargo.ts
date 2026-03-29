@@ -13,8 +13,16 @@ export interface Cargo {
   quantity: number;
   category: CargoCategory;
   status: CargoStatus;
-  bayId?: string; // ID of the bay where it's allocated
-  positionInBay?: 'port' | 'center' | 'starboard'; // Transversal Stowage Tracking
+  
+  // Storage Location
+  bayId?: string; // ID of the bay where it's allocated (legacy/logical)
+  positionInBay?: 'port' | 'center' | 'starboard'; // Transversal Stowage Tracking (legacy/logical)
+  
+  // Spatial Placement (Vapozeiro Engine)
+  x?: number; // absolute X coordinate in meters relative to the active location (deck)
+  y?: number; // absolute Y coordinate in meters relative to the active location (deck)
+  isRotated?: boolean; // True if visually rotated 90 degrees (width and length swapped)
+
   observations?: string;
   alerts?: string[];
   isRemovable?: boolean; // If true, can be removed during operation (e.g., risers lowered into water)

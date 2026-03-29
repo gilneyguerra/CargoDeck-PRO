@@ -25,7 +25,8 @@ export interface CargoState {
     updateCargo: (id: string, updates: Partial<Cargo>) => void;
     setActiveLocation: (id: string) => void;
     updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
-    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard') => void;
+    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard', x?: number, y?: number, isRotated?: boolean) => void;
+    updateCargoPosition: (cargoId: string, x: number, y: number, isRotated?: boolean) => void;
     deleteCargo: (cargoId: string) => Promise<void>;
     setSearchTerm: (term: string) => void;
     getAllCargo: () => Cargo[];
@@ -199,7 +200,22 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         }))
     })),
 
-    moveCargoToBay: (cargoId, bayId, positionInBay) => set((state) => {
+    updateCargoPosition: (cargoId, x, y, isRotated) => set((state) => {
+        const updateIn = (cargoes: Cargo[]) =>
+            cargoes.map(c => c.id === cargoId ? { ...c, x, y, isRotated: isRotated ?? c.isRotated } : c);
+        return {
+            unallocatedCargoes: updateIn(state.unallocatedCargoes),
+            locations: state.locations.map(loc => ({
+                ...loc,
+                bays: loc.bays.map(bay => ({
+                    ...bay,
+                    allocatedCargoes: updateIn(bay.allocatedCargoes)
+                }))
+            }))
+        };
+    }),
+
+    moveCargoToBay: (cargoId, bayId, positionInBay, x, y, isRotated) => set((state) => {
         let cargoToMove: Cargo | undefined;
         let sourceBayId: string | undefined;
         let sourceLocationId: string | undefined;
@@ -262,7 +278,10 @@ export const useCargoStore = create<CargoState>((set, get) => ({
                                 ...cargoToMove,
                                 bayId: bay.id,
                                 status: 'ALLOCATED',
-                                positionInBay: positionInBay ?? 'center'
+                                positionInBay: positionInBay ?? 'center',
+                                x: x,
+                                y: y,
+                                isRotated: isRotated ?? false
                             }],
                             currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0) + (cargoToMove.weightTonnes * cargoToMove.quantity),
                             currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0) + (cargoToMove.lengthMeters * cargoToMove.widthMeters * cargoToMove.quantity)
