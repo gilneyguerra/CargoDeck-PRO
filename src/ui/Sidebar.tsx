@@ -9,9 +9,24 @@ import { EditCargoModal } from './EditCargoModal';
 import { CargoPreview } from './CargoPreview';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import DraggableCargo from './DraggableCargo';
-  };
 
-  return (
+export function Sidebar() {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo } = useCargoStore();
+    const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+
+    const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleFileUpload(file);
+            e.target.value = ''; // Reset to allow re-upload of the same file
+        }
+    };
+
+    return (
     <aside className="w-80 border-r border-neutral-800 bg-[#16161a] flex flex-col shrink-0 h-full">
         <div className="p-4 border-b border-neutral-800 bg-neutral-900/40">
         <h2 className="text-sm font-semibold text-neutral-200 mb-3 tracking-wide">MANIFESTO</h2>
