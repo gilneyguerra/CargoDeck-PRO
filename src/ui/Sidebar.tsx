@@ -40,7 +40,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
           isHighlight ? "bg-yellow-900/50 border-yellow-400" : ""
         )}
       >
-        <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} scale={10} quantity={cargo.quantity} weightTonnes={cargo.weightTonnes} dynamicScale={true} />
+        <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} weightTonnes={cargo.weightTonnes} cargo={cargo} />
         <div className="text-xs text-neutral-400 mt-1 text-center" style={{ fontSize: `${fontSize * 0.8}px` }}>{cargo.quantity} x {cargo.weightTonnes.toFixed(1)} t</div>
         <div className="flex items-start justify-between">
          <div className="flex flex-col items-start gap-1.5">
