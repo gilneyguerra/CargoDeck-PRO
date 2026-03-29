@@ -44,11 +44,18 @@ export function Sidebar() {
           {isProcessing ? (
             <div className="flex flex-col items-center justify-center gap-3 w-full animate-pulse transition-all px-2">
               <FileType className="h-6 w-6 text-indigo-400" />
-              <div className="w-full bg-neutral-950 rounded-full h-1.5 border border-neutral-700/50 overflow-hidden relative">
-                <div className="bg-indigo-500 h-1.5 transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
+              <div className="w-full bg-neutral-950 rounded-full h-2 border border-neutral-700/50 overflow-hidden relative">
+                <div className="bg-indigo-500 h-2 transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
               </div>
-              <span className="text-[9px] text-indigo-300 text-center uppercase tracking-widest font-semibold">{progressText || 'Extraindo dados...'}</span>
-            </div>
+              <div className="flex justify-between w-full text-[8px] font-mono text-neutral-400">
+                <span className="text-indigo-300">{progressText || 'Inicializando...'}</span>
+                <span>{progressPercent || 0}%</span>
+              </div>
+              <div className="flex gap-1 mt-1">
+                <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 10 ? 'bg-green-900/30 text-green-400' : 'bg-neutral-800 text-neutral-600'}`}>✓ PDF</span>
+                <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 30 ? 'bg-amber-900/30 text-amber-400' : 'bg-neutral-800 text-neutral-600'}`}>OCR</span>
+                <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 95 ? 'bg-blue-900/30 text-blue-400' : 'bg-neutral-800 text-neutral-600'}`}>Parse</span>
+              </div>
           ) : (
             <>
               <UploadCloud className="h-6 w-6" />
