@@ -16,7 +16,8 @@ function App() {
 const { 
   moveCargoToBay, unallocatedCargoes, locations, 
   activeLocationId, setActiveLocation,
-  deleteCargo
+  deleteCargo,
+  setEditingCargo
 } = useCargoStore();
 
   const [activeCargo, setActiveCargo] = useState<Cargo | null>(null);
