@@ -3,13 +3,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { useManifestUpload } from '@/features/useManifestUpload';
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useDragStore } from '@/features/dragStore';
-import { UploadCloud, FileType, AlertCircle, Trash2, Plus, Edit } from 'lucide-react';
-import { useCargoStore } from '@/features/cargoStore';
-import { useManifestUpload } from '@/features/useManifestUpload';
-import { useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
-import { useDragStore } from '@/features/dragStore';
+import { useDraggable } from '@dnd-kit/core';
 import type { Cargo } from '@/domain/Cargo';
 import { ManualCargoModal } from './ManualCargoModal';
 import { EditCargoModal } from './EditCargoModal';
@@ -17,48 +11,41 @@ import { CargoPreview } from './CargoPreview';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 
 function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighlight?: boolean, onEdit: (cargo: Cargo) => void }) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: cargo.id,
+    });
     const { deleteCargo } = useCargoStore();
-    const { startDrag, endDrag } = useDragStore();
     
-    // Use consistent scaling system
-    const fontSize = getCargoFontSize(cargo);
-    const buttonSize = getCargoIconSize(cargo);
-
-    const handleDragStart = (e: React.DragEvent) => {
-      startDrag(cargo, e);
-      // Optional: change opacity or styling on the original element during drag
-      setTimeout(() => {
-        if (e.target instanceof HTMLElement) {
-          e.target.style.opacity = '0.4';
-        }
-      }, 0);
-    };
-
-    const handleDragEnd = (e: React.DragEvent) => {
-      endDrag();
-      if (e.target instanceof HTMLElement) {
-        e.target.style.opacity = '1';
-      }
-    };
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    } : undefined;
 
     const handleDelete = async () => {
       await deleteCargo(cargo.id);
     };
 
+     // Use consistent scaling system
+     const fontSize = getCargoFontSize(cargo);
+     const buttonSize = getCargoIconSize(cargo);
+
     return (
       <div 
-        draggable
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+        ref={setNodeRef} 
+        style={style} 
+        {...listeners} 
+        {...attributes}
         className={cn(
           "border border-neutral-700 rounded p-2 flex flex-col gap-1 transition-colors cursor-grab select-none",
-          "hover:border-indigo-500/50 active:cursor-grabbing",
+          isDragging ? "opacity-50" : "hover:border-indigo-500/50 active:cursor-grabbing",
           isHighlight ? "bg-yellow-900/50 border-yellow-400" : ""
         )}
       >
-        <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} weightTonnes={cargo.weightTonnes} cargo={cargo} />
-        <div className="text-xs text-neutral-400 mt-1 text-center" style={{ fontSize: `${fontSize * 0.8}px` }}>{cargo.identifier}</div>
+        <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} scale={10} quantity={cargo.quantity} weightTonnes={cargo.weightTonnes} dynamicScale={true} />
         <div className="text-xs text-neutral-400 mt-1 text-center" style={{ fontSize: `${fontSize * 0.8}px` }}>{cargo.quantity} x {cargo.weightTonnes.toFixed(1)} t</div>
+        <div className="flex items-start justify-between">
+         <div className="flex flex-col items-start gap-1.5">
+            <span className="font-medium text-neutral-200 leading-tight pr-2" style={{ fontSize: `${fontSize}px` }}>{cargo.description}</span>
+         </div>
          <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
            {cargo.observations === 'BACKLOAD' && (
              <span className="bg-amber-500/20 text-amber-500 px-1 py-0.5 rounded uppercase font-bold tracking-wider" style={{ fontSize: `${fontSize * 0.6}px` }}>Backload</span>
