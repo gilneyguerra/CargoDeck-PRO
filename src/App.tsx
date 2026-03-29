@@ -7,6 +7,10 @@ import { useState } from 'react';
 import type { Cargo } from '@/domain/Cargo';
 import { useAuthAndHydration } from '@/hooks/useAuthAndHydration';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { CargoPreview } from '@/ui/CargoPreview';
+import { Edit, Trash2 } from 'lucide-react';
+import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
+import { cn } from '@/lib/utils';
 
 function App() {
   const { 
@@ -78,13 +82,39 @@ function App() {
       </Layout>
       <DragOverlay>
         {activeCargo ? (
-          <div className="bg-neutral-800 border-2 border-indigo-500 rounded p-3 opacity-95 shadow-2xl scale-105 cursor-grabbing w-64">
-            <div className="flex items-start justify-between mb-2">
-              <span className="text-sm font-medium text-neutral-100">{activeCargo.description}</span>
+          <div 
+            className={cn(
+              "border border-indigo-500/70 rounded flex flex-col gap-2 p-2 opacity-95 shadow-2xl cursor-grabbing",
+              "bg-neutral-900/95"
+            )}
+            style={{ 
+              minWidth: '100px',
+              maxWidth: '160px'
+            }}
+          >
+            <CargoPreview 
+              format={activeCargo.format || 'Retangular'} 
+              length={activeCargo.lengthMeters} 
+              width={activeCargo.widthMeters} 
+              height={activeCargo.heightMeters || 1} 
+              color={activeCargo.color || '#3b82f6'} 
+              quantity={activeCargo.quantity} 
+              weightTonnes={activeCargo.weightTonnes}
+              cargo={activeCargo}
+            />
+            <div className="text-xs text-neutral-300 text-center font-medium leading-tight px-1">
+              {activeCargo.description}
             </div>
-            <div className="flex gap-2">
-              <span className="text-xs bg-neutral-900 px-1.5 rounded">{activeCargo.weightTonnes}t</span>
-              <span className="text-xs text-indigo-400">{activeCargo.category}</span>
+            <div className="flex flex-wrap gap-1 justify-center text-[10px] text-neutral-400">
+              <span className="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
+                {activeCargo.quantity} x {activeCargo.weightTonnes.toFixed(1)} t
+              </span>
+              <span className="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
+                {activeCargo.lengthMeters}x{activeCargo.widthMeters} m
+              </span>
+              <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                {activeCargo.category}
+              </span>
             </div>
           </div>
         ) : null}
