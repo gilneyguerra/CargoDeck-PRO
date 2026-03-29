@@ -13,10 +13,11 @@ import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { cn } from '@/lib/utils';
 
 function App() {
-  const { 
-    moveCargoToBay, unallocatedCargoes, locations, 
-    activeLocationId, setActiveLocation 
-  } = useCargoStore();
+const { 
+  moveCargoToBay, unallocatedCargoes, locations, 
+  activeLocationId, setActiveLocation,
+  deleteCargo
+} = useCargoStore();
 
   const [activeCargo, setActiveCargo] = useState<Cargo | null>(null);
 
@@ -84,13 +85,9 @@ function App() {
         {activeCargo ? (
           <div 
             className={cn(
-              "border border-indigo-500/70 rounded flex flex-col gap-2 p-2 opacity-95 shadow-2xl cursor-grabbing",
-              "bg-neutral-900/95"
+              "border border-neutral-700 rounded p-2 flex flex-col gap-1 transition-colors cursor-grab select-none",
+              "hover:border-indigo-500/50 active:cursor-grabbing"
             )}
-            style={{ 
-              minWidth: '100px',
-              maxWidth: '160px'
-            }}
           >
             <CargoPreview 
               format={activeCargo.format || 'Retangular'} 
@@ -102,19 +99,41 @@ function App() {
               weightTonnes={activeCargo.weightTonnes}
               cargo={activeCargo}
             />
-            <div className="text-xs text-neutral-300 text-center font-medium leading-tight px-1">
-              {activeCargo.description}
+            <div className="text-xs text-neutral-400 mt-1 text-center" style={{ fontSize: `${getCargoFontSize(activeCargo) * 0.8}px` }}>
+              {activeCargo.quantity} x {activeCargo.weightTonnes.toFixed(1)} t
             </div>
-            <div className="flex flex-wrap gap-1 justify-center text-[10px] text-neutral-400">
-              <span className="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
-                {activeCargo.quantity} x {activeCargo.weightTonnes.toFixed(1)} t
-              </span>
-              <span className="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
-                {activeCargo.lengthMeters}x{activeCargo.widthMeters} m
-              </span>
-              <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20">
-                {activeCargo.category}
-              </span>
+            <div className="flex items-start justify-between">
+              <div className="flex flex-col items-start gap-1.5">
+                <span className="font-medium text-neutral-200 leading-tight pr-2" style={{ fontSize: `${getCargoFontSize(activeCargo)}px` }}>
+                  {activeCargo.description}
+                </span>
+              </div>
+              <div className="flex items-end gap-1 shrink-0 mt-1">
+                <button 
+                  onClick={() => setEditingCargo(activeCargo)}
+                  className="text-blue-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  title="Editar carga"
+                  style={{ width: `${getCargoIconSize(activeCargo)}px`, height: `${getCargoIconSize(activeCargo)}px` }}
+                >
+                  <Edit style={{ width: `${getCargoIconSize(activeCargo) * 0.8}px`, height: `${getCargoIconSize(activeCargo) * 0.8}px` }} />
+                </button>
+                <button 
+                  onClick={async () => {
+                    await deleteCargo(activeCargo!.id);
+                    setActiveCargo(null);
+                  }}
+                  className="text-red-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-900/20"
+                  title="Excluir carga"
+                  style={{ width: `${getCargoIconSize(activeCargo)}px`, height: `${getCargoIconSize(activeCargo)}px` }}
+                >
+                  <Trash2 style={{ width: `${getCargoIconSize(activeCargo) * 0.8}px`, height: `${getCargoIconSize(activeCargo) * 0.8}px` }} />
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-neutral-400 mt-1" style={{ fontSize: `${getCargoFontSize(activeCargo) * 0.8}px` }}>
+              <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{activeCargo.weightTonnes.toFixed(1)} t</span>
+              <span className="bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-800">{activeCargo.lengthMeters}x{activeCargo.widthMeters} m</span>
+              <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20">{activeCargo.category}</span>
             </div>
           </div>
         ) : null}
