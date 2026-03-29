@@ -1,4 +1,4 @@
-import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle } from 'lucide-react';
+import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle, Sun, Moon } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
 import { useEffect, useState } from 'react';
@@ -18,6 +18,16 @@ export function Header() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
 
   useEffect(() => {
+    // Set dark mode from localStorage or system preference
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme) {
+      document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.toggle('dark', prefersDark);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
@@ -152,23 +162,35 @@ export function Header() {
              <Trash2 className="w-4 h-4" />
            </button>
           
-          <button 
-            onClick={handleExport}
-            disabled={!manifestsLoaded}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-indigo-500 disabled:border-neutral-700 shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            <span>Gerar PDF</span>
-          </button>
+           <button 
+             onClick={handleExport}
+             disabled={!manifestsLoaded}
+             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-indigo-500 disabled:border-neutral-700 shadow-sm"
+           >
+             <Download className="w-4 h-4" />
+             <span>Gerar PDF</span>
+           </button>
 
-          <button 
-            onClick={handleSaveToCloud}
-            disabled={saving}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-emerald-500 disabled:border-neutral-700 shadow-sm ml-2"
-          >
-            <CloudUpload className="w-4 h-4" />
-            <span>{saving ? 'Salvando...' : 'Salvar Cloud'}</span>
-          </button>
+           <button 
+             onClick={() => {
+               const isDark = document.documentElement.classList.toggle('dark');
+               // Optionally store preference in localStorage
+               localStorage.setItem('theme', isDark ? 'dark' : 'light');
+             }}
+             className="flex items-center gap-2 text-neutral-400 hover:text-neutral-200 transition-colors"
+           >
+             {document.documentElement.classList.contains('dark') ? (<Sun className="w-4 h-4" />) : (<Moon className="w-4 h-4" />)}
+             <span className="ml-1">{document.documentElement.classList.contains('dark') ? 'Claro' : 'Escuro'}</span>
+           </button>
+
+           <button 
+             onClick={handleSaveToCloud}
+             disabled={saving}
+             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-emerald-500 disabled:border-neutral-700 shadow-sm ml-2"
+           >
+             <CloudUpload className="w-4 h-4" />
+             <span>{saving ? 'Salvando...' : 'Salvar Cloud'}</span>
+           </button>
 
           <div className="h-4 w-px bg-neutral-700 ml-2 mr-2" />
 
