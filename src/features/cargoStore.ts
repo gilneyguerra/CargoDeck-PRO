@@ -5,6 +5,7 @@ import { DEFAULT_DECK_CONFIG } from '@/domain/DeckConfig';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { v4 as uuidv4 } from 'uuid';
+import { historyStore } from './historyStore';
 
 export interface CargoState {
     manifestsLoaded: boolean;
