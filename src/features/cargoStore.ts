@@ -17,7 +17,6 @@ export interface CargoState {
     searchTerm: string;
     editingCargo: Cargo | null;
     
-    // Actions
     setShipOperationCode: (code: string) => void;
     setExtractedCargoes: (cargoes: Cargo[]) => void;
     setManifestDetails: (shipName: string, voyage: string) => void;
@@ -123,7 +122,7 @@ export const useCargoStore = create<CargoState>((set, get) => ({
                     currentOccupiedArea: updatedCargoes.reduce((acc, c) =>
                         acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
                 };
-            }))
+            })
         }));
         return {
             unallocatedCargoes: newUnallocated,
@@ -150,7 +149,6 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         locations: state.locations.map(loc => {
             if (loc.id === state.activeLocationId) {
                 const newConfig = { ...loc.config, ...config };
-                
                 let newBays = [...loc.bays];
                 if (newConfig.numberOfBays !== loc.bays.length) {
                     newBays = Array.from({ length: newConfig.numberOfBays }, (_, i) => ({
@@ -170,23 +168,21 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         })
     })),
     
-    editLocation: (id: string, updates: Partial<CargoLocation>) => set((state) => ({
+    editLocation: (id, updates) => set((state) => ({
         locations: state.locations.map(loc => 
             loc.id === id ? { ...loc, ...updates } : loc
         ),
         ...(updates.id && { activeLocationId: updates.id })
     })),
     
-    deleteLocation: (id: string) => set((state) => {
+    deleteLocation: (id) => set((state) => {
         if (state.locations.length <= 1) {
             return state;
         }
-        
         const locations = state.locations.filter(loc => loc.id !== id);
         const activeLocationId = state.activeLocationId === id 
             ? locations[0].id 
             : state.activeLocationId;
-            
         return { locations, activeLocationId };
     }),
 
@@ -203,18 +199,13 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         }))
     })),
 
-    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard') => set((state) => {
-        // Step 1: Find the cargo and its current location (if any)
-        let cargoToMove: Cargo | undefined = undefined;
-        let sourceBayId: string | undefined = undefined;
-        let sourceLocationId: string | undefined = undefined;
+    moveCargoToBay: (cargoId, bayId, positionInBay) => set((state) => {
+        let cargoToMove: Cargo | undefined;
+        let sourceBayId: string | undefined;
+        let sourceLocationId: string | undefined;
 
-        // Check in unallocated
         cargoToMove = state.unallocatedCargoes.find(c => c.id === cargoId);
-        if (cargoToMove) {
-            // It's in unallocated, so we don't have a source bay/location to remove from
-        } else {
-            // Check in allocated cargoes in bays
+        if (!cargoToMove) {
             outer: for (const loc of state.locations) {
                 for (const bay of loc.bays) {
                     const found = bay.allocatedCargoes.find(c => c.id === cargoId);
@@ -228,24 +219,20 @@ export const useCargoStore = create<CargoState>((set, get) => ({
             }
         }
 
-        // If cargo not found, return state unchanged
         if (!cargoToMove) {
             return state;
         }
 
-        // Step 2: Remove the cargo from its current location
         let newUnallocated = state.unallocatedCargoes;
         let newLocations = state.locations;
 
         if (sourceLocationId !== undefined) {
-            // The cargo was in a bay, so we need to remove it from that bay's allocatedCargoes
             newLocations = state.locations.map(loc => {
                 if (loc.id === sourceLocationId) {
                     return {
                         ...loc,
                         bays: loc.bays.map(bay => {
                             if (bay.id === sourceBayId) {
-                                // Remove the cargo from this bay's allocatedCargoes
                                 const filtered = bay.allocatedCargoes.filter(c => c.id !== cargoId);
                                 return {
                                     ...bay,
@@ -261,18 +248,14 @@ export const useCargoStore = create<CargoState>((set, get) => ({
                 return loc;
             });
         } else {
-            // The cargo was in unallocated, so remove it from unallocatedCargoes
             newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
         }
 
-        // Step 3: Add the cargo to the target bay
-        // We need to find the target bay in the newLocations (after removal) and add the cargo there
         newLocations = newLocations.map(loc => {
             return {
                 ...loc,
                 bays: loc.bays.map(bay => {
                     if (bay.id === bayId) {
-                        // Add the cargo to this bay
                         return {
                             ...bay,
                             allocatedCargoes: [...bay.allocatedCargoes, {
@@ -297,11 +280,9 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         };
     }),
 
-    deleteCargo: async (cargoId: string) => {
-        // First update state optimistically
+    deleteCargo: async (cargoId) => {
         set((state) => {
             const newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
-            
             const newLocations = state.locations.map(loc => {
                 const newBays = loc.bays.map(bay => {
                     const filteredCargoes = bay.allocatedCargoes.filter(c => c.id !== cargoId);
@@ -312,20 +293,11 @@ export const useCargoStore = create<CargoState>((set, get) => ({
                         currentOccupiedArea: filteredCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
                     };
                 });
-                return {
-                    ...loc,
-                    bays: newBays
-                };
+                return { ...loc, bays: newBays };
             });
-            
-            return {
-                ...state,
-                unallocatedCargoes: newUnallocated,
-                locations: newLocations
-            };
+            return { unallocatedCargoes: newUnallocated, locations: newLocations };
         });
         
-        // Then delete from database
         const stateBeforeDelete = useCargoStore.getState();
         const foundCargo = stateBeforeDelete.unallocatedCargoes.find(c => c.id === cargoId) || 
                           stateBeforeDelete.locations.flatMap(loc => loc.bays).flatMap(bay => bay.allocatedCargoes).find(c => c.id === cargoId);
@@ -335,12 +307,11 @@ export const useCargoStore = create<CargoState>((set, get) => ({
                 await DatabaseService.deleteCargo(foundCargo.id);
             } catch (error) {
                 console.error('Failed to delete cargo from database:', error);
-                // Keep UI state change for better UX
             }
         }
     },
 
-    hydrateFromDb: (payload: Partial<CargoState>) => set((state) => ({
+    hydrateFromDb: (payload) => set((state) => ({
         unallocatedCargoes: payload.unallocatedCargoes ?? state.unallocatedCargoes,
         locations: payload.locations ?? state.locations,
         shipOperationCode: payload.shipOperationCode ?? state.shipOperationCode,
