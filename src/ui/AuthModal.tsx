@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, LogIn } from 'lucide-react';
 
+const SUPABASE_CONFIGURED = import.meta.env.VITE_SUPABASE_URL && 
+                           import.meta.env.VITE_SUPABASE_URL !== 'https://example.supabase.co';
+
 export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +18,13 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    if (!SUPABASE_CONFIGURED) {
+      setError('Supabase não configurado. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no Vercel.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -26,7 +36,12 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
       }
       onClose();
     } catch (err: unknown) {
-      setError((err as Error).message);
+      const message = (err as Error).message;
+      if (message.includes('fetch') || message.includes('Failed to')) {
+        setError('Erro de conexão. Verifique as configurações do Supabase.');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
