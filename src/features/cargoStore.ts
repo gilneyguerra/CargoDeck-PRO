@@ -105,32 +105,6 @@ export const useCargoStore = create<CargoState>((set, get) => ({
     })),
 
     updateCargo: (id, updates) => set((state) => {
-        const newUnallocated = state.unallocatedCargoes.map(c => 
-            c.id === id ? { ...c, ...updates } : c
-        );
-        const newLocations = state.locations.map(loc => ({
-            ...loc,
-            bays: loc.bays.map(bay => {
-                const updatedCargoes = bay.allocatedCargoes.map(c =>
-                    c.id === id ? { ...c, ...updates } : c
-                );
-                return {
-                    ...bay,
-                    allocatedCargoes: updatedCargoes,
-                    currentWeightTonnes: updatedCargoes.reduce((acc, c) =>
-                        acc + (c.weightTonnes * c.quantity), 0),
-                    currentOccupiedArea: updatedCargoes.reduce((acc, c) =>
-                        acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
-                };
-            })
-        }));
-        return {
-            unallocatedCargoes: newUnallocated,
-            locations: newLocations
-        };
-    }),
-
-    addLocation: (name) => set((state) => {
         const newLoc: CargoLocation = {
             id: uuidv4(),
             name,
