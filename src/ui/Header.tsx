@@ -194,6 +194,23 @@ export function Header() {
 
           <div className="h-4 w-px bg-neutral-700 ml-2 mr-2" />
 
+          <div className="flex items-center gap-2 text-[10px] text-neutral-500 font-mono">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[9px]">Arraste</kbd>
+              <span>→ área</span>
+            </span>
+            <span className="text-neutral-700">·</span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[9px]">R</kbd>
+              <span>gira</span>
+            </span>
+            <span className="text-neutral-700">·</span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[9px]">Del</kbd>
+              <span>remove</span>
+            </span>
+          </div>
+
           {user ? (
             <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors" title="Sair da Conta">
               <UserCircle className="w-5 h-5 text-emerald-400" />
