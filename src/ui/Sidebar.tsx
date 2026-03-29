@@ -10,11 +10,23 @@ import { CargoPreview } from './CargoPreview';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import DraggableCargo from './DraggableCargo';
 
+export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY' | 'FRAGILE' | 'OTHER';
+
 export function Sidebar() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo } = useCargoStore();
     const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState<CargoFilter>('ALL');
+
+    const filterButtons: { key: CargoFilter; label: string; color: string }[] = [
+        { key: 'ALL', label: 'TODOS', color: 'text-neutral-400' },
+        { key: 'GENERAL', label: 'GERAL', color: 'text-blue-400' },
+        { key: 'CONTAINER', label: 'CONTÊINER', color: 'text-orange-400' },
+        { key: 'HEAVY', label: 'PESADO', color: 'text-red-400' },
+        { key: 'HAZARDOUS', label: 'PERIGOSO', color: 'text-yellow-400' },
+        { key: 'FRAGILE', label: 'FRÁGIL', color: 'text-purple-400' },
+    ];
 
     const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
 
@@ -72,12 +84,33 @@ export function Sidebar() {
         )}
       </div>
       
+      <div className="px-2 py-2 border-b border-neutral-800 bg-neutral-900/20">
+        <div className="flex flex-wrap gap-1">
+          {filterButtons.map(btn => (
+            <button
+              key={btn.key}
+              onClick={() => setCategoryFilter(btn.key)}
+              className={cn(
+                "px-2 py-1 text-[9px] font-bold tracking-wider rounded transition-all",
+                categoryFilter === btn.key 
+                  ? "bg-indigo-600 text-white border border-indigo-500" 
+                  : "bg-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-700 border border-transparent"
+              )}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-auto p-4 flex flex-col gap-3 relative">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-bold tracking-widest text-neutral-400 uppercase">Não Alocadas</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md font-medium">
-              {unallocatedCargoes.length}
+              {categoryFilter === 'ALL' 
+                ? unallocatedCargoes.length 
+                : unallocatedCargoes.filter(c => c.category === categoryFilter).length}
             </span>
             <button
               onClick={() => setIsManualModalOpen(true)}
