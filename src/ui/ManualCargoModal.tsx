@@ -69,32 +69,32 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 text-neutral-400 hover:text-white">
+      <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-400 dark:border-neutral-800 rounded-xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white">
           <X className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold text-white mb-6">Adicionar Carga Manual</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Adicionar Carga Manual</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1">Descrição *</label>
+            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Descrição *</label>
             <input
               type="text"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
               placeholder="Ex: Container 20ft com máquinas"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1">Identificador *</label>
+            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Identificador *</label>
             <input
               type="text"
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
               placeholder="Ex: CONT001"
               required
             />
@@ -102,24 +102,24 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1">Peso (tonnes) *</label>
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Peso (tonnes) *</label>
               <input
                 type="number"
                 step="0.1"
                 value={weightTonnes}
                 onChange={e => setWeightTonnes(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
                 placeholder="10.5"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1">Quantidade *</label>
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Quantidade *</label>
               <input
                 type="number"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
                 placeholder="1"
                 min="1"
                 required
@@ -129,37 +129,37 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1">Comprimento (m) *</label>
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Comprimento (m) *</label>
               <input
                 type="number"
                 step="0.01"
                 value={lengthMeters}
                 onChange={e => setLengthMeters(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
                 placeholder="6.10"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1">Largura (m) *</label>
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Largura (m) *</label>
               <input
                 type="number"
                 step="0.01"
                 value={widthMeters}
                 onChange={e => setWidthMeters(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
                 placeholder="2.44"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-400 mb-1">Altura (m) *</label>
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Altura (m) *</label>
               <input
                 type="number"
                 step="0.01"
                 value={heightMeters}
                 onChange={e => setHeightMeters(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
                 placeholder="2.59"
                 required
               />
@@ -167,11 +167,11 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1">Formato *</label>
+            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Formato *</label>
             <select
               value={format}
               onChange={e => setFormat(e.target.value as typeof format)}
-              className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
               required
             >
               <option value="Retangular">Retangular</option>
@@ -180,8 +180,8 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
             </select>
           </div>
 
-           <div className="mt-4 p-4 bg-neutral-950 border border-neutral-700 rounded">
-             <p className="text-sm text-neutral-400 mb-2">Preview:</p>
+           <div className="mt-4 p-4 bg-neutral-200 dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 rounded">
+             <p className="text-sm text-neutral-700 dark:text-neutral-400 mb-2">Preview:</p>
              {/* Create temporary cargo object for consistent scaling */}
              <CargoPreview 
                format={format} 
@@ -202,11 +202,11 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
            </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1">Cor</label>
+            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Cor</label>
             <select
               value={color}
               onChange={e => setColor(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
               required
             >
               <option value="#000000">Preto</option>
@@ -233,12 +233,12 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1">Observações</label>
+            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Observações</label>
             <input
               type="text"
               value={observations}
               onChange={e => setObservations(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500"
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
               placeholder="Ex: Carga perigosa"
             />
           </div>
@@ -249,9 +249,9 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                 type="checkbox"
                 checked={isRemovable}
                 onChange={e => setIsRemovable(e.target.checked)}
-                className="w-4 h-4 bg-neutral-950 border border-neutral-700 text-indigo-500 focus:ring-indigo-500"
+                className="w-4 h-4 bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500"
               />
-              <span className="text-sm font-medium text-neutral-400">Carga removível durante operação</span>
+              <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Carga removível durante operação</span>
             </label>
           </div>
 
