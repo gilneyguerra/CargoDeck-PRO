@@ -6,17 +6,17 @@ import type { Cargo } from '@/domain/Cargo'
  */
 
 /**
- * Base scale: 1 meter = 4 pixels
- * This provides good visibility while keeping the UI usable
+ * Base scale: 1 meter = 3 pixels
+ * Reduced from 4 to make cargo elements smaller while maintaining readability
  */
-export const BASE_SCALE = 4
+export const BASE_SCALE = 3
 
 /**
  * Minimum and maximum pixel sizes for cargo dimensions
  * Ensures cargos are always visible and usable, but not overwhelming
  */
-export const MIN_PIXEL_SIZE = 12   // Minimum width/height in pixels
-export const MAX_PIXEL_SIZE = 120  // Maximum width/height in pixels
+export const MIN_PIXEL_SIZE = 9   // Reduced proportionally with BASE_SCALE
+export const MAX_PIXEL_SIZE = 90  // Reduced proportionally with BASE_SCALE
 
 /**
  * Convert real-world dimension (meters) to visual pixels with clamping
@@ -74,7 +74,7 @@ export function getScaledDimensions(cargo: Cargo): {
 export function getCargoFontSize(cargo: Cargo): number {
   const scale = getCargoScaleFactor(cargo)
   // Base size 10px, scale factor adjusts it, clamped between 8px and 16px
-  return Math.max(8, Math.min(16, 10 * scale / 4)) // 4 is BASE_SCALE
+  return Math.max(8, Math.min(16, 10 * scale / BASE_SCALE))
 }
 
 /**
@@ -84,5 +84,5 @@ export function getCargoFontSize(cargo: Cargo): number {
 export function getCargoIconSize(cargo: Cargo): number {
   const scale = getCargoScaleFactor(cargo)
   // Base size 12px, scale factor adjusts it, clamped between 10px and 20px
-  return Math.max(10, Math.min(20, 12 * scale / 4)) // 4 is BASE_SCALE
+  return Math.max(10, Math.min(20, 12 * scale / BASE_SCALE))
 }
