@@ -89,17 +89,17 @@ export function Header() {
         <div className="bg-indigo-500/10 p-1.5 rounded-md">
           <Ship className="h-5 w-5 text-indigo-400" />
         </div>
-        <h1 className="font-semibold text-lg tracking-tight text-neutral-100">CargoDeck Pro</h1>
+        <h1 className="font-semibold text-lg tracking-tight text-gray-100 dark:text-neutral-100">CargoDeck Pro</h1>
       </div>
 
       <div className="flex items-center gap-6 ml-10">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Navio Atual:</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider">Navio Atual:</span>
           <input 
             type="text" 
             value={shipOperationCode}
             onChange={(e) => setShipOperationCode(e.target.value)}
-            className="bg-neutral-950 border border-neutral-700 text-neutral-200 text-sm rounded px-3 py-1 w-24 uppercase focus:border-indigo-500 outline-none"
+            className="bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 text-sm rounded px-3 py-1 w-24 uppercase focus:border-indigo-500 outline-none"
             placeholder="Sigla"
             title="Sigla exata do navio como consta no manifesto"
           />
@@ -107,15 +107,15 @@ export function Header() {
       </div>
 
       {(totalPort > 0 || totalStarboard > 0) && (
-          <div className="flex-1 flex justify-center items-center gap-8 px-4 border-x border-neutral-800/50 mx-6">
+          <div className="flex-1 flex justify-center items-center gap-8 px-4 border-x border-neutral-300 dark:border-neutral-800/50 mx-6">
             <div className="flex flex-col items-center gap-1 min-w-[200px]">
-              <span className="text-[9px] text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1">
+              <span className="text-[9px] text-neutral-500 dark:text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1">
                 <ListCollapse size={10} /> BANDA (TRANSVERSAL)
               </span>
               <div className="flex items-center gap-2 text-xs font-mono">
-                <span className={totalPort > totalStarboard + 50 ? "text-red-400" : "text-neutral-400"}>BB: {totalPort.toFixed(1)}t</span>
-                <div className="w-24 h-1.5 bg-black border border-neutral-600 rounded-full relative overflow-hidden flex">
-                  <div className="flex-1 border-r border-neutral-600 relative">
+                <span className={totalPort > totalStarboard + 50 ? "text-red-500 dark:text-red-400" : "text-neutral-600 dark:text-neutral-400"}>BB: {totalPort.toFixed(1)}t</span>
+                <div className="w-24 h-1.5 bg-neutral-300 dark:bg-black border border-neutral-400 dark:border-neutral-600 rounded-full relative overflow-hidden flex">
+                  <div className="flex-1 border-r border-neutral-400 dark:border-neutral-600 relative">
                      <div className={`absolute top-0 bottom-0 right-0 transition-all ${isListing && totalPort > totalStarboard ? "bg-red-500" : "bg-indigo-500"}`}
                          style={{ width: `${Math.min(100, (listDiff / (totalPort+totalStarboard+1)) * 100)}%`, opacity: totalPort > totalStarboard ? 1 : 0 }}></div>
                   </div>
@@ -124,14 +124,14 @@ export function Header() {
                         style={{ width: `${Math.min(100, (listDiff / (totalPort+totalStarboard+1)) * 100)}%`, opacity: totalStarboard > totalPort ? 1 : 0 }} />
                   </div>
                 </div>
-                <span className={totalStarboard > totalPort + 50 ? "text-red-400" : "text-neutral-400"}>BE: {totalStarboard.toFixed(1)}t</span>
+                <span className={totalStarboard > totalPort + 50 ? "text-red-500 dark:text-red-400" : "text-neutral-600 dark:text-neutral-400"}>BE: {totalStarboard.toFixed(1)}t</span>
               </div>
             </div>
 
             {totalTopHeavyMoment > 0 && (
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1"><Weight size={10} /> CENTRO GAL (VCG)</span>
-                <span className={`text-[10px] font-mono font-bold ${isTopHeavy ? "text-red-500" : "text-emerald-500"}`}>
+                <span className="text-[9px] text-neutral-500 dark:text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1"><Weight size={10} /> CENTRO GAL (VCG)</span>
+                <span className={`text-[10px] font-mono font-bold ${isTopHeavy ? "text-red-600 dark:text-red-500" : "text-emerald-600 dark:text-emerald-500"}`}>
                   M: {totalTopHeavyMoment.toFixed(0)} <span className="opacity-50">tm</span> {isTopHeavy && '(⚠️)'}
                 </span>
               </div>
@@ -139,17 +139,17 @@ export function Header() {
           </div>
       )}
 
-      <div className="ml-auto flex items-center gap-6 text-sm text-neutral-400">
+      <div className="ml-auto flex items-center gap-6 text-sm text-neutral-500 dark:text-neutral-400">
         <div className="flex items-center gap-2">
           <span>Total Planejado:</span>
-          <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">{currentTotalWeight.toFixed(1)} t</span>
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-100 dark:bg-indigo-500/10 px-2 py-0.5 rounded">{currentTotalWeight.toFixed(1)} t</span>
         </div>
 
-        <div className="h-4 w-px bg-neutral-700" />
+        <div className="h-4 w-px bg-neutral-400 dark:bg-neutral-700" />
 
          <div className="flex items-center gap-3">
            <button 
-             className="flex items-center gap-2 text-neutral-400 hover:text-red-400 transition-colors"
+             className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
              onClick={() => {
                if (window.confirm('Você está prestes a deletar todas as cargas do plano de carga, deseja prosseguir?')) {
                  const { clearAllCargoes } = useCargoStore.getState();
@@ -164,7 +164,7 @@ export function Header() {
            <button 
              onClick={handleExport}
              disabled={!manifestsLoaded}
-             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-indigo-500 disabled:border-neutral-700 shadow-sm"
+             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-800 disabled:text-neutral-600 dark:disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-indigo-500 dark:disabled:border-neutral-700 shadow-sm"
            >
              <Download className="w-4 h-4" />
              <span>Gerar PDF</span>
@@ -174,7 +174,7 @@ export function Header() {
               onClick={() => {
                 setIsDark(prev => !prev);
               }}
-              className="flex items-center gap-2 text-neutral-400 hover:text-neutral-200 transition-colors"
+              className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-200 transition-colors"
             >
               {isDark ? (<Sun className="w-4 h-4" />) : (<Moon className="w-4 h-4" />)}
               <span className="ml-1">{isDark ? 'Claro' : 'Escuro'}</span>
@@ -183,37 +183,37 @@ export function Header() {
            <button 
              onClick={handleSaveToCloud}
              disabled={saving}
-             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-emerald-500 disabled:border-neutral-700 shadow-sm ml-2"
+             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-800 disabled:text-neutral-600 dark:disabled:text-neutral-500 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors border border-emerald-500 dark:disabled:border-neutral-700 shadow-sm ml-2"
            >
              <CloudUpload className="w-4 h-4" />
              <span>{saving ? 'Salvando...' : 'Salvar Cloud'}</span>
            </button>
 
-          <div className="h-4 w-px bg-neutral-700 ml-2 mr-2" />
+          <div className="h-4 w-px bg-neutral-400 dark:bg-neutral-700 ml-2 mr-2" />
 
           <div className="flex items-center gap-2 text-[10px] text-neutral-500 font-mono">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[9px]">Arraste</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-neutral-800 border border-neutral-400 dark:border-neutral-700 rounded text-[9px]">Arraste</kbd>
               <span>→ área</span>
             </span>
-            <span className="text-neutral-700">·</span>
+            <span className="text-neutral-400 dark:text-neutral-700">·</span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[9px]">R</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-neutral-800 border border-neutral-400 dark:border-neutral-700 rounded text-[9px]">R</kbd>
               <span>gira</span>
             </span>
-            <span className="text-neutral-700">·</span>
+            <span className="text-neutral-400 dark:text-neutral-700">·</span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[9px]">Del</kbd>
+              <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-neutral-800 border border-neutral-400 dark:border-neutral-700 rounded text-[9px]">Del</kbd>
               <span>remove</span>
             </span>
           </div>
 
           {user ? (
-            <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors" title="Sair da Conta">
-              <UserCircle className="w-5 h-5 text-emerald-400" />
+            <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white transition-colors" title="Sair da Conta">
+              <UserCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </button>
           ) : (
-            <button onClick={() => setIsAuthOpen(true)} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
+            <button onClick={() => setIsAuthOpen(true)} className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white transition-colors">
               <LogIn className="w-4 h-4" />
               <span>Login</span>
             </button>
@@ -227,13 +227,13 @@ export function Header() {
 
     {exportModalOpen && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-neutral-800 p-6 rounded-lg w-96 max-w-[90vw]">
-          <h3 className="text-lg font-semibold text-neutral-100 mb-4">Exportar PDF</h3>
+        <div className="bg-neutral-100 dark:bg-neutral-800 p-6 rounded-lg w-96 max-w-[90vw]">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-4">Exportar PDF</h3>
           <input
             type="text"
             value={exportFilename}
             onChange={(e) => setExportFilename(e.target.value)}
-            className="w-full px-3 py-2 bg-neutral-700 text-neutral-100 rounded mb-4 border border-neutral-600 focus:border-indigo-500 outline-none"
+            className="w-full px-3 py-2 bg-white dark:bg-neutral-700 text-gray-800 dark:text-neutral-100 rounded mb-4 border border-neutral-400 dark:border-neutral-600 focus:border-indigo-500 outline-none"
             placeholder="Nome do arquivo (com .pdf)"
           />
           <div className="flex gap-2 mb-4">
@@ -283,7 +283,7 @@ export function Header() {
           </div>
           <button 
             onClick={() => { setExportModalOpen(false); setDirHandle(null); }} 
-            className="w-full text-neutral-400 hover:text-white transition-colors"
+            className="w-full text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             Cancelar
           </button>
