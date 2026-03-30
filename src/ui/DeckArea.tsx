@@ -95,16 +95,16 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
     const currentOccupiedArea = cargoes.reduce((acc, c) => acc + (c.widthMeters * c.lengthMeters), 0);
     const isOverArea = maxArea > 0 && currentOccupiedArea > maxArea;
 
-  return (
-    <div 
-      ref={setNodeRef}
-      className={cn(
-        "flex-1 min-h-[120px] flex flex-col items-start p-2 relative transition-colors",
-        !isLast && "border-r border-dashed border-neutral-700/50",
-        isOver ? "bg-indigo-500/20" : "",
-        isOverArea && !isOver ? "bg-red-950/20" : ""
-      )}
-    >
+     return (
+       <div 
+         ref={setNodeRef}
+         className={cn(
+           "flex-1 min-h-[80px] flex flex-col items-start p-2 relative transition-colors",
+           !isLast && "border-r border-dashed border-neutral-700/50",
+           isOver ? "bg-indigo-500/20" : "",
+           isOverArea && !isOver ? "bg-red-950/20" : ""
+         )}
+       >
       <div className="w-full flex justify-between items-center mb-2 px-1 border-b border-neutral-800/50 pb-1">
          <span className="opacity-40 font-bold text-[9px] tracking-widest">{side === 'port' ? 'BOMBORDO' : side === 'center' ? 'CENTRO' : 'BORESTE'}</span>
          <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded", isOverArea ? "bg-red-500/20 text-red-400" : "bg-black/30 text-neutral-500")}>
@@ -132,13 +132,13 @@ function DroppableBay({ bay, activeLocation, searchTerm, onEdit }: { bay: Bay, a
     const percentOccupied = bay.maxAreaSqMeters ? (bay.currentOccupiedArea / bay.maxAreaSqMeters) * 100 : 0;
     const isOverArea = percentOccupied > 100;
 
-    return (
-      <div 
-        className={cn(
-          "w-full border-2 rounded-md relative flex flex-col items-center pt-8 transition-colors min-h-[120px]",
-          "bg-[#1f1f26] border-dashed border-[#2d2d38]"
-        )}
-      >
+return (
+  <div 
+    className={cn(
+      "w-full border-2 rounded-md relative flex flex-col items-center pt-8 transition-colors min-h-[80px]",
+      "bg-[#1f1f26] border-dashed border-[#2d2d38]"
+    )}
+  >
         <div className="absolute top-2 left-2 flex items-center gap-2">
           <span className="bg-black/40 text-neutral-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-neutral-800/50">
             Baia {String(bay.number).padStart(2, '0')}
