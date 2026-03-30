@@ -3,12 +3,12 @@ import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core'
 import { Layout } from '@/ui/Layout';
 import { DeckArea } from '@/ui/DeckArea';
 import { useCargoStore } from '@/features/cargoStore';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Cargo } from '@/domain/Cargo';
 import { useAuthAndHydration } from '@/hooks/useAuthAndHydration';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { CargoPreview } from '@/ui/CargoPreview';
-import { Edit, Trash2, Undo2 } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { cn } from '@/lib/utils';
 
@@ -17,29 +17,13 @@ const {
   moveCargoToBay, unallocatedCargoes, locations, 
   activeLocationId, setActiveLocation,
   deleteCargo,
-  setEditingCargo,
-  undo,
-  canUndo
+  setEditingCargo
 } = useCargoStore();
 
   const [activeCargo, setActiveCargo] = useState<Cargo | null>(null);
 
   useAuthAndHydration();
   useAutoSave();
-
-  // Keyboard shortcuts for undo
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        if (canUndo()) {
-          undo();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, canUndo]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
