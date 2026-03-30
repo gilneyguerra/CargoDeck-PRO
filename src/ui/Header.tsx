@@ -16,28 +16,27 @@ export function Header() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFilename, setExportFilename] = useState('Plano_de_Carga_Consolidado.pdf');
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   useEffect(() => {
     // Set dark mode from localStorage or system preference
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme) {
-      document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+      const isDark = storedTheme === 'dark';
+      document.documentElement.classList.toggle('dark', isDark);
+      setIsDark(isDark);
     } else {
       // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       document.documentElement.classList.toggle('dark', prefersDark);
+      setIsDark(prefersDark);
     }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   const handleExport = () => {
     setExportModalOpen(true);
@@ -171,17 +170,15 @@ export function Header() {
              <span>Gerar PDF</span>
            </button>
 
-           <button 
-             onClick={() => {
-               const isDark = document.documentElement.classList.toggle('dark');
-               // Optionally store preference in localStorage
-               localStorage.setItem('theme', isDark ? 'dark' : 'light');
-             }}
-             className="flex items-center gap-2 text-neutral-400 hover:text-neutral-200 transition-colors"
-           >
-             {document.documentElement.classList.contains('dark') ? (<Sun className="w-4 h-4" />) : (<Moon className="w-4 h-4" />)}
-             <span className="ml-1">{document.documentElement.classList.contains('dark') ? 'Claro' : 'Escuro'}</span>
-           </button>
+            <button 
+              onClick={() => {
+                setIsDark(prev => !prev);
+              }}
+              className="flex items-center gap-2 text-neutral-400 hover:text-neutral-200 transition-colors"
+            >
+              {isDark ? (<Sun className="w-4 h-4" />) : (<Moon className="w-4 h-4" />)}
+              <span className="ml-1">{isDark ? 'Claro' : 'Escuro'}</span>
+            </button>
 
            <button 
              onClick={handleSaveToCloud}
