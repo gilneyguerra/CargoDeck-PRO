@@ -206,8 +206,16 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         const state = useCargoStore.getState();
         const cargoesToDelete = [...state.unallocatedCargoes];
         
+        // Clear local state immediately for better UX
+        set({ unallocatedCargoes: [] });
+        
+        // Delete from database in background without waiting
         for (const cargo of cargoesToDelete) {
-            await useCargoStore.getState().deleteCargo(cargo.id);
+            try {
+                await DatabaseService.deleteCargo(cargo.id);
+            } catch (e) {
+                console.error('Failed to delete cargo from DB:', e);
+            }
         }
     },
 
