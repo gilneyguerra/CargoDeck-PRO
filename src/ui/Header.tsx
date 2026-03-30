@@ -84,7 +84,7 @@ export function Header() {
 
   return (
     <>
-      <header className="flex items-center h-14 px-6 border-b border-neutral-800 bg-neutral-900 shrink-0">
+      <header className="flex items-center h-14 px-6 border-b border-border bg-bg shrink-0">
       <div className="flex items-center gap-3">
         <div className="bg-indigo-500/10 p-1.5 rounded-md">
           <Ship className="h-5 w-5 text-indigo-400" />
