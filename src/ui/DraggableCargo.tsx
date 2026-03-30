@@ -48,11 +48,15 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
       {...listeners}
       {...attributes}
       className={cn(
-        "border border-neutral-400 dark:border-neutral-700 rounded p-2 flex flex-col gap-1 transition-colors cursor-grab select-none bg-neutral-100 dark:bg-neutral-900",
+        "group relative border border-neutral-400 dark:border-neutral-700 rounded p-2 flex flex-col gap-1 transition-colors cursor-grab select-none bg-neutral-100 dark:bg-neutral-900",
         isDragging ? "opacity-50" : "hover:border-indigo-500/50 active:cursor-grabbing",
         isHighlight ? "bg-yellow-200/50 dark:bg-yellow-900/50 border-yellow-500 dark:border-yellow-400" : ""
       )}
     >
+      {/* Tooltip com identificador - aparece no hover */}
+      <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-neutral-700 text-white dark:text-neutral-100 text-xs font-mono rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+        {cargo.identifier}
+      </div>
       {/* We rotate the cargo preview if isRotated is true */}
       <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
         <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} weightTonnes={cargo.weightTonnes} cargo={cargo} />
