@@ -89,7 +89,7 @@ export function Header() {
         <div className="bg-indigo-500/10 p-1.5 rounded-md">
           <Ship className="h-5 w-5 text-indigo-400" />
         </div>
-        <h1 className="font-semibold text-lg tracking-tight text-gray-100 dark:text-neutral-100">CargoDeck Pro</h1>
+        <h1 className="font-semibold text-lg tracking-tight text-gray-800 dark:text-neutral-100">CargoDeck Pro</h1>
       </div>
 
       <div className="flex items-center gap-6 ml-10">
