@@ -285,11 +285,11 @@ export function DeckArea() {
                     <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Bombordo</div>
                     <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 rotate-90 text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Boreste</div>
                     
-                    <div className="flex-1 mt-6 mb-4 flex flex-col gap-3 relative z-10 w-full">
-                        {bays.map(bay => (
-                            <DroppableBay key={bay.id} bay={bay} activeLocation={activeLocation} searchTerm={searchTerm} onEdit={setEditingCargo} />
-                        ))}
-                    </div>
+                     <div className="flex-1 mt-6 mb-4 flex flex-col gap-3 relative z-10 w-full overflow-auto">
+                         {bays.map(bay => (
+                             <DroppableBay key={bay.id} bay={bay} activeLocation={activeLocation} searchTerm={searchTerm} onEdit={setEditingCargo} />
+                         ))}
+                     </div>
                 </div>
             </div>
             
