@@ -33,10 +33,14 @@ export interface CargoState {
     getAllCargo: () => Cargo[];
     editLocation: (id: string, updates: Partial<CargoLocation>) => void;
     deleteLocation: (id: string) => void;
+    saveHistory: () => void;
+}
     clearAllCargoes: () => void;
     clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
     setEditingCargo: (cargo: Cargo | null) => void;
+    undo: () => void;
+    canUndo: () => boolean;
 }
 
 const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
@@ -202,6 +206,21 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         }))
     })),
 
+    saveHistory: () => {
+        const state = useCargoStore.getState();
+        historyStore.getState().pushState({
+            manifestsLoaded: state.manifestsLoaded,
+            unallocatedCargoes: state.unallocatedCargoes,
+            locations: state.locations,
+            activeLocationId: state.activeLocationId,
+            shipOperationCode: state.shipOperationCode,
+            manifestShipName: state.manifestShipName,
+            manifestVoyage: state.manifestVoyage,
+            searchTerm: state.searchTerm,
+            editingCargo: state.editingCargo,
+        });
+    },
+
     clearUnallocatedCargoes: async () => {
         const state = useCargoStore.getState();
         const cargoesToDelete = [...state.unallocatedCargoes];
@@ -234,7 +253,11 @@ export const useCargoStore = create<CargoState>((set, get) => ({
         };
     }),
 
-    moveCargoToBay: (cargoId, bayId, positionInBay, x, y, isRotated) => set((state) => {
+    moveCargoToBay: (cargoId, bayId, positionInBay, x, y, isRotated) => {
+        // Save history before moving
+        useCargoStore.getState().saveHistory();
+        
+        set((state) => {
         let cargoToMove: Cargo | undefined;
         let sourceBayId: string | undefined;
         let sourceLocationId: string | undefined;
@@ -316,9 +339,12 @@ export const useCargoStore = create<CargoState>((set, get) => ({
             unallocatedCargoes: newUnallocated,
             locations: newLocations
         };
-    }),
+    });
 
     deleteCargo: async (cargoId) => {
+        // Save history before deleting
+        useCargoStore.getState().saveHistory();
+        
         set((state) => {
             const newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
             const newLocations = state.locations.map(loc => {
@@ -360,4 +386,19 @@ export const useCargoStore = create<CargoState>((set, get) => ({
             ? payload.locations[0].id 
             : state.activeLocationId
     })),
+
+    undo: () => {
+        const previousState = historyStore.getState().undo();
+        if (previousState) {
+            set({
+                unallocatedCargoes: previousState.unallocatedCargoes,
+                locations: previousState.locations,
+                activeLocationId: previousState.activeLocationId,
+            });
+        }
+    },
+
+    canUndo: () => {
+        return historyStore.getState().past.length > 0;
+    },
 }));

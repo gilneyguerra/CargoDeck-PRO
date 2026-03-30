@@ -1,4 +1,4 @@
-import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle, Sun, Moon } from 'lucide-react';
+import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle, Sun, Moon, Undo2 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
 import { useEffect, useState } from 'react';
@@ -8,7 +8,7 @@ import { AuthModal } from './AuthModal';
 import type { User } from '@supabase/supabase-js';
 
 export function Header() {
-  const { locations, manifestsLoaded, shipOperationCode, setShipOperationCode, manifestShipName, manifestVoyage } = useCargoStore();
+  const { locations, manifestsLoaded, shipOperationCode, setShipOperationCode, manifestShipName, manifestVoyage, undo, canUndo } = useCargoStore();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -206,6 +206,17 @@ export function Header() {
           <div className="h-4 w-px bg-neutral-400 dark:bg-neutral-700 ml-2 mr-2" />
 
           <div className="flex items-center gap-2 text-[10px] text-neutral-500 font-mono">
+            <button
+              onClick={() => undo()}
+              disabled={!canUndo()}
+              className="flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+              title="Desfazer (Ctrl+Z)"
+            >
+              <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-neutral-800 border border-neutral-400 dark:border-neutral-700 rounded text-[9px]">Ctrl+Z</kbd>
+              <span className="hidden sm:inline">Desfaz</span>
+              <Undo2 className="w-3 h-3" />
+            </button>
+            <span className="text-neutral-400 dark:text-neutral-700">|</span>
             <span className="flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-neutral-800 border border-neutral-400 dark:border-neutral-700 rounded text-[9px]">Arraste</kbd>
               <span>→ área</span>
