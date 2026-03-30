@@ -14,7 +14,7 @@ export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY
 
 export function Sidebar() {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, deleteCargo } = useCargoStore();
+    const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, clearUnallocatedCargoes } = useCargoStore();
     const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState<CargoFilter>('ALL');
@@ -113,21 +113,18 @@ export function Sidebar() {
                 ? unallocatedCargoes.length 
                 : unallocatedCargoes.filter(c => c.category === categoryFilter).length}
             </span>
-            {unallocatedCargoes.length > 0 && (
-              <button
-                onClick={async () => {
-                  if (window.confirm(`Tem certeza que deseja excluir ${unallocatedCargoes.length} carga(s) não alocada(s)?`)) {
-                    for (const cargo of unallocatedCargoes) {
-                      await deleteCargo(cargo.id);
-                    }
-                  }
-                }}
-                className="text-neutral-600 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                title="Excluir todas as cargas não alocadas"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              onClick={async () => {
+                if (window.confirm(`Tem certeza que deseja excluir ${unallocatedCargoes.length} carga(s) não alocada(s)?`)) {
+                  await clearUnallocatedCargoes();
+                }
+              }}
+              disabled={unallocatedCargoes.length === 0}
+              className="text-neutral-600 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Excluir todas as cargas não alocadas"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setIsManualModalOpen(true)}
               className="text-neutral-600 dark:text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"

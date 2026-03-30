@@ -34,6 +34,7 @@ export interface CargoState {
     editLocation: (id: string, updates: Partial<CargoLocation>) => void;
     deleteLocation: (id: string) => void;
     clearAllCargoes: () => void;
+    clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
     setEditingCargo: (cargo: Cargo | null) => void;
 }
@@ -200,6 +201,15 @@ export const useCargoStore = create<CargoState>((set, get) => ({
             }))
         }))
     })),
+
+    clearUnallocatedCargoes: async () => {
+        const state = useCargoStore.getState();
+        const cargoesToDelete = [...state.unallocatedCargoes];
+        
+        for (const cargo of cargoesToDelete) {
+            await useCargoStore.getState().deleteCargo(cargo.id);
+        }
+    },
 
     updateCargoPosition: (cargoId, x, y, isRotated) => set((state) => {
         const updateIn = (cargoes: Cargo[]) =>
