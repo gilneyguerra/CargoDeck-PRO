@@ -128,21 +128,23 @@ export function Sidebar() {
             </div>
           )}
          
-          {unallocatedCargoes
-            .filter(cargo =>
-              cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              cargo.description.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-            .map(cargo => (
-              <DraggableCargo 
-                key={cargo.id} 
-                cargo={cargo} 
-                isHighlight={searchTerm.length > 0 && 
-                  (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                   cargo.description.toLowerCase().includes(searchTerm.toLowerCase()))}
-                onEdit={handleEditCargo}
-              />
-            ))}
+{unallocatedCargoes
+  .filter(cargo => {
+    const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'ALL' || cargo.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  })
+  .map(cargo => (
+    <DraggableCargo 
+      key={cargo.id} 
+      cargo={cargo} 
+      isHighlight={searchTerm.length > 0 && 
+        (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+         cargo.description.toLowerCase().includes(searchTerm.toLowerCase()))}
+      onEdit={handleEditCargo}
+    />
+  ))}
       </div>
 
       <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
