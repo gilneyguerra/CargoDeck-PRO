@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { Settings, Plus, Search, Trash2, Edit } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
