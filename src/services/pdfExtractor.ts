@@ -107,7 +107,7 @@ export class PDFExtractor {
                 const pageItems = this.parseManifesto(text, i);
                 allItems.push(...pageItems);
             } catch (pageError) {
-                logger.warn(`Erro ao extrair texto da pagina ${i}:`, pageError, { pageNumber: i });
+                logger.warn(`Erro ao extrair texto da pagina ${i}:`, { error: pageError, pageNumber: i });
             } finally {
                 if (page) {
                     page.cleanup();

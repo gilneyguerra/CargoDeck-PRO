@@ -18,7 +18,7 @@ import { handleApplicationError } from '../services/errorHandler';
 /**
  * Define a estrutura do estado do store de cargas.
  */
-interface CargoState {
+export interface CargoState {
     manifestsLoaded: boolean;
     unallocatedCargoes: Cargo[];
     locations: CargoLocation[];
@@ -31,7 +31,7 @@ interface CargoState {
     
     setShipOperationCode: (code: string) => void;
     setExtractedCargoes: (cargoes: Cargo[]) => void;
-    setManifestDetails: (shipName: string, voyage: string) => void;
+    setManifestDetails: (shipName: string | null, voyage: string | null) => void;
     addLocation: (name: string) => void;
     addManualCargo: (cargoData: Omit<Cargo, 'id' | 'status'>) => void;
     updateCargo: (id: string, updates: Partial<Cargo>) => void;

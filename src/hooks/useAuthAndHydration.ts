@@ -18,7 +18,7 @@ export const useAuthAndHydration = () => {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
             if (sessionError) {
-                logger.warn('Erro ao obter sessao:', sessionError.message);
+                logger.warn('Erro ao obter sessao:', { message: sessionError.message });
             }
 
             if (session?.user) {

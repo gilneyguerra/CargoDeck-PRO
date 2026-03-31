@@ -6,13 +6,14 @@
 import React, { useRef } from 'react';
 import { usePDFUpload } from '../hooks/usePDFUpload';
 import { useCargoStore } from '../features/cargoStore';
+import type { Cargo } from '../domain/Cargo';
 import { AlertCircle, CheckCircle, Loader, FileText } from 'lucide-react';
 import { logger } from '../utils/logger';
 
 export function PDFUploader() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { loading, error, progress, success, fileName, upload, reset } = usePDFUpload();
-    const addCargas = useCargoStore(state => state.addCargas);
+    const addCargas = useCargoStore(state => state.setExtractedCargoes);
 
     const handleFileSelect = async (file: File) => {
         logger.info(`Arquivo selecionado: ${file.name}`);
@@ -20,7 +21,21 @@ export function PDFUploader() {
         const extractedItems = await upload(file);
 
         if (extractedItems) {
-            addCargas(extractedItems);
+            const mappedCargoes: Cargo[] = extractedItems.map(item => ({
+                id: item.id,
+                description: item.description,
+                identifier: item.id,
+                weightTonnes: item.weight,
+                widthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 2.4) : 2.4,
+                lengthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 6) : 6,
+                quantity: 1,
+                category: 'GENERAL',
+                status: 'UNALLOCATED',
+                x: item.positionX,
+                y: item.positionY,
+                isRotated: item.rotation ? item.rotation > 0 : false
+            }));
+            addCargas(mappedCargoes);
             logger.info(`Itens de carga adicionados ao store: ${extractedItems.length}`);
         }
     };

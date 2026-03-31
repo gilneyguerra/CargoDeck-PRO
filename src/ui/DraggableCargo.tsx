@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
+import { useDragRotation } from '@/hooks/useDragRotation';
 import { useCargoStore } from '@/features/cargoStore';
 import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';

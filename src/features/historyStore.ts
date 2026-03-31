@@ -11,11 +11,11 @@ interface HistoryState {
 const historyStore = create<HistoryState>((set, get) => ({
   past: [],
   limit: 30,
-  pushState: (state) => {
+  pushState: (newCargoState) => {
     set((state) => {
       // Deep clone the state to avoid mutations
-      const clonedState = JSON.parse(JSON.stringify(state));
-      const past = [...get().past, clonedState];
+      const clonedState = JSON.parse(JSON.stringify(newCargoState));
+      const past = [...state.past, clonedState];
       // Enforce limit
       if (past.length > get().limit) {
         past.shift(); // Remove the oldest
