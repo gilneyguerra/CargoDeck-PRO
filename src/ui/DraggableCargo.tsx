@@ -6,7 +6,6 @@ import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { CargoPreview } from './CargoPreview';
 import { Edit, Trash2 } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
-import { useDragRotation } from '@/hooks/useDragRotation';
 import { useEffect, useState } from 'react';
 
 function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighlight?: boolean, onEdit: (cargo: Cargo) => void }) {

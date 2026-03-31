@@ -1,19 +1,22 @@
 // src/utils/logger.ts
 /**
- * @file Utilitário de logging para a aplicação CargoDeck-PRO.
- * Permite registrar mensagens com diferentes níveis de severidade.
- * Em um ambiente de produção, pode ser integrado com serviços de logging externos (e.g., Sentry, LogRocket).
+ * @file Utilitario de logging para a aplicacao CargoDeck-PRO.
+ * Permite registrar mensagens com diferentes niveis de severidade.
+ * Em um ambiente de producao, pode ser integrado com servicos de logging externos (e.g., Sentry, LogRocket).
  */
+
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
 interface LogEntry {
     level: LogLevel;
     message: string;
     timestamp: string;
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
     error?: Error;
 }
 
-// Nível mínimo de log para exibição no console
-const MIN_LOG_LEVEL: LogLevel = import.meta.env.PROD ? 'warn' : 'debug';
+// Nivel minimo de log para exibicao no console
+const MIN_LOG_LEVEL: LogLevel = 'debug';
 
 const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
     debug: 0,
@@ -27,7 +30,7 @@ class Logger {
         return LOG_LEVEL_ORDER[level] >= LOG_LEVEL_ORDER[MIN_LOG_LEVEL];
     }
 
-    private formatMessage(level: LogLevel, message: string, context?: Record<string, any>, error?: Error): LogEntry {
+    private formatMessage(level: LogLevel, message: string, context?: Record<string, unknown>, error?: Error): LogEntry {
         return {
             level,
             message,
@@ -37,32 +40,31 @@ class Logger {
         };
     }
 
-    public debug(message: string, context?: Record<string, any>): void {
+    public debug(message: string, context?: Record<string, unknown>): void {
         if (this.shouldLog('debug')) {
             const entry = this.formatMessage('debug', message, context);
             console.debug(`[DEBUG] ${entry.timestamp} - ${entry.message}`, entry.context);
         }
     }
 
-    public info(message: string, context?: Record<string, any>): void {
+    public info(message: string, context?: Record<string, unknown>): void {
         if (this.shouldLog('info')) {
             const entry = this.formatMessage('info', message, context);
             console.info(`[INFO] ${entry.timestamp} - ${entry.message}`, entry.context);
         }
     }
 
-    public warn(message: string, context?: Record<string, any>): void {
+    public warn(message: string, context?: Record<string, unknown>): void {
         if (this.shouldLog('warn')) {
             const entry = this.formatMessage('warn', message, context);
             console.warn(`[WARN] ${entry.timestamp} - ${entry.message}`, entry.context);
         }
     }
 
-    public error(message: string, error?: Error, context?: Record<string, any>): void {
+    public error(message: string, error?: Error, context?: Record<string, unknown>): void {
         if (this.shouldLog('error')) {
             const entry = this.formatMessage('error', message, context, error);
             console.error(`[ERROR] ${entry.timestamp} - ${entry.message}`, entry.error, entry.context);
-            // TODO: Em produção, enviar para um serviço de monitoramento de erros (e.g., Sentry)
         }
     }
 }

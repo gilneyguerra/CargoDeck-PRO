@@ -1,4 +1,4 @@
-import { UploadCloud, FileType, AlertCircle, Trash2, Plus, Edit } from 'lucide-react';
+import { UploadCloud, FileType, AlertCircle, Trash2, Plus } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useManifestUpload } from '@/features/useManifestUpload';
 import { useRef, useState } from 'react';
@@ -6,8 +6,6 @@ import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
 import { ManualCargoModal } from './ManualCargoModal';
 import { EditCargoModal } from './EditCargoModal';
-import { CargoPreview } from './CargoPreview';
-import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import DraggableCargo from './DraggableCargo';
 
 export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY' | 'FRAGILE' | 'OTHER';

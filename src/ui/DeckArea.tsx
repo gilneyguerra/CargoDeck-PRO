@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { Settings, Plus, Search, Trash2, Edit } from 'lucide-react';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import type { Bay } from '@/domain/Bay';
-import type { Cargo } from '@/domain/Cargo';
 import type { CargoLocation } from '@/domain/Location';
 import { DeckSettingsModal } from './DeckSettingsModal';
 import type { DeckConfig } from '@/domain/DeckConfig';
-import { CargoPreview } from './CargoPreview';
-import { getCargoFontSize, getCargoIconSize, getScaledDimensions } from '@/lib/scaling';
 import DraggableCargo from './DraggableCargo';
-import { useDragStore } from '@/features/dragStore';
-import { useDragRotation } from '@/hooks/useDragRotation';
 
 
 
