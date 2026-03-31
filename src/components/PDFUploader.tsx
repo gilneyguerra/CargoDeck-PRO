@@ -132,10 +132,9 @@ export function PDFUploader() {
             ${loading ? 'border-blue-400 bg-blue-50' : ''}
             ${error ? 'border-red-400 bg-red-50' : ''}
             ${success ? 'border-green-400 bg-green-50' : ''}
-            ${!loading && !error && !success ? 'border-gray-300 hover:border-blue-500 hover:bg-gray-50' : ''}
-        `}
-        style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
+            ${!loading && !error && !success ? 'border-gray-300 hover:border-blue-500 hover:bg-gray-50' : ''}`}
+            style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
         <input
             ref={fileInputRef}
             type="file"

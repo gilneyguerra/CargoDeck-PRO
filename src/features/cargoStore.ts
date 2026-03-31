@@ -155,26 +155,26 @@ export const useCargoStore = create<CargoState>()(
                         const newUnallocated = state.unallocatedCargoes.map(c => 
                             c.id === id ? { ...c, ...updates } : c
                         );
-                        const newLocations = state.locations.map(loc => ({
-                            ...loc,
-                            bays: loc.bays.map(bay => ({
-                                ...bay,
-                                allocatedCargoes: bay.allocatedCargoes.map(c =>
-                                    c.id === id ? { ...c, ...updates } : c
-                                ),
-                                currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) =>
-                                    acc + (c.weightTonnes * c.quantity), 0),
-                                currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) =>
-                                    acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
-                            }));
-                        }));
-                        
-                        return {
-                            unallocatedCargoes: newUnallocated,
-                            locations: newLocations
-                        };
-                    });
-                    logger.info(`Carga ${id} atualizada.`, { id, updates });
+const newLocations = state.locations.map(loc => ({
+                             ...loc,
+                             bays: loc.bays.map(bay => ({
+                                 ...bay,
+                                 allocatedCargoes: bay.allocatedCargoes.map(c =>
+                                     c.id === id ? { ...c, ...updates } : c
+                                 ),
+                                 currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) =>
+                                     acc + (c.weightTonnes * c.quantity), 0),
+                                 currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) =>
+                                     acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
+                             }))
+                         }));
+                         
+                         return {
+                             unallocatedCargoes: newUnallocated,
+                             locations: newLocations
+                         };
+                     });
+                     logger.info(`Carga ${id} atualizada.`, { id, updates });
                 } catch (error) {
                     logger.error(`Falha ao atualizar carga ${id}:`, error);
                     throw handleApplicationError(error, { 
