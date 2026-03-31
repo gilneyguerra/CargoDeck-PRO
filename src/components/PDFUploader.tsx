@@ -5,8 +5,8 @@
  */
 import React, { useRef } from 'react';
 import { usePDFUpload } from '../hooks/usePDFUpload';
-import { useCargoStore } from '../features/cargoStore'; // Ajuste o caminho se necessário
-import { Upload, AlertCircle, CheckCircle, Loader, FileText } from 'lucide-react';
+import { useCargoStore } from '../features/cargoStore';
+import { AlertCircle, CheckCircle, Loader, FileText } from 'lucide-react';
 import { logger } from '../utils/logger';
 
 export function PDFUploader() {
@@ -16,7 +16,7 @@ export function PDFUploader() {
 
     const handleFileSelect = async (file: File) => {
         logger.info(`Arquivo selecionado: ${file.name}`);
-        reset(); // Limpa qualquer estado de upload anterior
+        reset();
         const extractedItems = await upload(file);
 
         if (extractedItems) {
@@ -27,7 +27,7 @@ export function PDFUploader() {
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-        e.stopPropagation(); // Previne o comportamento padrão do navegador
+        e.stopPropagation();
         const file = e.dataTransfer.files[0];
         if (file) {
             handleFileSelect(file);
@@ -46,7 +46,6 @@ export function PDFUploader() {
         if (file) {
             handleFileSelect(file);
         }
-        // Limpa o input para permitir o upload do mesmo arquivo novamente
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -73,7 +72,7 @@ export function PDFUploader() {
                 <div className="flex flex-col items-center gap-2">
                     <AlertCircle className="w-10 h-10 text-red-500" />
                     <p className="text-red-600 font-semibold text-center">{error.message}</p>
-                    <p className="text-sm text-gray-500">Código: {error.code}</p>
+                    <p className="text-sm text-gray-500">Codigo: {error.code}</p>
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className="mt-4 px-6 py-3 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition-colors"
@@ -118,7 +117,7 @@ export function PDFUploader() {
                     Selecionar Arquivo PDF
                 </button>
                 <p className="text-xs text-gray-400 mt-2">
-                    Apenas arquivos .pdf são aceitos (máx. 50MB)
+                    Apenas arquivos .pdf sao aceitos (max. 50MB)
                 </p>
             </div>
         );
@@ -128,20 +127,17 @@ export function PDFUploader() {
         <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ease-in-out
-            ${loading ? 'border-blue-400 bg-blue-50' : ''}
-            ${error ? 'border-red-400 bg-red-50' : ''}
-            ${success ? 'border-green-400 bg-green-50' : ''}
-            ${!loading && !error && !success ? 'border-gray-300 hover:border-blue-500 hover:bg-gray-50' : ''}`}
+            className="border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ease-in-out bg-gray-50"
             style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-        <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf"
-            onChange={handleInputChange}
-            className="hidden"
-        />
-        {renderContent()}
-    </div>
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handleInputChange}
+                className="hidden"
+            />
+            {renderContent()}
+        </div>
+    );
 }
