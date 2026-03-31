@@ -3,14 +3,10 @@
  * @file Servico robusto para extracao de dados de PDFs na aplicacao CargoDeck-PRO.
  * Lida com validacao de arquivo e extracao de texto via pdfjs-dist.
  */
-import * as pdfjsLib from 'pdfjs-dist';
+import type * as pdfjsLibType from 'pdfjs-dist';
 import { AppError, handleApplicationError } from './errorHandler';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
-
-// Configurar o worker de pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export interface CargoItem {
     id: string;
@@ -94,7 +90,7 @@ export class PDFExtractor {
         return items;
     }
 
-    private static async extractTextFromPDF(pdf: pdfjsLib.PDFDocumentProxy): Promise<CargoItem[]> {
+    private static async extractTextFromPDF(pdf: pdfjsLibType.PDFDocumentProxy): Promise<CargoItem[]> {
         const allItems: CargoItem[] = [];
         for (let i = 1; i <= pdf.numPages; i++) {
             let page;
@@ -128,8 +124,10 @@ export class PDFExtractor {
 
             const arrayBuffer = await this.fileToArrayBuffer(file);
 
-            let pdf: pdfjsLib.PDFDocumentProxy;
+            let pdf: pdfjsLibType.PDFDocumentProxy;
             try {
+                const pdfjsLib = await import('pdfjs-dist');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
                 pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             } catch (error) {
                 return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };

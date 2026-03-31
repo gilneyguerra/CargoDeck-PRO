@@ -1,6 +1,6 @@
 import { UploadCloud, FileType, AlertCircle, Trash2, Plus } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
-import { useManifestUpload } from '@/features/useManifestUpload';
+import { usePDFUpload } from '@/hooks/usePDFUpload';
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
@@ -13,7 +13,7 @@ export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY
 export function Sidebar() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, clearUnallocatedCargoes } = useCargoStore();
-    const { isProcessing, progressText, progressPercent, error, handleFileUpload } = useManifestUpload();
+    const { loading: isProcessing, progress: progressPercent, error, upload, reset } = usePDFUpload();
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState<CargoFilter>('ALL');
 
@@ -28,10 +28,29 @@ export function Sidebar() {
 
     const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            handleFileUpload(file);
+            reset();
+            const extractedItems = await upload(file);
+            if (extractedItems) {
+                const mappedCargoes: Cargo[] = extractedItems.map(item => ({
+                    id: item.id,
+                    description: item.description,
+                    identifier: item.id,
+                    weightTonnes: item.weight,
+                    widthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 2.4) : 2.4,
+                    lengthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 6) : 6,
+                    quantity: 1,
+                    category: 'GENERAL',
+                    status: 'UNALLOCATED',
+                    x: item.positionX,
+                    y: item.positionY,
+                    isRotated: item.rotation ? item.rotation > 0 : false
+                }));
+                // We use useCargoStore.getState() or we can add setExtractedCargoes from the hook above
+                useCargoStore.getState().setExtractedCargoes(mappedCargoes);
+            }
             e.target.value = ''; // Reset to allow re-upload of the same file
         }
     };
@@ -58,7 +77,7 @@ export function Sidebar() {
                   <div className="bg-indigo-500 h-2 transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
                 </div>
                 <div className="flex justify-between w-full text-[8px] font-mono text-neutral-600 dark:text-neutral-400">
-                  <span className="text-indigo-600 dark:text-indigo-300">{progressText || 'Inicializando...'}</span>
+                  <span className="text-indigo-600 dark:text-indigo-300">{'Lendo PDF...'}</span>
                   <span>{progressPercent || 0}%</span>
                 </div>
                 <div className="flex gap-1 mt-1">
@@ -78,7 +97,7 @@ export function Sidebar() {
         {error && (
           <div className="mt-3 text-xs text-red-400 flex items-center gap-1.5 bg-red-400/10 p-2 rounded">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
+            <span>{error.message}</span>
           </div>
         )}
       </div>
