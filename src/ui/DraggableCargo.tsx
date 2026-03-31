@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
-import { useDragRotation } from '@/hooks/useDragRotation';
+// import { useDragRotation } from '@/hooks/useDragRotation';
 import { useCargoStore } from '@/features/cargoStore';
 import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
@@ -16,22 +16,37 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   const { deleteCargo } = useCargoStore();
   const { isDragging: dragStoreIsDragging } = useDragStore();
   const [isRotated, setIsRotated] = useState(cargo.isRotated ?? false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Update the cargo store's isRotated when the rotation state changes during drag
-  useEffect(() => {
-    if (dragStoreIsDragging) {
-      const { updateCargo } = useCargoStore();
-      updateCargo(cargo.id, { isRotated });
-    }
-  }, [isRotated, dragStoreIsDragging]);
-
-  // Initialize the rotation state from the cargo
+  // Handle global shortcuts (R and Delete) when active (hovering or dragging)
   useEffect(() => {
     setIsRotated(cargo.isRotated ?? false);
   }, [cargo.isRotated]);
 
-  // Handle R key rotation
-  useDragRotation(dragStoreIsDragging, isRotated, setIsRotated);
+  useEffect(() => {
+    const isActive = dragStoreIsDragging || isHovered;
+    if (!isActive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignora atalhos de teclado se o usuário estiver focando num campo de texto
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        setIsRotated(prev => {
+           const next = !prev;
+           useCargoStore.getState().updateCargo(cargo.id, { isRotated: next });
+           return next;
+        });
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteCargo(cargo.id);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dragStoreIsDragging, isHovered, cargo.id, deleteCargo]);
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -50,6 +65,8 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
       style={style}
       {...listeners}
       {...attributes}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "group relative border border-neutral-400 dark:border-neutral-700 rounded p-2 flex flex-col gap-1 transition-colors cursor-grab select-none bg-neutral-100 dark:bg-neutral-900",
         isDragging ? "opacity-50" : "hover:border-indigo-500/50 active:cursor-grabbing",
