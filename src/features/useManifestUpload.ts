@@ -63,7 +63,7 @@ export function useManifestUpload() {
            setError(`Aviso: ${duplicatesCount} cargas foram ignoradas pois já constam a bordo ou na lista.`);
         }
         setManifestDetails(shipName, voyage);
-        setExtractedCargoes([...store.unallocatedCargoes, ...newCargos]);
+        setExtractedCargoes(newCargos);
       }
     } catch (err) {
       console.error('Erro ao ler manifesto:', err);

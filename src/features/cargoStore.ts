@@ -5,15 +5,15 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { type Cargo } from '@/domain/Cargo';
-import { type CargoLocation } from '@/domain/Location';
-import { type DeckConfig } from '@/domain/DeckConfig';
+import type { Cargo } from '@/domain/Cargo';
+import type { CargoLocation } from '@/domain/Location';
+import type { DeckConfig } from '@/domain/DeckConfig';
 import { DEFAULT_DECK_CONFIG } from '@/domain/DeckConfig';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { v4 as uuidv4 } from 'uuid';
+
 import { logger } from '../utils/logger';
-import { AppError, handleApplicationError } from '../services/errorHandler';
-import { ErrorCodes } from '../lib/errorCodes';
+import { handleApplicationError } from '../services/errorHandler';
 
 /**
  * Define a estrutura do estado do store de cargas.
@@ -113,7 +113,7 @@ export const useCargoStore = create<CargoState>()(
                     }));
                     logger.info(`Adicionadas ${cargoes.length} cargas extraídas do PDF.`, { 
                         cargoCount: cargoes.length,
-                        totalUnallocated: state.unallocatedCargoes.length + cargoes.length
+                        totalUnallocated: get().unallocatedCargoes.length
                     });
                 } catch (error) {
                     logger.error('Falha ao adicionar cargas extraídas:', error);
@@ -138,7 +138,7 @@ export const useCargoStore = create<CargoState>()(
                     }));
                     logger.info('Carga manual adicionada.', { 
                         cargoData: { ...cargoData, id: '<generated>' },
-                        totalUnallocated: state.unallocatedCargoes.length + 1
+                        totalUnallocated: get().unallocatedCargoes.length
                     });
                 } catch (error) {
                     logger.error('Falha ao adicionar carga manual:', error);
@@ -201,7 +201,7 @@ const newLocations = state.locations.map(loc => ({
                     });
                     logger.info(`Nova localização adicionada: ${name}`, { 
                         locationName: name,
-                        totalLocations: state.locations.length + 1
+                        totalLocations: get().locations.length
                     });
                 } catch (error) {
                     logger.error('Falha ao adicionar localização:', error);
@@ -253,7 +253,7 @@ const newLocations = state.locations.map(loc => ({
                         })
                     }));
                     logger.info('Configuração do local ativo atualizada.', { 
-                        locationId: state.activeLocationId,
+                        locationId: get().activeLocationId,
                         config
                     });
                 } catch (error) {
@@ -298,7 +298,7 @@ const newLocations = state.locations.map(loc => ({
                     });
                     logger.info(`Localização ${id} removida.`, { 
                         locationId: id,
-                        remainingLocations: state.locations.length - 1
+                        remainingLocations: get().locations.length
                     });
                 } catch (error) {
                     logger.error(`Falha ao remover localização ${id}:`, error);
@@ -324,8 +324,7 @@ const newLocations = state.locations.map(loc => ({
                         }))
                     }));
                     logger.info('Todas as cargas foram limpas.', { 
-                        previousUnallocated: state.unallocatedCargoes.length,
-                        totalLocations: state.locations.length
+                        totalLocations: get().locations.length
                     });
                 } catch (error) {
                     logger.error('Falha ao limpar todas as cargas:', error);
@@ -559,6 +558,7 @@ const newLocations = state.locations.map(loc => ({
 
             hydrateFromDb: (payload) => {
                 try {
+                    const currentState = get();
                     set((state) => ({
                         unallocatedCargoes: payload.unallocatedCargoes ?? state.unallocatedCargoes,
                         locations: payload.locations ?? state.locations,
@@ -572,8 +572,8 @@ const newLocations = state.locations.map(loc => ({
                     }));
                     logger.info('Estado hidratado do banco de dados.', { 
                         hasPayload: !!payload,
-                        cargoCount: payload?.unallocatedCargoes?.length ?? state.unallocatedCargoes.length,
-                        locationCount: payload?.locations?.length ?? state.locations.length
+                        cargoCount: payload?.unallocatedCargoes?.length ?? currentState.unallocatedCargoes.length,
+                        locationCount: payload?.locations?.length ?? currentState.locations.length
                     });
                 } catch (error) {
                     logger.error('Falha ao hidratar estado do banco de dados:', error);
@@ -587,16 +587,24 @@ const newLocations = state.locations.map(loc => ({
         {
             name: 'cargo-deck-pro-storage', // Unique name for the item in localStorage
             storage: createJSONStorage(() => localStorage), // Uses localStorage
-            onRehydrateStorage: (state) => {
+            partialize: (state) => ({
+                unallocatedCargoes: state.unallocatedCargoes,
+                locations: state.locations,
+                shipOperationCode: state.shipOperationCode,
+                manifestShipName: state.manifestShipName,
+                manifestVoyage: state.manifestVoyage,
+                manifestsLoaded: state.manifestsLoaded,
+                activeLocationId: state.activeLocationId,
+            }),
+            onRehydrateStorage: () => {
                 logger.info('Reidratando estado do armazenamento local...');
                 // Optional: Add migration or validation logic here
-                return (state, error) => {
+                return (_state, error) => {
                     if (error) {
-                        handleApplicationError(error, { 
-                            context: 'zustandRehydration',
-                            error
+                        const appError = handleApplicationError(error, { 
+                            context: 'zustandRehydration'
                         });
-                        logger.error('Falha na reidratação do estado do armazenamento local.', error);
+                        logger.error('Falha na reidratação do estado do armazenamento local.', appError);
                         // If rehydration fails, you might want to clear state or load a default state
                         // set({ /* default state */ });
                     } else {

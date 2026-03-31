@@ -4,11 +4,11 @@ import { Settings, Plus, Search, Trash2, Edit } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import type { Bay } from '@/domain/Bay';
+import type { Cargo } from '@/domain/Cargo';
 import type { CargoLocation } from '@/domain/Location';
 import { DeckSettingsModal } from './DeckSettingsModal';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import DraggableCargo from './DraggableCargo';
-
 
 
 function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoLocation, isActive: boolean, onClick: () => void, onEdit: (loc: CargoLocation) => void, onDelete: (id: string) => void }) {
@@ -232,7 +232,7 @@ export function DeckArea() {
                           if (matchingCargos.length > 0) {
                             // Switch to location of first matching cargo
                             const firstCargo = matchingCargos[0];
-                            let locId = null;
+                            let locId: string | null = null;
                             if (unallocatedCargoes.some(c => c.id === firstCargo.id)) {
                               // No switch
                             } else {

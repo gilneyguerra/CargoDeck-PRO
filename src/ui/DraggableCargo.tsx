@@ -29,6 +29,9 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
     setIsRotated(cargo.isRotated ?? false);
   }, [cargo.isRotated]);
 
+  // Handle R key rotation
+  useDragRotation(dragStoreIsDragging, isRotated, setIsRotated);
+
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined;

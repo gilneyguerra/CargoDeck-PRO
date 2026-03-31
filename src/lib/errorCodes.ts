@@ -1,10 +1,11 @@
 // src/lib/errorCodes.ts
 /**
  * @file Define códigos de erro padronizados para a aplicação CargoDeck-PRO.
- * Isso garante consistência na identificação e comunicação de erros.  
+ * Isso garante consistência na identificação e comunicação de erros.
  */
 
-export const ErrorCodes = {   // Erros de PDF
+export const ErrorCodes = {
+    // Erros de PDF
     PDF_INVALID_TYPE: 'PDF_INVALID_TYPE',
     PDF_TOO_LARGE: 'PDF_TOO_LARGE',
     PDF_EMPTY: 'PDF_EMPTY',

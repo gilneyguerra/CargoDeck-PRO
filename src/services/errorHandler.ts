@@ -64,6 +64,7 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCodes.U
  * Lida com um erro, logando-o e retornando uma instância de AppError.
  * Esta função é o ponto central para processar erros antes de exibi-los ou reagir a eles.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function handleApplicationError(error: unknown, context?: Record<string, any>): AppError {
     const appError = toAppError(error);
 
@@ -77,7 +78,11 @@ export function handleApplicationError(error: unknown, context?: Record<string, 
             break;
         case 'error':
         default:
-            logger.error(appError.message, appError.originalError instanceof Error ? appError.originalError : undefined, { ...context, code: appError.code });
+            logger.error(
+                appError.message,
+                appError.originalError instanceof Error ? appError.originalError : undefined,
+                { ...context, code: appError.code }
+            );
             break;
     }
 
