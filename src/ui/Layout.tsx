@@ -16,26 +16,8 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
-      <div className="flex items-center justify-between px-4 py-2 bg-neutral-200 dark:bg-border border-t border-neutral-300 dark:border-border text-[10px] text-neutral-600 dark:text-muted shrink-0">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-border border border-neutral-400 dark:border-border rounded">Arraste</kbd>
-            <span>→ carga para posição</span>
-          </span>
-          <span className="text-neutral-400 dark:text-muted">|</span>
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-border border border-neutral-400 dark:border-border rounded">R</kbd>
-            <span>gira carga</span>
-          </span>
-          <span className="text-neutral-400 dark:text-muted">|</span>
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-neutral-300 dark:bg-border border border-neutral-400 dark:border-border rounded">Del</kbd>
-            <span>remove carga</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-neutral-600 dark:text-muted">CargoDeck Pro v1.0</span>
-        </div>
+      <div className="flex items-center justify-end px-4 py-1.5 bg-neutral-200 dark:bg-border border-t border-neutral-300 dark:border-border text-[10px] text-neutral-500 dark:text-muted shrink-0">
+        <span>CargoDeck Pro v1.0</span>
       </div>
     </div>
   );
