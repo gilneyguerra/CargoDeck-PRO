@@ -13,7 +13,7 @@ export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY
 export function Sidebar() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, clearUnallocatedCargoes } = useCargoStore();
-    const { loading: isProcessing, progress: progressPercent, error, upload, reset } = usePDFUpload();
+    const { loading: isProcessing, progress: progressPercent, error, upload, reset, isOCR } = usePDFUpload();
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState<CargoFilter>('ALL');
 
@@ -77,12 +77,16 @@ export function Sidebar() {
                   <div className="bg-indigo-500 h-2 transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
                 </div>
                 <div className="flex justify-between w-full text-[8px] font-mono text-neutral-600 dark:text-neutral-400">
-                  <span className="text-indigo-600 dark:text-indigo-300">{'Lendo PDF...'}</span>
+                  <span className="text-indigo-600 dark:text-indigo-300">
+                    {isOCR ? 'Processando OCR...' : progressPercent < 30 ? 'Lendo PDF...' : progressPercent < 95 ? 'Extraindo texto...' : 'Finalizando...'}
+                  </span>
                   <span>{progressPercent || 0}%</span>
                 </div>
                 <div className="flex gap-1 mt-1">
                   <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 10 ? 'bg-green-800/30 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>✓ PDF</span>
-                  <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 30 ? 'bg-amber-800/30 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>OCR</span>
+                  <span className={`text-[7px] px-1.5 py-0.5 rounded ${isOCR && progressPercent >= 30 ? 'bg-amber-800/30 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : progressPercent >= 30 && !isOCR ? 'bg-green-800/30 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>
+                    {isOCR && progressPercent >= 30 ? '✓ OCR' : progressPercent >= 30 && !isOCR ? '✓ Texto' : 'OCR'}
+                  </span>
                   <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 95 ? 'bg-blue-800/30 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>Parse</span>
                 </div>
              </div>

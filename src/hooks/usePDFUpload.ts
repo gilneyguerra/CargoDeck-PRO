@@ -18,6 +18,7 @@ interface UploadState {
     progress: number; // 0-100
     success: boolean;
     fileName: string | null;
+    isOCR: boolean; // Indicates if OCR is being used
 }
 
 /**
@@ -31,6 +32,7 @@ export function usePDFUpload() {
         progress: 0,
         success: false,
         fileName: null,
+        isOCR: false,
     });
 
     // Usado para garantir que apenas uma operação de upload esteja ativa por vez
@@ -38,7 +40,7 @@ export function usePDFUpload() {
 
     const upload = useCallback(async (file: File): Promise<CargoItem[] | null> => {
         // Resetar estado e iniciar carregamento
-        setState({ loading: true, error: null, progress: 0, success: false, fileName: file.name });
+        setState({ loading: true, error: null, progress: 0, success: false, fileName: file.name, isOCR: false });
         logger.info(`Iniciando upload e extração para: ${file.name}`);
 
         // Criar um novo AbortController para esta operação
@@ -62,10 +64,18 @@ export function usePDFUpload() {
             if (!validation.valid) {
                 throw validation.error; // Lança o AppError específico
             }
-            setState(prev => ({ ...prev, progress: 25 }));
+            setState(prev => ({ ...prev, progress: 15 }));
 
-            // 2. Extrair dados do PDF
-            const extractionResult: ExtractionResult = await PDFExtractor.extract(file);
+            // 2. Extrair dados do PDF (com callback de progresso para OCR)
+            const extractionResult: ExtractionResult = await PDFExtractor.extract(file, (ocrProgress) => {
+                // Map OCR progress to 30-90 range in the UI
+                const mappedProgress = 30 + (ocrProgress * 0.6);
+                setState(prev => ({ 
+                    ...prev, 
+                    progress: Math.round(mappedProgress),
+                    isOCR: true 
+                }));
+            });
 
             if (signal.aborted) {
                 throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'Operação de extração cancelada.');
@@ -76,7 +86,7 @@ export function usePDFUpload() {
             }
 
             // Simular progresso final
-            setState(prev => ({ ...prev, progress: 90 }));
+            setState(prev => ({ ...prev, progress: 95 }));
 
             // Processamento bem-sucedido
             setState(prev => ({
@@ -85,7 +95,10 @@ export function usePDFUpload() {
                 success: true,
                 loading: false,
             }));
-            logger.info(`Extração de ${file.name} concluída com sucesso.`, { metadata: extractionResult.data?.metadata });
+            logger.info(`Extração de ${file.name} concluída com sucesso.`, { 
+                metadata: extractionResult.data?.metadata,
+                method: extractionResult.data?.metadata?.method 
+            });
             return extractionResult.data?.items || null;
         } catch (rawError) {
             const error = handleApplicationError(rawError, { fileName: file.name, context: 'usePDFUpload' });
@@ -107,7 +120,7 @@ export function usePDFUpload() {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort(); // Aborta qualquer operação pendente
         }
-        setState({ loading: false, error: null, progress: 0, success: false, fileName: null });
+        setState({ loading: false, error: null, progress: 0, success: false, fileName: null, isOCR: false });
         logger.info('Estado de upload resetado.');
     }, []);
 

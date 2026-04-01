@@ -1,9 +1,10 @@
 // src/services/pdfExtractor.ts
 /**
  * @file Servico robusto para extracao de dados de PDFs na aplicacao CargoDeck-PRO.
- * Lida com validacao de arquivo e extracao de texto via pdfjs-dist.
+ * Lida com validacao de arquivo e extracao de texto via pdfjs-dist com fallback OCR via Tesseract.js.
  */
 import * as pdfjsLib from 'pdfjs-dist';
+import { createWorker } from 'tesseract.js';
 import { AppError, handleApplicationError } from './errorHandler';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
@@ -162,7 +163,67 @@ export class PDFExtractor {
         return allItems;
     }
 
-    static async extract(file: File): Promise<ExtractionResult> {
+    private static async renderPageToImage(pdf: pdfjsLib.PDFDocumentProxy, pageNumber: number): Promise<HTMLCanvasElement> {
+        const page = await pdf.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 2.0 });
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const context = canvas.getContext('2d');
+        
+        if (!context) {
+            throw new Error('Failed to get canvas context for page rendering');
+        }
+        
+        await page.render({ canvasContext: context, viewport }).promise;
+        return canvas;
+    }
+
+    private static async performOCR(pdf: pdfjsLib.PDFDocumentProxy, onProgress?: (progress: number) => void): Promise<CargoItem[]> {
+        logger.info('Starting OCR extraction with Tesseract.js');
+        const allItems: CargoItem[] = [];
+        
+        const worker = await createWorker('eng+por', 1, {
+            logger: (m) => {
+                if (m.status === 'recognizing text') {
+                    logger.debug(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+                    if (onProgress) {
+                        onProgress(Math.round(m.progress * 100));
+                    }
+                }
+            }
+        });
+        
+        try {
+            for (let i = 1; i <= pdf.numPages; i++) {
+                logger.info(`OCR processing page ${i} of ${pdf.numPages}`);
+                
+                const canvas = await this.renderPageToImage(pdf, i);
+                const { data: { text } } = await worker.recognize(canvas);
+                
+                logger.debug(`OCR page ${i} text extracted`, { 
+                    textLength: text.length,
+                    textPreview: text.substring(0, 200) + (text.length > 200 ? '...' : '')
+                });
+                
+                const pageItems = this.parseManifesto(text, i);
+                allItems.push(...pageItems);
+                
+                logger.debug(`OCR page ${i} items found`, { count: pageItems.length });
+            }
+        } finally {
+            await worker.terminate();
+        }
+        
+        logger.info(`OCR extraction completed`, { 
+            totalPages: pdf.numPages, 
+            totalItems: allItems.length 
+        });
+        return allItems;
+    }
+
+    static async extract(file: File, onOCRProgress?: (progress: number) => void): Promise<ExtractionResult> {
         try {
             const validation = this.validateFile(file);
             if (!validation.valid) {
@@ -185,6 +246,7 @@ export class PDFExtractor {
                 return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };
             }
 
+            // Step 1: Try text extraction
             let items: CargoItem[];
             try {
                 items = await this.extractTextFromPDF(pdf);
@@ -194,11 +256,24 @@ export class PDFExtractor {
                 items = [];
             }
 
+            // Step 2: If text extraction failed, try OCR
             if (items.length === 0) {
-                logger.warn('Nenhum item encontrado na extração de texto.');
+                logger.info('Text extraction returned no items. Attempting OCR fallback...');
+                try {
+                    items = await this.performOCR(pdf, onOCRProgress);
+                    logger.info(`OCR extraction result`, { itemCount: items.length });
+                } catch (ocrError) {
+                    logger.error('Erro na extracao via OCR.', ocrError);
+                    items = [];
+                }
+            }
+
+            // Step 3: If both methods failed, return error
+            if (items.length === 0) {
+                logger.warn('Nenhum item encontrado após extração de texto e OCR.');
                 return { 
                     success: false, 
-                    error: new AppError(ErrorCodes.PDF_PARSING_FAILED, 'Nenhum item de carga encontrado no PDF. O arquivo pode ser uma imagem escaneada ou ter formato incompatível.') 
+                    error: new AppError(ErrorCodes.PDF_PARSING_FAILED, 'Nenhum item de carga encontrado no PDF. O arquivo pode estar corrompido ou ter formato incompatível.') 
                 };
             }
 
@@ -211,7 +286,7 @@ export class PDFExtractor {
                     metadata: {
                         pages: pdf.numPages,
                         extractedAt: new Date(),
-                        method: 'text',
+                        method: items.length > 0 ? 'text' : 'ocr',
                         fileName: file.name,
                         fileSize: file.size,
                     },
