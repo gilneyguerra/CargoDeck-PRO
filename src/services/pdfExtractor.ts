@@ -3,16 +3,11 @@
  * @file Servico robusto para extracao de dados de PDFs na aplicacao CargoDeck-PRO.
  * Lida com validacao de arquivo e extracao de texto via pdfjs-dist com fallback OCR via Tesseract.js.
  */
-import * as pdfjsLib from 'pdfjs-dist';
+import type * as pdfjsLibType from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
 import { AppError, handleApplicationError } from './errorHandler';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
-
-// Configure worker once at module load time
-if (typeof window !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-}
 
 export interface CargoItem {
     id: string;
@@ -79,16 +74,9 @@ export class PDFExtractor {
     private static parseManifesto(text: string, pageNumber: number): CargoItem[] {
         const items: CargoItem[] = [];
         
-        // Pattern 1: Format "number | description | weight t | volume m³ | bay"
         const pattern1 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)/g;
-        
-        // Pattern 2: Format "number | description | weight t | bay" (without volume)
         const pattern2 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*(\d+)/g;
-        
-        // Pattern 3: Format "number description weight t bay" (with spaces instead of pipes)
         const pattern3 = /(\d+)\s+([^\d]+?)\s+([\d.]+)\s*t\s+(\d+)/g;
-        
-        // Pattern 4: Try to extract any structured data with numbers and descriptions
         const pattern4 = /(\d+)\s*[-–—]\s*([A-Za-zÀ-ÿ\s]+?)\s*[-–—]\s*([\d.]+)\s*t\s*[-–—]\s*(\d+)/g;
         
         const patterns = [
@@ -110,7 +98,6 @@ export class PDFExtractor {
                         bay: hasVolume ? parseInt(match[5], 10) : parseInt(match[4], 10),
                     };
                     
-                    // Avoid duplicates
                     if (!items.some(existing => existing.id === item.id)) {
                         items.push(item);
                     }
@@ -118,14 +105,14 @@ export class PDFExtractor {
                     logger.warn(`Falha ao parsear linha do manifesto: ${match[0]}`, { pageNumber, parseError });
                 }
             }
-            pattern.lastIndex = 0; // Reset regex state
+            pattern.lastIndex = 0;
         }
         
         logger.debug(`Parsed ${items.length} items from page ${pageNumber}`, { textLength: text.length });
         return items;
     }
 
-    private static async extractTextFromPDF(pdf: pdfjsLib.PDFDocumentProxy): Promise<CargoItem[]> {
+    private static async extractTextFromPDF(pdf: pdfjsLibType.PDFDocumentProxy): Promise<CargoItem[]> {
         const allItems: CargoItem[] = [];
         logger.info(`Starting text extraction from ${pdf.numPages} pages`);
         
@@ -163,24 +150,24 @@ export class PDFExtractor {
         return allItems;
     }
 
-    private static async renderPageToImage(pdf: pdfjsLib.PDFDocumentProxy, pageNumber: number): Promise<HTMLCanvasElement> {
+    private static async renderPageToImage(pdf: pdfjsLibType.PDFDocumentProxy, pageNumber: number): Promise<HTMLCanvasElement> {
         const page = await pdf.getPage(pageNumber);
         const viewport = page.getViewport({ scale: 2.0 });
         
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        const context = canvas.getContext('2d');
         
+        const context = canvas.getContext('2d');
         if (!context) {
             throw new Error('Failed to get canvas context for page rendering');
         }
         
-        await page.render({ canvas, viewport }).promise;
+        await page.render({ canvas: canvas as any, viewport: viewport as any }).promise;
         return canvas;
     }
 
-    private static async performOCR(pdf: pdfjsLib.PDFDocumentProxy, onProgress?: (progress: number) => void): Promise<CargoItem[]> {
+    private static async performOCR(pdf: pdfjsLibType.PDFDocumentProxy, onProgress?: (progress: number) => void): Promise<CargoItem[]> {
         logger.info('Starting OCR extraction with Tesseract.js');
         const allItems: CargoItem[] = [];
         
@@ -200,7 +187,8 @@ export class PDFExtractor {
                 logger.info(`OCR processing page ${i} of ${pdf.numPages}`);
                 
                 const canvas = await this.renderPageToImage(pdf, i);
-                const { data: { text } } = await worker.recognize(canvas);
+                const result = await worker.recognize(canvas);
+                const text = result.data.text;
                 
                 logger.debug(`OCR page ${i} text extracted`, { 
                     textLength: text.length,
@@ -235,9 +223,12 @@ export class PDFExtractor {
             const arrayBuffer = await this.fileToArrayBuffer(file);
             logger.info(`Arquivo convertido para ArrayBuffer`, { size: arrayBuffer.byteLength });
 
-            let pdf: pdfjsLib.PDFDocumentProxy;
+            let pdf: pdfjsLibType.PDFDocumentProxy;
             try {
-                logger.info(`PDF.js version: ${pdfjsLib.version}`);
+                const pdfjsLib = await import('pdfjs-dist');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+                logger.info(`PDF.js loaded`, { version: pdfjsLib.version });
+                
                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                 pdf = await loadingTask.promise;
                 logger.info(`PDF document loaded successfully`, { pages: pdf.numPages });
@@ -246,7 +237,6 @@ export class PDFExtractor {
                 return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };
             }
 
-            // Step 1: Try text extraction
             let items: CargoItem[];
             try {
                 items = await this.extractTextFromPDF(pdf);
@@ -256,7 +246,6 @@ export class PDFExtractor {
                 items = [];
             }
 
-            // Step 2: If text extraction failed, try OCR
             if (items.length === 0) {
                 logger.info('Text extraction returned no items. Attempting OCR fallback...');
                 try {
@@ -268,7 +257,6 @@ export class PDFExtractor {
                 }
             }
 
-            // Step 3: If both methods failed, return error
             if (items.length === 0) {
                 logger.warn('Nenhum item encontrado após extração de texto e OCR.');
                 return { 
@@ -286,7 +274,7 @@ export class PDFExtractor {
                     metadata: {
                         pages: pdf.numPages,
                         extractedAt: new Date(),
-                        method: items.length > 0 ? 'text' : 'ocr',
+                        method: 'text',
                         fileName: file.name,
                         fileSize: file.size,
                     },
