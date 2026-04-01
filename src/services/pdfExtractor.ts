@@ -238,6 +238,80 @@ export class PDFExtractor {
             }
 
             let items: CargoItem[];
+            let ocrAttempted = false;
+            
+            // Step 1: Try text extraction
+            try {
+                items = await this.extractTextFromPDF(pdf);
+                logger.info(`Text extraction result`, { itemCount: items.length });
+            } catch (extractionError) {
+                logger.error('Erro na extracao de texto.', extractionError);
+                items = [];
+            }
+
+            // Step 2: If text extraction failed, try OCR
+            if (items.length === 0) {
+                logger.info('Text extraction returned no items. Attempting OCR fallback...');
+                ocrAttempted = true;
+                try {
+                    items = await this.performOCR(pdf, onOCRProgress);
+                    logger.info(`OCR extraction result`, { itemCount: items.length });
+                } catch (ocrError) {
+                    logger.error('Erro na extracao via OCR.', ocrError);
+                    items = [];
+                }
+            }
+
+            // Step 3: If both methods failed, return error
+            if (items.length === 0) {
+                logger.warn('Nenhum item encontrado após extração de texto e OCR.');
+                return { 
+                    success: false, 
+                    error: new AppError(ErrorCodes.PDF_PARSING_FAILED, 'Nenhum item de carga encontrado no PDF. O arquivo pode estar corrompido ou ter formato incompatível.') 
+                };
+            }
+
+            logger.info(`Extracao concluida com sucesso. Itens encontrados: ${items.length}`);
+
+            return {
+                success: true,
+                data: {
+                    items,
+                    metadata: {
+                        pages: pdf.numPages,
+                        extractedAt: new Date(),
+                        method: ocrAttempted ? 'ocr' : 'text',
+                        fileName: file.name,
+                        fileSize: file.size,
+                    },
+                },
+            };
+        } catch (error) {
+            logger.error('Erro geral na extração:', error);
+            return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_EXTRACTION_FAILED }) };
+        }
+    }
+
+            logger.info(`Iniciando extracao para o arquivo: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+
+            const arrayBuffer = await this.fileToArrayBuffer(file);
+            logger.info(`Arquivo convertido para ArrayBuffer`, { size: arrayBuffer.byteLength });
+
+            let pdf: pdfjsLibType.PDFDocumentProxy;
+            try {
+                const pdfjsLib = await import('pdfjs-dist');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+                logger.info(`PDF.js loaded`, { version: pdfjsLib.version });
+                
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                pdf = await loadingTask.promise;
+                logger.info(`PDF document loaded successfully`, { pages: pdf.numPages });
+            } catch (error) {
+                logger.error('Error loading PDF document:', error);
+                return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };
+            }
+
+            let items: CargoItem[];
             try {
                 items = await this.extractTextFromPDF(pdf);
                 logger.info(`Text extraction result`, { itemCount: items.length });
@@ -267,6 +341,10 @@ export class PDFExtractor {
 
             logger.info(`Extracao concluida com sucesso. Itens encontrados: ${items.length}`);
 
+            // Determine method: if we attempted OCR, it's OCR; otherwise it's text
+            // Simple heuristic: if we got items and went through OCR path, mark as OCR
+            const method = items.length > 0 ? 'text' : 'unknown'; // Will be refined below
+            
             return {
                 success: true,
                 data: {
@@ -274,7 +352,7 @@ export class PDFExtractor {
                     metadata: {
                         pages: pdf.numPages,
                         extractedAt: new Date(),
-                        method: 'text',
+                        method: method,
                         fileName: file.name,
                         fileSize: file.size,
                     },
