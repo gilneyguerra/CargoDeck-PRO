@@ -3,10 +3,15 @@
  * @file Servico robusto para extracao de dados de PDFs na aplicacao CargoDeck-PRO.
  * Lida com validacao de arquivo e extracao de texto via pdfjs-dist.
  */
-import type * as pdfjsLibType from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
 import { AppError, handleApplicationError } from './errorHandler';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
+
+// Configure worker once at module load time
+if (typeof window !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+}
 
 export interface CargoItem {
     id: string;
@@ -119,7 +124,7 @@ export class PDFExtractor {
         return items;
     }
 
-    private static async extractTextFromPDF(pdf: pdfjsLibType.PDFDocumentProxy): Promise<CargoItem[]> {
+    private static async extractTextFromPDF(pdf: pdfjsLib.PDFDocumentProxy): Promise<CargoItem[]> {
         const allItems: CargoItem[] = [];
         logger.info(`Starting text extraction from ${pdf.numPages} pages`);
         
@@ -167,15 +172,13 @@ export class PDFExtractor {
             logger.info(`Iniciando extracao para o arquivo: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
 
             const arrayBuffer = await this.fileToArrayBuffer(file);
+            logger.info(`Arquivo convertido para ArrayBuffer`, { size: arrayBuffer.byteLength });
 
-            let pdf: pdfjsLibType.PDFDocumentProxy;
+            let pdf: pdfjsLib.PDFDocumentProxy;
             try {
-                const pdfjsLib = await import('pdfjs-dist');
-                // Configure workerSrc for production deployment
-                pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-                logger.info(`PDF.js loaded`, { version: pdfjsLib.version, workerSrc: pdfjsLib.GlobalWorkerOptions.workerSrc });
-                
-                pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                logger.info(`PDF.js version: ${pdfjsLib.version}`);
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                pdf = await loadingTask.promise;
                 logger.info(`PDF document loaded successfully`, { pages: pdf.numPages });
             } catch (error) {
                 logger.error('Error loading PDF document:', error);
@@ -185,13 +188,18 @@ export class PDFExtractor {
             let items: CargoItem[];
             try {
                 items = await this.extractTextFromPDF(pdf);
+                logger.info(`Text extraction result`, { itemCount: items.length });
             } catch (extractionError) {
-                logger.warn('Erro na extracao de texto.', extractionError);
+                logger.error('Erro na extracao de texto.', extractionError);
                 items = [];
             }
 
             if (items.length === 0) {
-                return { success: false, error: new AppError(ErrorCodes.PDF_PARSING_FAILED, 'Nenhum item de carga encontrado no PDF.') };
+                logger.warn('Nenhum item encontrado na extração de texto.');
+                return { 
+                    success: false, 
+                    error: new AppError(ErrorCodes.PDF_PARSING_FAILED, 'Nenhum item de carga encontrado no PDF. O arquivo pode ser uma imagem escaneada ou ter formato incompatível.') 
+                };
             }
 
             logger.info(`Extracao concluida com sucesso. Itens encontrados: ${items.length}`);
@@ -210,6 +218,7 @@ export class PDFExtractor {
                 },
             };
         } catch (error) {
+            logger.error('Erro geral na extração:', error);
             return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_EXTRACTION_FAILED }) };
         }
     }
