@@ -127,7 +127,8 @@ export class PDFExtractor {
             let pdf: pdfjsLibType.PDFDocumentProxy;
             try {
                 const pdfjsLib = await import('pdfjs-dist');
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+                // Configure workerSrc for production deployment
+                pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
                 pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             } catch (error) {
                 return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };
