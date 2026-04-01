@@ -176,7 +176,7 @@ export class PDFExtractor {
             throw new Error('Failed to get canvas context for page rendering');
         }
         
-        await page.render({ canvasContext: context, viewport }).promise;
+        await page.render({ canvas, viewport }).promise;
         return canvas;
     }
 
