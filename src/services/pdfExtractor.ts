@@ -280,8 +280,8 @@ export class PDFExtractor {
                         method: ocrAttempted ? 'ocr' : 'text',
                         fileName: file.name,
                         fileSize: file.size,
-                    },
-                };
+                    }
+                }
             };
         } catch (error) {
             logger.error('Erro geral na extração:', error);
