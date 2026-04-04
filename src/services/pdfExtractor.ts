@@ -93,8 +93,11 @@ export class PDFExtractor {
         const pattern3 = /(\d+)\s+([^\d]+?)\s+([\d.]+)\s*t\s+(\d+)/g;
         // Pattern 4: ID - Description - Weight t - Bay (dash-separated)
         const pattern4 = /(\d+)\s*[-–—]\s*([A-Za-zÀ-ÿ\s]+?)\s*[-–—]\s*([\d.]+)\s*t\s*[-–—]\s*(\d+)/g;
-        // Pattern 5: Container/AWB format - ABCD1234567 or similar cargo codes
-        const pattern5 = /([A-Z]{4}\d{7,})\s*[=\s]+\s*([^\n\d]+?)\s+([\d.]+)\s*t\s+([\d.]+)\s*m[³3]\s+(\d+)/g;
+        // Pattern 5: Container format - ABCD1234567 DESCRIPTION WEIGHT t VOLUME m3 BAY
+        // Handles multi-word descriptions by matching until weight pattern
+        const pattern5 = /([A-Z]{4}\d{7,})\s+([A-Za-zÀ-ÿ\s]+?)(?=\s+[\d.]+\s*t\s)/g;
+        // Pattern 5b: Same as 5 but with explicit = separator
+        const pattern5b = /([A-Z]{4}\d{7,})\s*=\s*([A-Za-zÀ-ÿ\s]+?)(?=\s+[\d.]+\s*t\s)/g;
         // Pattern 6: Dimensions pattern - LxWxH format
         const pattern6 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)\s*\|\s*([\d.]+)\s*[xX]\s*([\d.]+)\s*[xX]\s*([\d.]+)/g;
 
@@ -103,36 +106,64 @@ export class PDFExtractor {
             { pattern: pattern2, hasVolume: false, hasDimensions: false },
             { pattern: pattern3, hasVolume: false, hasDimensions: false },
             { pattern: pattern4, hasVolume: false, hasDimensions: false },
-            { pattern: pattern5, hasVolume: true, hasDimensions: false },
+            { pattern: pattern5, hasVolume: true, hasDimensions: false, needsSecondParse: true },
+            { pattern: pattern5b, hasVolume: true, hasDimensions: false, needsSecondParse: true },
             { pattern: pattern6, hasVolume: true, hasDimensions: true },
         ];
         
-        for (const { pattern, hasVolume, hasDimensions } of patterns) {
+        for (const { pattern, hasVolume, hasDimensions, needsSecondParse } of patterns) {
             let match;
             while ((match = pattern.exec(text)) !== null) {
                 try {
-                    const description = match[2].trim();
-                    const isBackload = backloadKeywords.some(keyword => 
-                        description.toLowerCase().includes(keyword.toLowerCase())
-                    );
-                    
+                    let description: string;
+                    let weight: number;
+                    let volume: number;
+                    let bay: number;
                     let length: number | undefined;
                     let width: number | undefined;
                     let height: number | undefined;
 
-                    if (hasDimensions && match.length >= 9) {
-                        length = parseFloat(match[7]);
-                        width = parseFloat(match[8]);
-                        height = parseFloat(match[9]);
+                    if (needsSecondParse) {
+                        // For container patterns, extract metrics from the full line
+                        description = match[2].trim();
+                        const id = match[1];
+                        
+                        // Extract weight, volume, and bay from remaining text after description
+                        const remainingText = match[0].substring(match[0].indexOf(description) + description.length);
+                        const metricsMatch = /([\d.]+)\s*t\s+([\d.]+)\s*m[³3]\s+(\d+)/.exec(remainingText);
+                        
+                        if (!metricsMatch) {
+                            logger.warn(`Could not extract metrics from container line: ${match[0]}`);
+                            continue;
+                        }
+                        
+                        weight = parseFloat(metricsMatch[1]);
+                        volume = parseFloat(metricsMatch[2]);
+                        bay = parseInt(metricsMatch[3], 10);
+                    } else {
+                        description = match[2].trim();
+                        weight = parseFloat(match[3]);
+                        volume = hasVolume ? parseFloat(match[4]) : 0;
+                        bay = hasVolume ? parseInt(match[5], 10) : parseInt(match[4], 10);
+
+                        if (hasDimensions && match.length >= 9) {
+                            length = parseFloat(match[7]);
+                            width = parseFloat(match[8]);
+                            height = parseFloat(match[9]);
+                        }
                     }
+                    
+                    const isBackload = backloadKeywords.some(keyword => 
+                        description.toLowerCase().includes(keyword.toLowerCase())
+                    );
 
                     const item: CargoItem = {
                         id: `${pageNumber}-${match[1]}`,
                         identifier: match[1],
                         description: description,
-                        weight: parseFloat(match[3]),
-                        volume: hasVolume ? parseFloat(match[4]) : 0,
-                        bay: hasVolume ? parseInt(match[5], 10) : parseInt(match[4], 10),
+                        weight: weight,
+                        volume: volume,
+                        bay: bay,
                         length,
                         width,
                         height,
