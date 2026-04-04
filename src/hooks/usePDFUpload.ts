@@ -67,15 +67,19 @@ export function usePDFUpload() {
             setState(prev => ({ ...prev, progress: 15 }));
 
             // 2. Extrair dados do PDF (com callback de progresso para OCR)
-            const extractionResult: ExtractionResult = await PDFExtractor.extract(file, (ocrProgress) => {
-                // Map OCR progress to 30-90 range in the UI
-                const mappedProgress = 30 + (ocrProgress * 0.6);
-                setState(prev => ({ 
-                    ...prev, 
-                    progress: Math.round(mappedProgress),
-                    isOCR: true 
-                }));
-            });
+            const extractionResult: ExtractionResult = await PDFExtractor.extract(
+                file, 
+                (ocrProgress) => {
+                    // Map OCR progress to 30-90 range in the UI
+                    const mappedProgress = 30 + (ocrProgress * 0.6);
+                    setState(prev => ({ 
+                        ...prev, 
+                        progress: Math.round(mappedProgress),
+                        isOCR: true 
+                    }));
+                },
+                signal
+            );
 
             if (signal.aborted) {
                 throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'Operação de extração cancelada.');

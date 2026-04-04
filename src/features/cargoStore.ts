@@ -159,10 +159,9 @@ export const useCargoStore = create<CargoState>()(
                         const newUnallocated = state.unallocatedCargoes.map(c => 
                             c.id === id ? { ...c, ...updates } : c
                         );
-                    const newLocations = state.locations.map(loc => ({
+                        const newLocations = state.locations.map(loc => ({
                              ...loc,
-                             bays: loc.bays.map(bay => ({
-                                 // Compute updated cargo array first
+                             bays: loc.bays.map(bay => {
                                  const updatedCargoes = bay.allocatedCargoes.map(c =>
                                      c.id === id ? { ...c, ...updates } : c
                                  );
@@ -174,7 +173,7 @@ export const useCargoStore = create<CargoState>()(
                                      currentOccupiedArea: updatedCargoes.reduce((acc, c) =>
                                          acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
                                  };
-                             }))
+                             })
                         }));
                         
                         return {
@@ -247,10 +246,10 @@ export const useCargoStore = create<CargoState>()(
                                 const currentBayCount = activeLoc.bays.length;
                                 if (config.numberOfBays !== currentBayCount) {
                                     // Collect all cargo from existing bays
-                                    const displacedCargoes = activeLoc.bays.flatMap(bay => 
+                                    const displacedCargoes: Cargo[] = activeLoc.bays.flatMap(bay => 
                                         bay.allocatedCargoes.map(cargo => ({
                                             ...cargo,
-                                            status: 'UNALLOCATED',
+                                            status: 'UNALLOCATED' as const,
                                             bayId: undefined,
                                             positionInBay: undefined,
                                             x: undefined,

@@ -87,7 +87,7 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
        : (deckConfig.numberOfBays > 0 ? (deckConfig.lengthMeters / deckConfig.numberOfBays) : 0);
 
     const maxArea = sideWidth * bayLength;
-    const currentOccupiedArea = cargoes.reduce((acc, c) => acc + (c.widthMeters * c.lengthMeters), 0);
+    const currentOccupiedArea = cargoes.reduce((acc, c) => acc + (c.widthMeters * c.lengthMeters * c.quantity), 0);
     const isOverArea = maxArea > 0 && currentOccupiedArea > maxArea;
 
      return (

@@ -4,7 +4,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { X } from 'lucide-react';
 
 export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { locations, activeLocationId, updateActiveLocationConfig, unallocatedCargoes } = useCargoStore();
+  const { locations, activeLocationId, updateActiveLocationConfig } = useCargoStore();
   const activeLocation = locations.find(l => l.id === activeLocationId);
 
   const [length, setLength] = useState<number | string>(0);
@@ -50,10 +50,24 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
       return;
     }
 
+    // Step 4b: confirm before destructive bay count change
+    const newBaysCount = Number(baysCount);
+    if (newBaysCount !== activeLocation.config.numberOfBays) {
+      const totalAllocated = activeLocation.bays.reduce(
+        (acc, bay) => acc + bay.allocatedCargoes.length, 0
+      );
+      if (totalAllocated > 0) {
+        const confirmed = window.confirm(
+          `Atenção: Alterar o número de baias irá mover ${totalAllocated} carga(s) alocada(s) de volta para a lista de não alocadas.\n\nDeseja continuar?`
+        );
+        if (!confirmed) return;
+      }
+    }
+
     updateActiveLocationConfig({
       lengthMeters: tL,
       widthMeters: tW,
-      numberOfBays: Number(baysCount),
+      numberOfBays: newBaysCount,
       bayLengthMeters: Number(bayLength),
       elevationMeters: Number(elevationMeters),
       portWidthMeters: Number(portWidth),

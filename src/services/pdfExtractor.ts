@@ -11,14 +11,18 @@ import { logger } from '../utils/logger';
 
 export interface CargoItem {
     id: string;
+    identifier: string;
     description: string;
     weight: number;
     volume: number;
+    length?: number;
+    width?: number;
+    height?: number;
     bay: number;
     positionX?: number;
     positionY?: number;
     rotation?: number;
-    isBackload?: boolean; // Indicates if cargo is being removed from ship
+    isBackload?: boolean;
 }
 
 interface ExtractionMetadata {
@@ -75,41 +79,63 @@ export class PDFExtractor {
     private static parseManifesto(text: string, pageNumber: number): CargoItem[] {
         const items: CargoItem[] = [];
         
-        // Keywords that indicate backload (cargo being removed from ship)
         const backloadKeywords = [
             'desembarque', 'desembarque', 'removido', 'removida', 'retorno', 
             'backload', 'descarregamento', 'saida', 'saída', 'lixo', 'resíduo',
             'descarga', 'descarga', 'offload', 'off-loading'
         ];
-        
+
+        // Pattern 1: ID | Description | Weight | Volume | Bay (pipe-separated with volume)
         const pattern1 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)/g;
+        // Pattern 2: ID | Description | Weight | Bay (pipe-separated without volume)
         const pattern2 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*(\d+)/g;
+        // Pattern 3: ID Description Weight t Bay (space-separated)
         const pattern3 = /(\d+)\s+([^\d]+?)\s+([\d.]+)\s*t\s+(\d+)/g;
+        // Pattern 4: ID - Description - Weight t - Bay (dash-separated)
         const pattern4 = /(\d+)\s*[-–—]\s*([A-Za-zÀ-ÿ\s]+?)\s*[-–—]\s*([\d.]+)\s*t\s*[-–—]\s*(\d+)/g;
-        
+        // Pattern 5: Container/AWB format - ABCD1234567 or similar cargo codes
+        const pattern5 = /([A-Z]{4}\d{7,})\s*[=\s]+\s*([^\n\d]+?)\s+([\d.]+)\s*t\s+([\d.]+)\s*m[³3]\s+(\d+)/g;
+        // Pattern 6: Dimensions pattern - LxWxH format
+        const pattern6 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)\s*\|\s*([\d.]+)\s*[xX]\s*([\d.]+)\s*[xX]\s*([\d.]+)/g;
+
         const patterns = [
-            { pattern: pattern1, hasVolume: true },
-            { pattern: pattern2, hasVolume: false },
-            { pattern: pattern3, hasVolume: false },
-            { pattern: pattern4, hasVolume: false },
+            { pattern: pattern1, hasVolume: true, hasDimensions: false },
+            { pattern: pattern2, hasVolume: false, hasDimensions: false },
+            { pattern: pattern3, hasVolume: false, hasDimensions: false },
+            { pattern: pattern4, hasVolume: false, hasDimensions: false },
+            { pattern: pattern5, hasVolume: true, hasDimensions: false },
+            { pattern: pattern6, hasVolume: true, hasDimensions: true },
         ];
         
-        for (const { pattern, hasVolume } of patterns) {
+        for (const { pattern, hasVolume, hasDimensions } of patterns) {
             let match;
             while ((match = pattern.exec(text)) !== null) {
                 try {
-                    // Check if description contains backload keywords
                     const description = match[2].trim();
                     const isBackload = backloadKeywords.some(keyword => 
                         description.toLowerCase().includes(keyword.toLowerCase())
                     );
                     
+                    let length: number | undefined;
+                    let width: number | undefined;
+                    let height: number | undefined;
+
+                    if (hasDimensions && match.length >= 9) {
+                        length = parseFloat(match[7]);
+                        width = parseFloat(match[8]);
+                        height = parseFloat(match[9]);
+                    }
+
                     const item: CargoItem = {
                         id: `${pageNumber}-${match[1]}`,
+                        identifier: match[1],
                         description: description,
                         weight: parseFloat(match[3]),
                         volume: hasVolume ? parseFloat(match[4]) : 0,
                         bay: hasVolume ? parseInt(match[5], 10) : parseInt(match[4], 10),
+                        length,
+                        width,
+                        height,
                         isBackload: isBackload
                     };
                     
@@ -117,7 +143,10 @@ export class PDFExtractor {
                         items.push(item);
                     }
                 } catch (parseError) {
-                    logger.warn(`Falha ao parsear linha do manifesto: ${match[0]}`, { pageNumber, parseError });
+                    logger.warn(`Falha ao parsear linha do manifesto: ${match[0]}`, { 
+                        pageNumber, 
+                        parseError: parseError instanceof Error ? parseError : undefined 
+                    });
                 }
             }
             pattern.lastIndex = 0;
@@ -127,17 +156,21 @@ export class PDFExtractor {
         return items;
     }
 
-    private static async extractTextFromPDF(pdf: pdfjsLibType.PDFDocumentProxy): Promise<CargoItem[]> {
+    private static async extractTextFromPDF(pdf: pdfjsLibType.PDFDocumentProxy, signal?: AbortSignal): Promise<CargoItem[]> {
         const allItems: CargoItem[] = [];
         logger.info(`Starting text extraction from ${pdf.numPages} pages`);
         
         for (let i = 1; i <= pdf.numPages; i++) {
+            if (signal?.aborted) {
+                throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'Text extraction aborted');
+            }
+
             let page;
             try {
                 page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 const text = textContent.items
-                    .map((item: unknown) => (item as { str: string }).str)
+                    .map((item: { str: string }) => item.str)
                     .join(' ');
                 
                 logger.debug(`Page ${i} text extracted`, { 
@@ -150,7 +183,10 @@ export class PDFExtractor {
                 
                 logger.debug(`Page ${i} items found`, { count: pageItems.length });
             } catch (pageError) {
-                logger.warn(`Erro ao extrair texto da pagina ${i}:`, { error: pageError, pageNumber: i });
+                logger.warn(`Erro ao extrair texto da pagina ${i}:`, { 
+                    pageNumber: i, 
+                    pageError: pageError instanceof Error ? pageError : undefined 
+                });
             } finally {
                 if (page) {
                     page.cleanup();
@@ -173,11 +209,21 @@ export class PDFExtractor {
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         
-        await page.render({ canvas: canvas as any, viewport: viewport as any }).promise;
+        const canvasContext = canvas.getContext('2d');
+        if (!canvasContext) {
+            throw new AppError(ErrorCodes.PDF_RENDER_FAILED, 'Failed to get 2D context from canvas. Environment may not support canvas rendering.');
+        }
+        
+        try {
+            await page.render({ canvasContext, viewport }).promise;
+        } finally {
+            page.cleanup();
+        }
+        
         return canvas;
     }
 
-    private static async performOCR(pdf: pdfjsLibType.PDFDocumentProxy, onProgress?: (progress: number) => void): Promise<CargoItem[]> {
+    private static async performOCR(pdf: pdfjsLibType.PDFDocumentProxy, onProgress?: (progress: number) => void, signal?: AbortSignal): Promise<CargoItem[]> {
         logger.info('Starting OCR extraction with Tesseract.js');
         const allItems: CargoItem[] = [];
         
@@ -194,10 +240,18 @@ export class PDFExtractor {
         
         try {
             for (let i = 1; i <= pdf.numPages; i++) {
+                if (signal?.aborted) {
+                    throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'OCR extraction aborted');
+                }
+
                 logger.info(`OCR processing page ${i} of ${pdf.numPages}`);
                 
                 const canvas = await this.renderPageToImage(pdf, i);
                 const result = await worker.recognize(canvas);
+                
+                canvas.width = 0;
+                canvas.height = 0;
+                
                 const text = result.data.text;
                 
                 logger.debug(`OCR page ${i} text extracted`, { 
@@ -221,7 +275,9 @@ export class PDFExtractor {
         return allItems;
     }
 
-    static async extract(file: File, onOCRProgress?: (progress: number) => void): Promise<ExtractionResult> {
+    static async extract(file: File, onOCRProgress?: (progress: number) => void, signal?: AbortSignal): Promise<ExtractionResult> {
+        let pdf: pdfjsLibType.PDFDocumentProxy | null = null;
+        
         try {
             const validation = this.validateFile(file);
             if (!validation.valid) {
@@ -233,11 +289,8 @@ export class PDFExtractor {
             const arrayBuffer = await this.fileToArrayBuffer(file);
             logger.info(`Arquivo convertido para ArrayBuffer`, { size: arrayBuffer.byteLength });
 
-            let pdf: pdfjsLibType.PDFDocumentProxy;
             try {
-                // Import pdfjs-dist dynamically to avoid bundling issues
                 const pdfjsLib = await import('pdfjs-dist');
-                // Configure worker for production - using local worker file
                 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
                 logger.info(`PDF.js loaded`, { version: pdfjsLib.version });
                 
@@ -245,36 +298,39 @@ export class PDFExtractor {
                 pdf = await loadingTask.promise;
                 logger.info(`PDF document loaded successfully`, { pages: pdf.numPages });
             } catch (error) {
-                logger.error('Error loading PDF document:', error);
+                logger.error('Error loading PDF document:', error instanceof Error ? error : undefined, { 
+                    rawError: error 
+                });
                 return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };
             }
 
             let items: CargoItem[];
             let ocrAttempted = false;
             
-            // Step 1: Try text extraction
             try {
-                items = await this.extractTextFromPDF(pdf);
+                items = await this.extractTextFromPDF(pdf, signal);
                 logger.info(`Text extraction result`, { itemCount: items.length });
             } catch (extractionError) {
-                logger.error('Erro na extracao de texto.', extractionError);
+                logger.error('Erro na extracao de texto.', extractionError instanceof Error ? extractionError : undefined, { 
+                    context: 'textExtraction' 
+                });
                 items = [];
             }
 
-            // Step 2: If text extraction failed, try OCR
             if (items.length === 0) {
                 logger.info('Text extraction returned no items. Attempting OCR fallback...');
                 ocrAttempted = true;
                 try {
-                    items = await this.performOCR(pdf, onOCRProgress);
+                    items = await this.performOCR(pdf, onOCRProgress, signal);
                     logger.info(`OCR extraction result`, { itemCount: items.length });
                 } catch (ocrError) {
-                    logger.error('Erro na extracao via OCR.', ocrError);
+                    logger.error('Erro na extracao via OCR.', ocrError instanceof Error ? ocrError : undefined, { 
+                        context: 'ocrExtraction' 
+                    });
                     items = [];
                 }
             }
 
-            // Step 3: If both methods failed, return error
             if (items.length === 0) {
                 logger.warn('Nenhum item encontrado após extração de texto e OCR.');
                 return { 
@@ -299,8 +355,15 @@ export class PDFExtractor {
                 }
             };
         } catch (error) {
-            logger.error('Erro geral na extração:', error);
+            logger.error('Erro geral na extração:', error instanceof Error ? error : undefined, { 
+                rawError: error 
+            });
             return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_EXTRACTION_FAILED }) };
+        } finally {
+            if (pdf) {
+                pdf.destroy();
+                logger.debug('PDF document destroyed and resources released');
+            }
         }
     }
 }

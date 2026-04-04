@@ -61,10 +61,16 @@ class Logger {
         }
     }
 
-    public error(message: string, error?: Error, context?: Record<string, unknown>): void {
+    public error(message: string, error?: unknown, context?: Record<string, unknown>): void {
         if (this.shouldLog('error')) {
-            const entry = this.formatMessage('error', message, context, error);
-            console.error(`[ERROR] ${entry.timestamp} - ${entry.message}`, entry.error, entry.context);
+            const errorInstance = error instanceof Error ? error : undefined;
+            const entry = this.formatMessage('error', message, context, errorInstance);
+            if (error !== undefined && !(error instanceof Error)) {
+                const extendedContext = { ...context, rawError: error };
+                console.error(`[ERROR] ${entry.timestamp} - ${entry.message}`, entry.error, extendedContext);
+            } else {
+                console.error(`[ERROR] ${entry.timestamp} - ${entry.message}`, entry.error, entry.context);
+            }
         }
     }
 }

@@ -21,20 +21,46 @@ export function PDFUploader() {
         const extractedItems = await upload(file);
 
         if (extractedItems) {
-            const mappedCargoes: Cargo[] = extractedItems.map(item => ({
-                id: item.id,
-                description: item.description,
-                identifier: item.id,
-                weightTonnes: item.weight,
-                widthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 2.4) : 2.4,
-                lengthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 6) : 6,
-                quantity: 1,
-                category: 'GENERAL',
-                status: 'UNALLOCATED',
-                x: item.positionX,
-                y: item.positionY,
-                isRotated: item.rotation ? item.rotation > 0 : false
-            }));
+            const mappedCargoes: Cargo[] = extractedItems.map(item => {
+                let widthMeters: number;
+                let lengthMeters: number;
+
+                if (item.width !== undefined && item.length !== undefined) {
+                    widthMeters = item.width;
+                    lengthMeters = item.length;
+                    logger.debug(`Using parsed dimensions for ${item.identifier}`, { widthMeters, lengthMeters });
+                } else if (item.volume > 0) {
+                    widthMeters = Math.max(Math.sqrt(item.volume), 2.4);
+                    lengthMeters = Math.max(Math.sqrt(item.volume), 6);
+                    logger.warn(`Using volume-based fallback dimensions for ${item.identifier}`, { 
+                        volume: item.volume, 
+                        widthMeters, 
+                        lengthMeters 
+                    });
+                } else {
+                    widthMeters = 2.4;
+                    lengthMeters = 6;
+                    logger.warn(`No dimensions available for ${item.identifier}, using defaults`, { 
+                        widthMeters, 
+                        lengthMeters 
+                    });
+                }
+
+                return {
+                    id: item.id,
+                    description: item.description,
+                    identifier: item.identifier,
+                    weightTonnes: item.weight,
+                    widthMeters,
+                    lengthMeters,
+                    quantity: 1,
+                    category: 'GENERAL',
+                    status: 'UNALLOCATED',
+                    x: item.positionX,
+                    y: item.positionY,
+                    isRotated: item.rotation ? item.rotation > 0 : false
+                };
+            });
             addCargas(mappedCargoes);
             logger.info(`Itens de carga adicionados ao store: ${extractedItems.length}`);
         }
