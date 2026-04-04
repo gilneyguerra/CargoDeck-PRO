@@ -211,11 +211,11 @@ export class PDFExtractor {
         
         const canvasContext = canvas.getContext('2d');
         if (!canvasContext) {
-            throw new AppError(ErrorCodes.PDF_RENDER_FAILED, 'Failed to get 2D context from canvas. Environment may not support canvas rendering.');
+            throw new AppError(ErrorCodes.PDF_EXTRACTION_FAILED, 'Failed to get 2D context from canvas. Environment may not support canvas rendering.');
         }
         
         try {
-            await page.render({ canvasContext, viewport }).promise;
+            await page.render({ canvas, canvasContext, viewport }).promise;
         } finally {
             page.cleanup();
         }
