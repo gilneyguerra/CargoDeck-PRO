@@ -126,7 +126,6 @@ export class PDFExtractor {
                     if (needsSecondParse) {
                         // For container patterns, extract metrics from the full line
                         description = match[2].trim();
-                        const id = match[1];
                         
                         // Extract weight, volume, and bay from remaining text after description
                         const remainingText = match[0].substring(match[0].indexOf(description) + description.length);
