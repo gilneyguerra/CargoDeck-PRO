@@ -10,7 +10,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 
 export const useAuthAndHydration = () => {
-    const { hydrateFromDb, shipOperationCode, setManifestDetails } = useCargoStore();
+    const { hydrateFromDb, shipOperationCode, setManifestDetails, setHydrationStatus } = useCargoStore();
 
     const fetchUserData = useCallback(async () => {
         logger.info('Tentando buscar dados do usuario e sessao...');
@@ -44,10 +44,15 @@ export const useAuthAndHydration = () => {
             } else {
                 logger.info('Nenhum usuario autenticado.');
             }
+            
+            // Marcar hidratação como concluída após a tentativa inicial (com ou sem dados)
+            setHydrationStatus(true);
         } catch (rawError) {
             logger.error('Falha na autenticacao ou hidratacao inicial.', rawError);
+            // Ainda marcar como hidratado para evitar bloqueio de auto-save
+            setHydrationStatus(true);
         }
-    }, [hydrateFromDb, setManifestDetails, shipOperationCode]);
+    }, [hydrateFromDb, setManifestDetails, shipOperationCode, setHydrationStatus]);
 
     useEffect(() => {
         fetchUserData();
@@ -56,6 +61,9 @@ export const useAuthAndHydration = () => {
             logger.debug(`Evento de autenticacao Supabase: ${event}`, { session });
             if (event === 'SIGNED_IN' && session?.user) {
                 logger.info('Usuario entrou em sessao.', { userId: session.user.id });
+                
+                // Reset hydration status before loading new data to block auto-save during load
+                setHydrationStatus(false);
                 
                 const loadStowage = async () => {
                     try {
@@ -76,6 +84,9 @@ export const useAuthAndHydration = () => {
                         }
                     } catch (error) {
                         logger.error('Falha ao carregar plano de estiba apos login:', error);
+                    } finally {
+                        // Mark hydration as complete after attempting to load data (success or failure)
+                        setHydrationStatus(true);
                     }
                 };
                 
@@ -90,5 +101,5 @@ export const useAuthAndHydration = () => {
             subscription.unsubscribe();
             logger.debug('Unsubscribed from auth state changes.');
         };
-    }, [fetchUserData, hydrateFromDb, setManifestDetails, shipOperationCode]);
+    }, [fetchUserData, hydrateFromDb, setManifestDetails, shipOperationCode, setHydrationStatus]);
 };

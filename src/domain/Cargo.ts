@@ -22,7 +22,10 @@ export interface Cargo {
   x?: number; // absolute X coordinate in meters relative to the active location (deck)
   y?: number; // absolute Y coordinate in meters relative to the active location (deck)
   isRotated?: boolean; // True if visually rotated 90 degrees (width and length swapped)
-
+  
+  // Operational Properties
+  isBackload?: boolean; // If true, cargo is being removed from ship (backload operation)
+  
   observations?: string;
   alerts?: string[];
   isRemovable?: boolean; // If true, can be removed during operation (e.g., risers lowered into water)

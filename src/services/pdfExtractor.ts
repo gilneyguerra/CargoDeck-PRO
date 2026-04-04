@@ -18,6 +18,7 @@ export interface CargoItem {
     positionX?: number;
     positionY?: number;
     rotation?: number;
+    isBackload?: boolean; // Indicates if cargo is being removed from ship
 }
 
 interface ExtractionMetadata {
@@ -74,6 +75,13 @@ export class PDFExtractor {
     private static parseManifesto(text: string, pageNumber: number): CargoItem[] {
         const items: CargoItem[] = [];
         
+        // Keywords that indicate backload (cargo being removed from ship)
+        const backloadKeywords = [
+            'desembarque', 'desembarque', 'removido', 'removida', 'retorno', 
+            'backload', 'descarregamento', 'saida', 'saída', 'lixo', 'resíduo',
+            'descarga', 'descarga', 'offload', 'off-loading'
+        ];
+        
         const pattern1 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)/g;
         const pattern2 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*(\d+)/g;
         const pattern3 = /(\d+)\s+([^\d]+?)\s+([\d.]+)\s*t\s+(\d+)/g;
@@ -90,12 +98,19 @@ export class PDFExtractor {
             let match;
             while ((match = pattern.exec(text)) !== null) {
                 try {
+                    // Check if description contains backload keywords
+                    const description = match[2].trim();
+                    const isBackload = backloadKeywords.some(keyword => 
+                        description.toLowerCase().includes(keyword.toLowerCase())
+                    );
+                    
                     const item: CargoItem = {
                         id: `${pageNumber}-${match[1]}`,
-                        description: match[2].trim(),
+                        description: description,
                         weight: parseFloat(match[3]),
                         volume: hasVolume ? parseFloat(match[4]) : 0,
                         bay: hasVolume ? parseInt(match[5], 10) : parseInt(match[4], 10),
+                        isBackload: isBackload
                     };
                     
                     if (!items.some(existing => existing.id === item.id)) {

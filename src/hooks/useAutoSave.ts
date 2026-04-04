@@ -4,11 +4,16 @@ import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 
 export const useAutoSave = () => {
-  const { locations, unallocatedCargoes, shipOperationCode, manifestsLoaded } = useCargoStore();
+  const { locations, unallocatedCargoes, shipOperationCode, manifestsLoaded, isHydratedFromCloud } = useCargoStore();
 
   // Auto-Save de 3 segundos contra flooding
   useEffect(() => {
     const handler = setTimeout(async () => {
+      // Bloquear auto-save enquanto a hidratação inicial não estiver concluída
+      if (!isHydratedFromCloud) {
+        return;
+      }
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         try {
@@ -21,5 +26,5 @@ export const useAutoSave = () => {
     }, 3000);
 
     return () => clearTimeout(handler);
-  }, [locations, unallocatedCargoes, shipOperationCode, manifestsLoaded]);
+  }, [locations, unallocatedCargoes, shipOperationCode, manifestsLoaded, isHydratedFromCloud]);
 };

@@ -4,7 +4,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { X } from 'lucide-react';
 
 export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { locations, activeLocationId, updateActiveLocationConfig } = useCargoStore();
+  const { locations, activeLocationId, updateActiveLocationConfig, unallocatedCargoes } = useCargoStore();
   const activeLocation = locations.find(l => l.id === activeLocationId);
 
   const [length, setLength] = useState<number | string>(0);

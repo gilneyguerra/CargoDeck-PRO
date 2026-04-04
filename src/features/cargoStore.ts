@@ -28,6 +28,7 @@ export interface CargoState {
     manifestVoyage: string | null;
     searchTerm: string;
     editingCargo: Cargo | null;
+    isHydratedFromCloud: boolean;
     
     setShipOperationCode: (code: string) => void;
     setExtractedCargoes: (cargoes: Cargo[]) => void;
@@ -48,6 +49,7 @@ export interface CargoState {
     clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
     setEditingCargo: (cargo: Cargo | null) => void;
+    setHydrationStatus: (status: boolean) => void;
 }
 
 const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
@@ -82,6 +84,7 @@ export const useCargoStore = create<CargoState>()(
             activeLocationId: initialLocationId,
             searchTerm: '',
             editingCargo: null,
+            isHydratedFromCloud: false,
 
             getAllCargo: () => {
                 const state = get();
@@ -95,6 +98,7 @@ export const useCargoStore = create<CargoState>()(
             },
 
             setEditingCargo: (cargo) => set({ editingCargo: cargo }),
+            setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
 
             setShipOperationCode: (code) => set({ shipOperationCode: code.toUpperCase() }),
 
@@ -155,26 +159,30 @@ export const useCargoStore = create<CargoState>()(
                         const newUnallocated = state.unallocatedCargoes.map(c => 
                             c.id === id ? { ...c, ...updates } : c
                         );
-const newLocations = state.locations.map(loc => ({
+                    const newLocations = state.locations.map(loc => ({
                              ...loc,
                              bays: loc.bays.map(bay => ({
-                                 ...bay,
-                                 allocatedCargoes: bay.allocatedCargoes.map(c =>
+                                 // Compute updated cargo array first
+                                 const updatedCargoes = bay.allocatedCargoes.map(c =>
                                      c.id === id ? { ...c, ...updates } : c
-                                 ),
-                                 currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) =>
-                                     acc + (c.weightTonnes * c.quantity), 0),
-                                 currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) =>
-                                     acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
+                                 );
+                                 return {
+                                     ...bay,
+                                     allocatedCargoes: updatedCargoes,
+                                     currentWeightTonnes: updatedCargoes.reduce((acc, c) =>
+                                         acc + (c.weightTonnes * c.quantity), 0),
+                                     currentOccupiedArea: updatedCargoes.reduce((acc, c) =>
+                                         acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
+                                 };
                              }))
-                         }));
-                         
-                         return {
-                             unallocatedCargoes: newUnallocated,
-                             locations: newLocations
-                         };
-                     });
-                     logger.info(`Carga ${id} atualizada.`, { id, updates });
+                        }));
+                        
+                        return {
+                            unallocatedCargoes: newUnallocated,
+                            locations: newLocations
+                        };
+                    });
+                    logger.info(`Carga ${id} atualizada.`, { id, updates });
                 } catch (error) {
                     logger.error(`Falha ao atualizar carga ${id}:`, error);
                     throw handleApplicationError(error, { 
@@ -230,28 +238,82 @@ const newLocations = state.locations.map(loc => ({
 
             updateActiveLocationConfig: (config) => {
                 try {
-                    set((state) => ({
-                        locations: state.locations.map(loc => {
-                            if (loc.id === state.activeLocationId) {
-                                const newConfig = { ...loc.config, ...config };
-                                let newBays = [...loc.bays];
-                                if (newConfig.numberOfBays !== loc.bays.length) {
-                                    newBays = Array.from({ length: newConfig.numberOfBays }, (_, i) => ({
+                    set((state) => {
+                        // If bay count changed, we need to handle cargo migration
+                        if (config.numberOfBays !== undefined && 
+                            state.activeLocationId !== null) {
+                            const activeLoc = state.locations.find(loc => loc.id === state.activeLocationId);
+                            if (activeLoc) {
+                                const currentBayCount = activeLoc.bays.length;
+                                if (config.numberOfBays !== currentBayCount) {
+                                    // Collect all cargo from existing bays
+                                    const displacedCargoes = activeLoc.bays.flatMap(bay => 
+                                        bay.allocatedCargoes.map(cargo => ({
+                                            ...cargo,
+                                            status: 'UNALLOCATED',
+                                            bayId: undefined,
+                                            positionInBay: undefined,
+                                            x: undefined,
+                                            y: undefined
+                                        }))
+                                    );
+                                    
+                                    // Calculate proper maxAreaSqMeters for new bays
+                                    const bayLengthMeters = (config.lengthMeters ?? activeLoc.config.lengthMeters) / config.numberOfBays;
+                                    const bayAreaSqMeters = bayLengthMeters * (config.widthMeters ?? activeLoc.config.widthMeters);
+                                    
+                                    // Create new bays with proper dimensions
+                                    const newBays = Array.from({ length: config.numberOfBays }, (_, i) => ({
                                         id: uuidv4(),
                                         number: i + 1,
                                         name: `Baia ${i + 1}`,
-                                        maxWeightTonnes: 150, 
-                                        maxAreaSqMeters: 0,
+                                        maxWeightTonnes: 150,
+                                        maxAreaSqMeters: bayAreaSqMeters,
                                         allocatedCargoes: [],
                                         currentWeightTonnes: 0,
                                         currentOccupiedArea: 0
                                     }));
+                                    
+                                    // Prepend displaced cargo to unallocated
+                                    return {
+                                        ...state,
+                                        locations: state.locations.map(loc => {
+                                            if (loc.id === state.activeLocationId) {
+                                                const newConfig = { ...loc.config, ...config };
+                                                return { ...loc, config: newConfig, bays: newBays };
+                                            }
+                                            return loc;
+                                        }),
+                                        unallocatedCargoes: [...displacedCargoes, ...state.unallocatedCargoes]
+                                    };
                                 }
-                                return { ...loc, config: newConfig, bays: newBays };
                             }
-                            return loc;
-                        })
-                    }));
+                        }
+                        
+                        // Default behavior if no bay count change or no active location
+                        return {
+                            locations: state.locations.map(loc => {
+                                if (loc.id === state.activeLocationId) {
+                                    const newConfig = { ...loc.config, ...config };
+                                    let newBays = [...loc.bays];
+                                    if (newConfig.numberOfBays !== loc.bays.length) {
+                                        newBays = Array.from({ length: newConfig.numberOfBays }, (_, i) => ({
+                                            id: uuidv4(),
+                                            number: i + 1,
+                                            name: `Baia ${i + 1}`,
+                                            maxWeightTonnes: 150, 
+                                            maxAreaSqMeters: 0,
+                                            allocatedCargoes: [],
+                                            currentWeightTonnes: 0,
+                                            currentOccupiedArea: 0
+                                        }));
+                                    }
+                                    return { ...loc, config: newConfig, bays: newBays };
+                                }
+                                return loc;
+                            })
+                        };
+                    });
                     logger.info('Configuração do local ativo atualizada.', { 
                         locationId: get().activeLocationId,
                         config
@@ -513,6 +575,7 @@ const newLocations = state.locations.map(loc => ({
 
             deleteCargo: async (cargoId) => {
                 try {
+                    // First, update the state optimistically
                     set((state) => {
                         const newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
                         const newLocations = state.locations.map(loc => {
@@ -530,22 +593,14 @@ const newLocations = state.locations.map(loc => ({
                         return { unallocatedCargoes: newUnallocated, locations: newLocations };
                     });
                     
-                    const stateBeforeDelete = get();
-                    const foundCargo = stateBeforeDelete.unallocatedCargoes.find(c => c.id === cargoId) || 
-                                       stateBeforeDelete.locations.flatMap(loc => loc.bays).flatMap(bay => bay.allocatedCargoes).find(c => c.id === cargoId);
-                    
-                    if (foundCargo) {
-                        try {
-                            await DatabaseService.deleteCargo(foundCargo.id);
-                            logger.info(`Carga ${cargoId} removida completamente.`, { 
-                                cargoId: foundCargo.id,
-                                description: foundCargo.description
-                            });
-                        } catch (error) {
-                            logger.error(`Falha ao remover carga ${cargoId} do banco de dados:`, error);
-                            // Note: We don't throw here because we already removed from state
-                            // The inconsistency will be resolved on next sync or manual retry
-                        }
+                    // Then, delete from backend using the cargoId directly (no need to re-find it)
+                    try {
+                        await DatabaseService.deleteCargo(cargoId);
+                        logger.info(`Carga ${cargoId} removida do banco de dados.`);
+                    } catch (error) {
+                        logger.error(`Falha ao remover carga ${cargoId} do banco de dados:`, error);
+                        // Note: We don't throw here because we already removed from state
+                        // The inconsistency will be resolved on next sync or manual retry
                     }
                 } catch (error) {
                     logger.error(`Falha ao remover carga ${cargoId}:`, error);
