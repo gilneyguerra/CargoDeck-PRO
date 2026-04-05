@@ -47,24 +47,32 @@ export function PDFUploader() {
                 }
 
                 return {
-                    id: item.id,
-                    description: item.description,
-                    identifier: item.identifier,
+                    id:           item.id,
+                    description:  item.description,
+                    identifier:   item.identifier,
                     weightTonnes: item.weight,
                     widthMeters,
                     lengthMeters,
-                    quantity: 1,
-                    category: 'GENERAL',
-                    status: 'UNALLOCATED',
-                    x: item.positionX,
-                    y: item.positionY,
-                    isRotated: item.rotation ? item.rotation > 0 : false
+                    heightMeters: item.height ?? 0,
+                    quantity:     1,
+                    category:     (item.tipoDetectado as Cargo['category']) ?? 'GENERAL',
+                    status:       'UNALLOCATED' as const,
+                    x:            item.positionX,
+                    y:            item.positionY,
+                    isRotated:    item.rotation ? item.rotation > 0 : false,
+                    // Metadados do manifesto
+                    nomeEmbarcacao:    item.nomeEmbarcacao,
+                    numeroAtendimento: item.numeroAtendimento,
+                    origemCarga:       item.origemCarga,
+                    destinoCarga:      item.destinoCarga,
+                    roteiroPrevisto:   item.roteiroPrevisto,
                 };
             });
             addCargas(mappedCargoes);
             logger.info(`Itens de carga adicionados ao store: ${extractedItems.length}`);
         }
     };
+
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();

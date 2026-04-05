@@ -73,9 +73,12 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
         isHighlight ? "bg-yellow-200/50 dark:bg-yellow-900/50 border-yellow-500 dark:border-yellow-400" : ""
       )}
     >
-      {/* Tooltip com identificador - aparece no hover */}
-      <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-neutral-700 text-white dark:text-neutral-100 text-xs font-mono rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-        {cargo.identifier}
+      {/* Tooltip com identificador e dados do manifesto - aparece no hover */}
+      <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-neutral-700 text-white dark:text-neutral-100 text-xs font-mono rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none flex flex-col items-center gap-0.5">
+        <span>{cargo.identifier}</span>
+        {cargo.nomeEmbarcacao && (
+          <span className="text-[9px] text-neutral-400">{cargo.nomeEmbarcacao}{cargo.numeroAtendimento ? ` · Ref: ${cargo.numeroAtendimento}` : ''}</span>
+        )}
       </div>
       {/* We rotate the cargo preview if isRotated is true */}
       <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
@@ -84,7 +87,17 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
       <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 text-center" style={{ fontSize: `${fontSize * 0.8}px` }}>{cargo.quantity} x {cargo.weightTonnes.toFixed(1)} t</div>
       <div className="flex items-start justify-between">
         <div className="flex flex-col items-start gap-1.5">
-          <span className="font-medium text-gray-800 dark:text-neutral-200 leading-tight pr-2" style={{ fontSize: `${fontSize}px` }}>{cargo.description}</span>
+          {/* Identificador no formato CATEGORIA: CÓDIGO */}
+          <span className="font-bold text-gray-900 dark:text-neutral-100 leading-tight pr-2 tracking-wide" style={{ fontSize: `${fontSize * 0.9}px` }}>
+            {cargo.category !== 'GENERAL' ? `${cargo.category}: ` : ''}{cargo.identifier}
+          </span>
+          <span className="font-medium text-gray-700 dark:text-neutral-300 leading-tight pr-2" style={{ fontSize: `${fontSize}px` }}>{cargo.description}</span>
+          {/* Origem → Destino quando disponível */}
+          {(cargo.origemCarga || cargo.destinoCarga) && (
+            <span className="text-neutral-500 dark:text-neutral-500 leading-tight" style={{ fontSize: `${fontSize * 0.75}px` }}>
+              {cargo.origemCarga ?? '?'} → {cargo.destinoCarga ?? '?'}
+            </span>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
           {cargo.observations === 'BACKLOAD' && (

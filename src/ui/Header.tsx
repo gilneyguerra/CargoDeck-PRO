@@ -8,7 +8,10 @@ import { AuthModal } from './AuthModal';
 import type { User } from '@supabase/supabase-js';
 
 export function Header() {
-  const { locations, manifestsLoaded, shipOperationCode, setShipOperationCode, manifestShipName, manifestVoyage } = useCargoStore();
+  const {
+    locations, manifestsLoaded, shipOperationCode, setShipOperationCode,
+    manifestShipName, manifestVoyage, manifestAtendimento, manifestRoteiro
+  } = useCargoStore();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -119,6 +122,30 @@ export function Header() {
           />
         </div>
       </div>
+
+      {/* Informações do manifesto carregado */}
+      {(manifestShipName || manifestAtendimento) && (
+        <div className="flex items-center gap-3 ml-4 pl-4 border-l border-neutral-300 dark:border-neutral-800">
+          {manifestShipName && (
+            <div className="flex flex-col">
+              <span className="text-[9px] text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-widest">Embarcação</span>
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{manifestShipName}</span>
+            </div>
+          )}
+          {manifestAtendimento && (
+            <div className="flex flex-col">
+              <span className="text-[9px] text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-widest">Atendimento</span>
+              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">#{manifestAtendimento}</span>
+            </div>
+          )}
+          {manifestRoteiro && manifestRoteiro.length > 0 && (
+            <div className="flex flex-col">
+              <span className="text-[9px] text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-widest">Roteiro</span>
+              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{manifestRoteiro.slice(0, 4).join(' → ')}{manifestRoteiro.length > 4 ? ' …' : ''}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {(totalPort > 0 || totalStarboard > 0) && (
           <div className="flex-1 flex justify-center items-center gap-8 px-4 border-x border-neutral-300 dark:border-neutral-800/50 mx-6">
@@ -256,7 +283,13 @@ export function Header() {
             </button>
             <button 
               onClick={async () => {
-                const blob = await PdfGeneratorService.generateBlob(locations, manifestShipName || "STARNAV HYDRA", manifestVoyage || "509467921");
+                const blob = await PdfGeneratorService.generateBlob(
+                  locations,
+                  manifestShipName || 'Embarcação',
+                  manifestVoyage || '',
+                  manifestAtendimento,
+                  manifestRoteiro
+                );
                 if (dirHandle) {
                   try {
                     const fileHandle = await dirHandle.getFileHandle(exportFilename, { create: true });
@@ -268,7 +301,14 @@ export function Header() {
                     alert('Erro ao salvar: ' + (e as Error).message);
                   }
                 } else {
-                  PdfGeneratorService.executeExport(locations, manifestShipName || "STARNAV HYDRA", manifestVoyage || "509467921", exportFilename);
+                  PdfGeneratorService.executeExport(
+                    locations,
+                    manifestShipName || 'Embarcação',
+                    manifestVoyage || '',
+                    exportFilename,
+                    manifestAtendimento,
+                    manifestRoteiro
+                  );
                 }
                 setExportModalOpen(false);
                 setDirHandle(null);

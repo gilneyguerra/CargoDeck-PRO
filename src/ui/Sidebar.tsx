@@ -3,10 +3,48 @@ import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '@/hooks/usePDFUpload';
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import type { Cargo } from '@/domain/Cargo';
+import type { Cargo, CargoCategory } from '@/domain/Cargo';
+import type { CargoItem } from '@/services/pdfExtractor';
 import { ManualCargoModal } from './ManualCargoModal';
 import { EditCargoModal } from './EditCargoModal';
 import DraggableCargo from './DraggableCargo';
+
+// ─── Helpers para mapeamento de itens extraídos do PDF ───────────────────────
+
+/**
+ * Detecta a categoria da carga com base no tipo detectado e no peso.
+ */
+function detectCategory(item: CargoItem): CargoCategory {
+    const tipo = (item.tipoDetectado ?? '').toUpperCase();
+    if (tipo === 'CONTAINER') return 'CONTAINER';
+    if (tipo === 'TUBULAR') return 'OTHER';
+    if (tipo === 'BASKET') return 'BASKET';
+    if (tipo === 'EQUIPMENT') return 'EQUIPMENT';
+    if (item.weight > 20) return 'HEAVY';
+    return 'GENERAL';
+}
+
+/**
+ * Escolhe o formato visual da carga com base no tipo.
+ */
+function detectFormat(item: CargoItem): Cargo['format'] {
+    const tipo = (item.tipoDetectado ?? '').toUpperCase();
+    if (tipo === 'TUBULAR') return 'Tubular';
+    if (item.length && item.width && Math.abs(item.length - item.width) < 0.5) return 'Quadrado';
+    return 'Retangular';
+}
+
+/**
+ * Retorna uma cor hexadecimal baseada na categoria/tipo da carga.
+ */
+function getCategoryColor(tipoDetectado?: string): string {
+    const tipo = (tipoDetectado ?? '').toUpperCase();
+    if (tipo === 'CONTAINER') return '#f97316'; // laranja
+    if (tipo === 'TUBULAR')   return '#a855f7'; // roxo
+    if (tipo === 'BASKET')    return '#22c55e'; // verde
+    if (tipo === 'EQUIPMENT') return '#eab308'; // amarelo
+    return '#3b82f6'; // azul (padrão)
+}
 
 export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY' | 'FRAGILE' | 'OTHER';
 
@@ -34,24 +72,43 @@ export function Sidebar() {
             reset();
             const extractedItems = await upload(file);
             if (extractedItems) {
-                const mappedCargoes: Cargo[] = extractedItems.map(item => ({
-                    id: item.id,
-                    description: item.description,
-                    identifier: item.id,
-                    weightTonnes: item.weight,
-                    widthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 2.4) : 2.4,
-                    lengthMeters: item.volume > 0 ? Math.max(Math.sqrt(item.volume), 6) : 6,
-                    quantity: 1,
-                    category: 'GENERAL',
-                    status: 'UNALLOCATED',
-                    x: item.positionX,
-                    y: item.positionY,
-                    isRotated: item.rotation ? item.rotation > 0 : false
-                }));
-                // We use useCargoStore.getState() or we can add setExtractedCargoes from the hook above
+                const mappedCargoes: Cargo[] = extractedItems.map((item: CargoItem) => {
+                    // Dimensões: usa valores reais do manifesto ou defaults razoáveis
+                    const lengthMeters = item.length && item.length > 0 ? item.length : 6.0;
+                    const widthMeters  = item.width  && item.width  > 0 ? item.width  : 2.4;
+                    const heightMeters = item.height && item.height > 0 ? item.height : 2.6;
+
+                    return {
+                        id: item.id,
+                        description: item.description,
+                        // Usa o código identificador real (ex: "MLTU 280189-9"), não o ID interno
+                        identifier: item.identifier,
+                        // Peso já vem em toneladas do extrator (foi convertido de KG)
+                        weightTonnes: item.weight,
+                        widthMeters,
+                        lengthMeters,
+                        heightMeters,
+                        quantity: 1,
+                        category: detectCategory(item),
+                        status: 'UNALLOCATED' as const,
+                        x: item.positionX,
+                        y: item.positionY,
+                        isRotated: item.rotation ? item.rotation > 0 : false,
+                        isBackload: item.isBackload ?? false,
+                        observations: item.isBackload ? 'BACKLOAD' : undefined,
+                        color: getCategoryColor(item.tipoDetectado),
+                        format: detectFormat(item),
+                        // Dados do manifesto
+                        nomeEmbarcacao:    item.nomeEmbarcacao,
+                        numeroAtendimento: item.numeroAtendimento,
+                        origemCarga:       item.origemCarga,
+                        destinoCarga:      item.destinoCarga,
+                        roteiroPrevisto:   item.roteiroPrevisto,
+                    };
+                });
                 useCargoStore.getState().setExtractedCargoes(mappedCargoes);
             }
-            e.target.value = ''; // Reset to allow re-upload of the same file
+            e.target.value = '';
         }
     };
 

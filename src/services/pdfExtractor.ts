@@ -1,7 +1,20 @@
 // src/services/pdfExtractor.ts
 /**
- * @file Servico robusto para extracao de dados de PDFs na aplicacao CargoDeck-PRO.
- * Lida com validacao de arquivo e extracao de texto via pdfjs-dist com fallback OCR via Tesseract.js.
+ * @file Serviço robusto para extração de dados de PDFs de manifestos de carga (CargoDeck-PRO).
+ *
+ * Capacidades:
+ * - Leitura de PDFs nativos (texto selecionável) via pdfjs-dist
+ * - Fallback automático para OCR via Tesseract.js em PDFs escaneados
+ * - Extração dos 9 elementos do manifesto offshore brasileiro (Petrobras/TAGAZ):
+ *   1. Nome da Embarcação  (do campo EQUIPAMENTO {NUM} {NOME})
+ *   2. Número de Atendimento  (ATENDIMENTO: XXXXXXXXX)
+ *   3. Roteiro Previsto  (Roteiro previsto PBG -> NS57 -> NS63 ...)
+ *   4. Local de Origem  (seção "ORIG_COD   NOME_ORIG   DEST_COD   NOME_DEST")
+ *   5. Local de Destino
+ *   6. Descrição da Carga  (campo livre após a unidade)
+ *   7. Código Identificador Único  (ISO container ou numérico)
+ *   8. Dimensões (CxLxA em metros, separação por 'x')
+ *   9. Peso (em KG → convertido para toneladas)
  */
 import type * as pdfjsLibType from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
@@ -9,20 +22,30 @@ import { AppError, handleApplicationError } from './errorHandler';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
 
+// ─── Interfaces Públicas ────────────────────────────────────────────────────
+
 export interface CargoItem {
     id: string;
-    identifier: string;
-    description: string;
-    weight: number;
-    volume: number;
-    length?: number;
-    width?: number;
-    height?: number;
-    bay: number;
+    identifier: string;        // Código único (ex: "MLTU 280189-9", "805154-2")
+    description: string;       // Descrição textual da carga
+    weight: number;            // Peso em TONELADAS (convertido de KG)
+    weightKg: number;          // Peso original em KG
+    volume: number;            // Volume em m³ (quando disponível)
+    length?: number;           // Comprimento em metros
+    width?: number;            // Largura em metros
+    height?: number;           // Altura em metros
+    bay: number;               // Página de origem (usado como agrupamento)
     positionX?: number;
     positionY?: number;
     rotation?: number;
-    isBackload?: boolean;
+    isBackload?: boolean;      // True se for operação de desembarque/backload
+    tipoDetectado?: string;    // ex: "CONTAINER", "CESTA", "TUBULAR"
+    // Dados do cabeçalho do manifesto
+    nomeEmbarcacao?: string;
+    numeroAtendimento?: string;
+    origemCarga?: string;
+    destinoCarga?: string;
+    roteiroPrevisto?: string[];
 }
 
 interface ExtractionMetadata {
@@ -42,9 +65,420 @@ export interface ExtractionResult {
     error?: AppError;
 }
 
+// ─── Interface interna do cabeçalho ─────────────────────────────────────────
+
+interface ManifestHeader {
+    nomeEmbarcacao?: string;
+    numeroAtendimento?: string;
+    origemCarga?: string;
+    destinoCarga?: string;
+    roteiroPrevisto?: string[];
+}
+
+// ─── Utilitários de Normalização ────────────────────────────────────────────
+
+/**
+ * Normaliza valor numérico para float JS.
+ * Suporta: "9.000,00" (BR), "9,000.00" (US), "9000"
+ */
+function normalizeNumber(raw: string): number {
+    const s = raw.trim();
+    const hasCommaDecimal = /\d,\d{1,2}$/.test(s);
+    const hasDotDecimal   = /\d\.\d{1,2}$/.test(s);
+
+    let normalized: string;
+    if (hasCommaDecimal) {
+        normalized = s.replace(/\./g, '').replace(',', '.');
+    } else if (hasDotDecimal) {
+        normalized = s.replace(/,/g, '');
+    } else {
+        normalized = s.replace(/[.,]/g, '');
+    }
+    return parseFloat(normalized) || 0;
+}
+
+function kgToTonnes(kg: number): number { return kg / 1000; }
+
+function normalizeDimension(raw: string): number {
+    return parseFloat(raw.replace(',', '.')) || 0;
+}
+
+// ─── Palavras-chave ──────────────────────────────────────────────────────────
+
+const BACKLOAD_KEYWORDS = [
+    'desembarque', 'removido', 'removida', 'retorno', 'backload',
+    'descarregamento', 'saida', 'saída', 'descarga', 'offload',
+];
+
+const CARGO_TYPES: Record<string, string> = {
+    'CONTAINER': 'CONTAINER',
+    'CONT ':     'CONTAINER',
+    'CESTA':     'BASKET',
+    'BASKET':    'BASKET',
+    'CESTACM':   'BASKET',
+    'CETSA':     'BASKET',
+    'CACAMBA':   'BASKET',
+    'TUBULAR':   'TUBULAR',
+    'RISER':     'TUBULAR',
+    'PIPE':      'TUBULAR',
+    'TUBO':      'TUBULAR',
+    'BOP':       'EQUIPMENT',
+    'SKID':      'EQUIPMENT',
+    'EQUIPAMENTO': 'EQUIPMENT',
+    'EQUIPMENT': 'EQUIPMENT',
+    'TANQUE':    'EQUIPMENT',
+    'CUTTING BOX': 'EQUIPMENT',
+    'CAIXA':     'GENERAL',
+    'BOX':       'GENERAL',
+    'PALLET':    'GENERAL',
+};
+
+// ─── Extração do Cabeçalho ───────────────────────────────────────────────────
+
+/**
+ * Extrai metadados do cabeçalho do manifesto Petrobras/TAGAZ:
+ * - Nome da Embarcação  (do campo "EQUIPAMENTO {NUM} {NOME}")
+ * - Número de Atendimento  ("ATENDIMENTO: 509442732")
+ * - Roteiro Previsto  ("Roteiro previsto PBG -> NS57 -> ...")
+ * - Origem/Destino global (primeiro cabeçalho de seção encontrado)
+ */
+function parseHeaderInfo(fullText: string): ManifestHeader {
+    const header: ManifestHeader = {};
+
+    // 1. Número de Atendimento
+    // Formato Petrobras TAGAZ: "ATENDIMENTO:   509442732   052"
+    const atendimentoPatterns = [
+        /ATENDIMENTO\s*[:\-]\s*(\d{7,12})/i,
+        /\b(5\d{8})\b/,          // Padrão Petrobras: 9 dígitos começando com 5
+        /\b(\d{9})\b/,           // Qualquer 9 dígitos (fallback)
+    ];
+    for (const pat of atendimentoPatterns) {
+        const m = fullText.match(pat);
+        if (m?.[1]) { header.numeroAtendimento = m[1].trim(); break; }
+    }
+
+    // 2. Nome da Embarcação
+    // Formato TAGAZ: "EQUIPAMENTO   30127695   TAGAZ"
+    //                 ⇒ "TAGAZ" é o nome da embarcação
+    const embarcacaoPatterns = [
+        /EQUIPAMENTO\s+\d+\s+([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35}?)(?=\s{2,}|\s+DATA:|\s+MANIFESTO|$)/m,
+        /(?:embarca[çc][ãa]o|navio|vessel|m\/v)\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-Za-zÀ-ÿ0-9\s\-]{3,40}?)(?:\s*\n|\s{2,})/im,
+    ];
+    for (const pat of embarcacaoPatterns) {
+        const m = fullText.match(pat);
+        const candidate = m?.[1]?.trim();
+        if (candidate && candidate.length >= 3 && candidate.length <= 50) {
+            if (!candidate.match(/^(MANIFESTO|PLANO|CARGA|ROTEIRO|ORIGEM|DESTINO|TOTAL|DATA|HORA|PAGINA|CONTAINER|PETROBRAS|BASE|EMPRESA|EQUIPAMENTO|RECEBIMENTO)/i)) {
+                header.nomeEmbarcacao = candidate;
+                break;
+            }
+        }
+    }
+
+    // 3. Roteiro Previsto
+    // Formato real: "Roteiro previsto PBG -> NS57 -> NS63 -> NS44 -> NS32..."
+    const roteiroPatterns = [
+        /Roteiro\s+previsto\s+([A-Z0-9]{2,6}(?:\s*->\s*[A-Z0-9]{2,6}){2,})/i,
+        /ROTEIRO\s+PREVISTO\s*[:\s]+([A-Z0-9]{2,6}(?:\s*->\s*[A-Z0-9]{2,6}){2,})/i,
+        /Roteiro\s+previsto\s+([A-Z0-9]{2,6}(?:\s*-\s*[A-Z0-9]{2,6}){2,})/i,
+    ];
+    for (const pat of roteiroPatterns) {
+        const m = fullText.match(pat);
+        if (m?.[1]) {
+            const stops = m[1].split(/\s*->\s*|\s+-\s+/)
+                .map(s => s.trim().toUpperCase())
+                .filter(s => /^[A-Z0-9]{2,6}$/.test(s));
+            if (stops.length >= 2) { header.roteiroPrevisto = stops; break; }
+        }
+    }
+
+    // 4. Origem e Destino global
+    // O primeiro cabeçalho de seção encontrado no texto completo:
+    // "NS44   LAGUNA STAR   PACU   PORTO DO AÇU"
+    const sectionHeaderMatch = fullText.match(
+        /\b([A-Z]{2,6})\s{2,}([A-Z][A-Z\sÀ-ÿ]{3,35}?)\s{3,}([A-Z]{2,6})\s{2,}([A-Z][A-Z\sÀ-ÿ]{3,35}?)(?=\s{2,}|\n|\d{4})/
+    );
+    if (sectionHeaderMatch) {
+        const code1 = sectionHeaderMatch[1].trim();
+        const nome1 = sectionHeaderMatch[2].trim();
+        const code2 = sectionHeaderMatch[3].trim();
+        const nome2 = sectionHeaderMatch[4].trim();
+        // Verificar que não são palavras de rodapé
+        if (!code1.match(/^(PETROBRAS|MANIFESTO|BASE|EMPRESA|RECEBIMENTO)$/i)) {
+            header.origemCarga  = `${code1} - ${nome1}`;
+            header.destinoCarga = `${code2} - ${nome2}`;
+        }
+    }
+
+    // Fallback: buscar por rótulos "Origem:" e "Destino:"
+    if (!header.origemCarga) {
+        const m = fullText.match(/(?:local\s+de\s+)?origem\s*[:\-]?\s*([A-Z]{2,6}\s*[-–]\s*[^\n\r]{3,60})/i);
+        if (m?.[1]) header.origemCarga = m[1].trim().substring(0, 70);
+    }
+    if (!header.destinoCarga) {
+        const m = fullText.match(/(?:local\s+de\s+)?destino\s*[:\-]?\s*([A-Z]{2,6}\s*[-–]\s*[^\n\r]{3,60})/i);
+        if (m?.[1]) header.destinoCarga = m[1].trim().substring(0, 70);
+    }
+
+    logger.debug('Header do manifesto extraído', {
+        nomeEmbarcacao:    header.nomeEmbarcacao,
+        numeroAtendimento: header.numeroAtendimento,
+        origemCarga:       header.origemCarga,
+        destinoCarga:      header.destinoCarga,
+        roteiroPrevisto:   header.roteiroPrevisto?.slice(0, 5),
+    });
+    return header;
+}
+
+// ─── Detecção de tipo de carga ───────────────────────────────────────────────
+
+function detectCargoType(text: string): string | undefined {
+    const upper = text.toUpperCase();
+    for (const [keyword, tipo] of Object.entries(CARGO_TYPES)) {
+        if (upper.includes(keyword)) return tipo;
+    }
+    return undefined;
+}
+
+// ─── Parser de Código Identificador ─────────────────────────────────────────
+
+function extractIdentifier(text: string): string | undefined {
+    // ISO container: 4 letras + 6-7 dígitos (ex: MLTU 280189-9, TITU7263141)
+    const containerMatch = text.match(/\b([A-Z]{3,4}\s?\d{6,7}[-]?\d?)\b/);
+    if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').trim();
+
+    // Código numérico com hífen (ex: "805154-2")
+    const numericHyphenMatch = text.match(/\b(\d{5,9}-\d{1,2})\b/);
+    if (numericHyphenMatch) return numericHyphenMatch[1];
+
+    // Código numérico puro (ex: "802567")
+    const numericMatch = text.match(/\b(\d{5,9})\b/);
+    if (numericMatch) return numericMatch[1];
+
+    return undefined;
+}
+
+// ─── Parser Principal de Itens de Manifesto ──────────────────────────────────
+
+/**
+ * Extrai itens de carga do texto do manifesto.
+ *
+ * Padrão principal: Formato Petrobras/TAGAZ (validado com PDFs reais)
+ * Cabeçalho de seção: "ORIG_COD   NOME_ORIGEM   DEST_COD   NOME_DESTINO"
+ * Linha de carga: "NNNN   NNNNNNNN   NNNN/NNNN   QTD   UN   DESCRIÇÃO   CxLxA   PESO_KG   VALOR   BRL"
+ *
+ * Padrões de fallback para outros formatos de manifesto.
+ */
+function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): CargoItem[] {
+    const items: CargoItem[] = [];
+    const seenIds = new Set<string>();
+
+    let localOrigem  = header.origemCarga;
+    let localDestino = header.destinoCarga;
+
+    // ── Detectar cabeçalhos de seção dentro do texto ──────────────────────────
+    // Padrão: "NS44   LAGUNA STAR   PACU   PORTO DO AÇU"
+    const sectionHeaders = [...text.matchAll(
+        /\b([A-Z]{2,6})\s{2,}([A-Z][A-Z\sÀ-ÿ]{3,35}?)\s{3,}([A-Z]{2,6})\s{2,}([A-Z][A-Z\sÀ-ÿ]{3,35}?)(?=\s{2,}|\n|\d{4})/g
+    )];
+
+    if (sectionHeaders.length > 0 && !localOrigem) {
+        const sh = sectionHeaders[0];
+        localOrigem  = `${sh[1].trim()} - ${sh[2].trim()}`;
+        localDestino = `${sh[3].trim()} - ${sh[4].trim()}`;
+    }
+
+    type SectionMeta = { pos: number; origem: string; destino: string };
+    const sections: SectionMeta[] = sectionHeaders.map(sh => ({
+        pos:     sh.index ?? 0,
+        origem:  `${sh[1].trim()} - ${sh[2].trim()}`,
+        destino: `${sh[3].trim()} - ${sh[4].trim()}`,
+    }));
+
+    function getSectionFor(pos: number): { origem: string; destino: string } {
+        let best = { origem: localOrigem ?? '', destino: localDestino ?? '' };
+        for (const sec of sections) {
+            if (sec.pos <= pos) best = sec;
+            else break;
+        }
+        return best;
+    }
+
+    // ── Padrão 1 (Principal): Petrobras/TAGAZ com dimensões ───────────────────
+    // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
+    // Grupos: [1]=seq [2]=NF [3]=descrição [4]=C [5]=L [6]=A [7]=peso_kg
+    const petrobrasPattern = /\b(\d{3,4})\s{2,}(\d{6,12})\s{2,}\d{4}\/\d{4}\s{2,}[\d,.]+\s{2,}(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s{2,}(.{5,150}?)\s{2,}(\d+[,.]\d+)x(\d+[,.]\d+)x(\d+[,.]\d+)\s{2,}([\d.,]+)\s{2,}[\d.,]+\s{2,}BRL/gi;
+
+    let match: RegExpExecArray | null;
+    while ((match = petrobrasPattern.exec(text)) !== null) {
+        try {
+            const rawDescription = match[3].trim();
+            if (rawDescription.match(/^(PETROBRAS|MANIFESTO|TRANSPORTE|PAG:|EMPRESA|ATENDIMENTO|ROTEIRO|HORA:|DATA:)/i)) continue;
+
+            const length   = normalizeDimension(match[4]);
+            const width    = normalizeDimension(match[5]);
+            const height   = normalizeDimension(match[6]);
+            const weightKg = normalizeNumber(match[7]);
+            if (weightKg === 0) continue;
+
+            const identifier = extractIdentifier(rawDescription) ?? match[2];
+            const desc       = rawDescription.substring(0, 120);
+            const isBackload = BACKLOAD_KEYWORDS.some(kw => desc.toLowerCase().includes(kw));
+            const tipo       = detectCargoType(desc);
+            const sec        = getSectionFor(match.index ?? 0);
+            const id         = `${identifier}-${match[1]}`;
+
+            if (!seenIds.has(id)) {
+                seenIds.add(id);
+                items.push({
+                    id, identifier,
+                    description: desc,
+                    weight: kgToTonnes(weightKg),
+                    weightKg,
+                    volume: length * width * height,
+                    length, width, height,
+                    bay: pageNumber,
+                    isBackload, tipoDetectado: tipo,
+                    nomeEmbarcacao:    header.nomeEmbarcacao,
+                    numeroAtendimento: header.numeroAtendimento,
+                    roteiroPrevisto:   header.roteiroPrevisto,
+                    origemCarga:       sec.origem  || header.origemCarga,
+                    destinoCarga:      sec.destino || header.destinoCarga,
+                });
+            }
+        } catch (e) {
+            logger.warn(`Falha ao parsear item (Petrobras) na pág ${pageNumber}:`, { truncated: match[0].substring(0, 80), error: e });
+        }
+    }
+    petrobrasPattern.lastIndex = 0;
+
+    // ── Padrão 2: Petrobras sem dimensões (líquidos/a granel) ────────────────
+    // Itens com 0,00x0,00x0,00 são capturados pelo padrão 1.
+    // Este padrão captura linhas sem o bloco de dimensões no meio.
+    if (items.length === 0) {
+        const pattern2 = /\b(\d{3,4})\s{2,}(\d{6,12})\s{2,}\d{4}\/\d{4}\s{2,}[\d,.]+\s{2,}(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s{2,}(.{5,150}?)\s{2,}([\d.,]+)\s{2,}[\d.,]+\s{2,}BRL/gi;
+        while ((match = pattern2.exec(text)) !== null) {
+            try {
+                const rawDescription = match[3].trim();
+                if (rawDescription.match(/^(PETROBRAS|MANIFESTO|TRANSPORTE|PAG:|EMPRESA|ATENDIMENTO|ROTEIRO)/i)) continue;
+
+                const weightKg = normalizeNumber(match[4]);
+                if (weightKg === 0) continue;
+
+                const identifier = extractIdentifier(rawDescription) ?? match[2];
+                const id   = `${identifier}-${match[1]}`;
+                const sec  = getSectionFor(match.index ?? 0);
+
+                if (!seenIds.has(id)) {
+                    seenIds.add(id);
+                    items.push({
+                        id, identifier,
+                        description: rawDescription.substring(0, 120),
+                        weight: kgToTonnes(weightKg),
+                        weightKg, volume: 0,
+                        bay: pageNumber,
+                        isBackload: BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw)),
+                        tipoDetectado: detectCargoType(rawDescription),
+                        nomeEmbarcacao:    header.nomeEmbarcacao,
+                        numeroAtendimento: header.numeroAtendimento,
+                        roteiroPrevisto:   header.roteiroPrevisto,
+                        origemCarga:       sec.origem  || header.origemCarga,
+                        destinoCarga:      sec.destino || header.destinoCarga,
+                    });
+                }
+            } catch (e) {
+                logger.warn(`Falha ao parsear item (sem dims) na pág ${pageNumber}:`, { error: e });
+            }
+        }
+        pattern2.lastIndex = 0;
+    }
+
+    // ── Padrão 3 (Fallback genérico): Descrição + CxLxA + KG ─────────────────
+    if (items.length === 0) {
+        const pattern3 = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-:\/]{3,80}?)\s+(\d+[,.]?\d{1,2})\s*[xX×]\s*(\d+[,.]?\d{1,2})\s*[xX×]\s*(\d+[,.]?\d{1,2})\s*(?:m|M)?\s+([\d.,]+)\s*[Kk][Gg]/g;
+        while ((match = pattern3.exec(text)) !== null) {
+            try {
+                const rawDescription = match[1].trim();
+                if (rawDescription.length < 5) continue;
+                if (rawDescription.match(/^(PETROBRAS|MANIFESTO|TOTAL|DATA|HORA|PAGINA|ASSINATURA|EMPRESA)/i)) continue;
+
+                const length = normalizeDimension(match[2]);
+                const width  = normalizeDimension(match[3]);
+                const height = normalizeDimension(match[4]);
+                const weightKg = normalizeNumber(match[5]);
+                if (weightKg === 0) continue;
+
+                const identifier = extractIdentifier(rawDescription) ?? `P${pageNumber}-${items.length + 1}`;
+                const id = `${pageNumber}-${identifier}`;
+                if (!seenIds.has(id)) {
+                    seenIds.add(id);
+                    items.push({
+                        id, identifier,
+                        description: rawDescription.substring(0, 120),
+                        weight: kgToTonnes(weightKg),
+                        weightKg,
+                        volume: length * width * height,
+                        length, width, height,
+                        bay: pageNumber,
+                        isBackload: BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw)),
+                        tipoDetectado: detectCargoType(rawDescription),
+                        ...header,
+                    });
+                }
+            } catch (e) {
+                logger.warn(`Falha ao parsear item (genérico) na pág ${pageNumber}:`, { error: e });
+            }
+        }
+        pattern3.lastIndex = 0;
+    }
+
+    // ── Padrão 4 (Legado pipes): compatibilidade com formato antigo ───────────
+    if (items.length === 0) {
+        const pattern4 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)/g;
+        while ((match = pattern4.exec(text)) !== null) {
+            try {
+                const rawDescription = match[2].trim();
+                const weightTonnes   = parseFloat(match[3]);
+                const volume         = parseFloat(match[4]);
+                const bay            = parseInt(match[5], 10);
+                if (isNaN(weightTonnes) || weightTonnes === 0) continue;
+
+                const identifier = extractIdentifier(rawDescription) ?? match[1];
+                const id = `${pageNumber}-${identifier}`;
+                if (!seenIds.has(id)) {
+                    seenIds.add(id);
+                    items.push({
+                        id, identifier,
+                        description: rawDescription,
+                        weight: weightTonnes,
+                        weightKg: weightTonnes * 1000,
+                        volume, bay,
+                        isBackload: BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw)),
+                        tipoDetectado: detectCargoType(rawDescription),
+                        ...header,
+                    });
+                }
+            } catch (e) {
+                logger.warn(`Falha ao parsear item (legado) na pág ${pageNumber}:`, { error: e });
+            }
+        }
+        pattern4.lastIndex = 0;
+    }
+
+    logger.debug(`Página ${pageNumber}: ${items.length} item(ns) extraído(s)`, {
+        textLength: text.length,
+        sectionCount: sections.length,
+    });
+    return items;
+}
+
+// ─── Classe PDFExtractor ─────────────────────────────────────────────────────
+
 export class PDFExtractor {
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024;
     private static readonly ALLOWED_TYPES = ['application/pdf'];
+    /** Densidade mínima de caracteres por página para considerar PDF nativo */
+    private static readonly MIN_TEXT_DENSITY = 50;
 
     static validateFile(file: File): { valid: boolean; error?: AppError } {
         if (!this.ALLOWED_TYPES.includes(file.type)) {
@@ -66,7 +500,7 @@ export class PDFExtractor {
                 if (reader.result instanceof ArrayBuffer) {
                     resolve(reader.result);
                 } else {
-                    reject(new AppError(ErrorCodes.PDF_READ_FAILED, 'Resultado da leitura do arquivo nao e um ArrayBuffer.'));
+                    reject(new AppError(ErrorCodes.PDF_READ_FAILED, 'Resultado da leitura não é um ArrayBuffer.'));
                 }
             };
             reader.onerror = () => {
@@ -76,123 +510,22 @@ export class PDFExtractor {
         });
     }
 
-    private static parseManifesto(text: string, pageNumber: number): CargoItem[] {
-        const items: CargoItem[] = [];
-        
-        const backloadKeywords = [
-            'desembarque', 'desembarque', 'removido', 'removida', 'retorno', 
-            'backload', 'descarregamento', 'saida', 'saída', 'lixo', 'resíduo',
-            'descarga', 'descarga', 'offload', 'off-loading'
-        ];
+    /**
+     * Extrai todo o texto de um PDF nativo (como texto único) e faz o parse.
+     * Detecta automaticamente se o texto é insuficiente (PDF escaneado).
+     */
+    private static async extractTextFromPDF(
+        pdf: pdfjsLibType.PDFDocumentProxy,
+        signal?: AbortSignal
+    ): Promise<{ items: CargoItem[]; isTextPoor: boolean }> {
+        let totalChars = 0;
+        let fullText   = '';
 
-        // Pattern 1: ID | Description | Weight | Volume | Bay (pipe-separated with volume)
-        const pattern1 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)/g;
-        // Pattern 2: ID | Description | Weight | Bay (pipe-separated without volume)
-        const pattern2 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*(\d+)/g;
-        // Pattern 3: ID Description Weight t Bay (space-separated)
-        const pattern3 = /(\d+)\s+([^\d]+?)\s+([\d.]+)\s*t\s+(\d+)/g;
-        // Pattern 4: ID - Description - Weight t - Bay (dash-separated)
-        const pattern4 = /(\d+)\s*[-–—]\s*([A-Za-zÀ-ÿ\s]+?)\s*[-–—]\s*([\d.]+)\s*t\s*[-–—]\s*(\d+)/g;
-        // Pattern 5: Container format - ABCD1234567 DESCRIPTION WEIGHT t VOLUME m3 BAY
-        // Handles multi-word descriptions by matching until weight pattern
-        const pattern5 = /([A-Z]{4}\d{7,})\s+([A-Za-zÀ-ÿ\s]+?)(?=\s+[\d.]+\s*t\s)/g;
-        // Pattern 5b: Same as 5 but with explicit = separator
-        const pattern5b = /([A-Z]{4}\d{7,})\s*=\s*([A-Za-zÀ-ÿ\s]+?)(?=\s+[\d.]+\s*t\s)/g;
-        // Pattern 6: Dimensions pattern - LxWxH format
-        const pattern6 = /(\d+)\s*\|\s*(.+?)\s*\|\s*([\d.]+)\s*t\s*\|\s*([\d.]+)\s*m[³3]\s*\|\s*(\d+)\s*\|\s*([\d.]+)\s*[xX]\s*([\d.]+)\s*[xX]\s*([\d.]+)/g;
+        logger.info(`Iniciando extração de texto de ${pdf.numPages} página(s)`);
 
-        const patterns = [
-            { pattern: pattern1, hasVolume: true, hasDimensions: false },
-            { pattern: pattern2, hasVolume: false, hasDimensions: false },
-            { pattern: pattern3, hasVolume: false, hasDimensions: false },
-            { pattern: pattern4, hasVolume: false, hasDimensions: false },
-            { pattern: pattern5, hasVolume: true, hasDimensions: false, needsSecondParse: true },
-            { pattern: pattern5b, hasVolume: true, hasDimensions: false, needsSecondParse: true },
-            { pattern: pattern6, hasVolume: true, hasDimensions: true },
-        ];
-        
-        for (const { pattern, hasVolume, hasDimensions, needsSecondParse } of patterns) {
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                try {
-                    let description: string;
-                    let weight: number;
-                    let volume: number;
-                    let bay: number;
-                    let length: number | undefined;
-                    let width: number | undefined;
-                    let height: number | undefined;
-
-                    if (needsSecondParse) {
-                        // For container patterns, extract metrics from the full line
-                        description = match[2].trim();
-                        
-                        // Extract weight, volume, and bay from remaining text after description
-                        const remainingText = match[0].substring(match[0].indexOf(description) + description.length);
-                        const metricsMatch = /([\d.]+)\s*t\s+([\d.]+)\s*m[³3]\s+(\d+)/.exec(remainingText);
-                        
-                        if (!metricsMatch) {
-                            logger.warn(`Could not extract metrics from container line: ${match[0]}`);
-                            continue;
-                        }
-                        
-                        weight = parseFloat(metricsMatch[1]);
-                        volume = parseFloat(metricsMatch[2]);
-                        bay = parseInt(metricsMatch[3], 10);
-                    } else {
-                        description = match[2].trim();
-                        weight = parseFloat(match[3]);
-                        volume = hasVolume ? parseFloat(match[4]) : 0;
-                        bay = hasVolume ? parseInt(match[5], 10) : parseInt(match[4], 10);
-
-                        if (hasDimensions && match.length >= 9) {
-                            length = parseFloat(match[7]);
-                            width = parseFloat(match[8]);
-                            height = parseFloat(match[9]);
-                        }
-                    }
-                    
-                    const isBackload = backloadKeywords.some(keyword => 
-                        description.toLowerCase().includes(keyword.toLowerCase())
-                    );
-
-                    const item: CargoItem = {
-                        id: `${pageNumber}-${match[1]}`,
-                        identifier: match[1],
-                        description: description,
-                        weight: weight,
-                        volume: volume,
-                        bay: bay,
-                        length,
-                        width,
-                        height,
-                        isBackload: isBackload
-                    };
-                    
-                    if (!items.some(existing => existing.id === item.id)) {
-                        items.push(item);
-                    }
-                } catch (parseError) {
-                    logger.warn(`Falha ao parsear linha do manifesto: ${match[0]}`, { 
-                        pageNumber, 
-                        parseError: parseError instanceof Error ? parseError : undefined 
-                    });
-                }
-            }
-            pattern.lastIndex = 0;
-        }
-        
-        logger.debug(`Parsed ${items.length} items from page ${pageNumber}`, { textLength: text.length });
-        return items;
-    }
-
-    private static async extractTextFromPDF(pdf: pdfjsLibType.PDFDocumentProxy, signal?: AbortSignal): Promise<CargoItem[]> {
-        const allItems: CargoItem[] = [];
-        logger.info(`Starting text extraction from ${pdf.numPages} pages`);
-        
         for (let i = 1; i <= pdf.numPages; i++) {
             if (signal?.aborted) {
-                throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'Text extraction aborted');
+                throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'Extração de texto abortada');
             }
 
             let page;
@@ -202,197 +535,208 @@ export class PDFExtractor {
                 const text = textContent.items
                     .map((item: { str: string }) => item.str)
                     .join(' ');
-                
-                logger.debug(`Page ${i} text extracted`, { 
-                    textLength: text.length,
-                    textPreview: text.substring(0, 200) + (text.length > 200 ? '...' : '')
+
+                totalChars += text.length;
+                fullText   += '\n' + text;
+
+                logger.debug(`Página ${i}: ${text.length} caracteres extraídos`, {
+                    preview: text.substring(0, 200) + (text.length > 200 ? '...' : '')
                 });
-                
-                const pageItems = this.parseManifesto(text, i);
-                allItems.push(...pageItems);
-                
-                logger.debug(`Page ${i} items found`, { count: pageItems.length });
             } catch (pageError) {
-                logger.warn(`Erro ao extrair texto da pagina ${i}:`, { 
-                    pageNumber: i, 
-                    pageError: pageError instanceof Error ? pageError : undefined 
-                });
+                logger.warn(`Erro ao extrair texto da página ${i}:`, { error: pageError });
             } finally {
-                if (page) {
-                    page.cleanup();
-                }
+                if (page) page.cleanup();
             }
         }
-        
-        logger.info(`Text extraction completed`, { 
-            totalPages: pdf.numPages, 
-            totalItems: allItems.length 
+
+        // Parse de todo o texto de uma vez (o manifesto Petrobras é contínuo entre páginas)
+        const header = parseHeaderInfo(fullText);
+        const items  = parseManifesto(fullText, 1, header);
+
+        const avgCharsPerPage = totalChars / pdf.numPages;
+        const isTextPoor      = avgCharsPerPage < PDFExtractor.MIN_TEXT_DENSITY;
+
+        logger.info('Extração de texto concluída', {
+            totalPages: pdf.numPages,
+            totalChars,
+            avgCharsPerPage: avgCharsPerPage.toFixed(0),
+            isTextPoor,
+            itemsFound: items.length,
+            header,
         });
-        return allItems;
+
+        return { items, isTextPoor };
     }
 
-    private static async renderPageToImage(pdf: pdfjsLibType.PDFDocumentProxy, pageNumber: number): Promise<HTMLCanvasElement> {
-        const page = await pdf.getPage(pageNumber);
+    private static async renderPageToImage(
+        pdf: pdfjsLibType.PDFDocumentProxy,
+        pageNumber: number
+    ): Promise<HTMLCanvasElement> {
+        const page     = await pdf.getPage(pageNumber);
         const viewport = page.getViewport({ scale: 2.0 });
-        
+
         const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
+        canvas.width  = viewport.width;
         canvas.height = viewport.height;
-        
+
         const canvasContext = canvas.getContext('2d');
         if (!canvasContext) {
-            throw new AppError(ErrorCodes.PDF_EXTRACTION_FAILED, 'Failed to get 2D context from canvas. Environment may not support canvas rendering.');
+            throw new AppError(ErrorCodes.PDF_EXTRACTION_FAILED, 'Falha ao obter contexto 2D do canvas.');
         }
-        
+
         try {
             await page.render({ canvas, canvasContext, viewport }).promise;
         } finally {
             page.cleanup();
         }
-        
+
         return canvas;
     }
 
-    private static async performOCR(pdf: pdfjsLibType.PDFDocumentProxy, onProgress?: (progress: number) => void, signal?: AbortSignal): Promise<CargoItem[]> {
-        logger.info('Starting OCR extraction with Tesseract.js');
-        const allItems: CargoItem[] = [];
-        
+    private static async performOCR(
+        pdf: pdfjsLibType.PDFDocumentProxy,
+        onProgress?: (progress: number) => void,
+        signal?: AbortSignal
+    ): Promise<CargoItem[]> {
+        logger.info('Iniciando extração via OCR (Tesseract.js)');
+        let fullOCRText = '';
+
         const worker = await createWorker('eng+por', 1, {
             logger: (m) => {
                 if (m.status === 'recognizing text') {
-                    logger.debug(`OCR Progress: ${Math.round(m.progress * 100)}%`);
-                    if (onProgress) {
-                        onProgress(Math.round(m.progress * 100));
-                    }
+                    logger.debug(`OCR: ${Math.round(m.progress * 100)}%`);
+                    onProgress?.(Math.round(m.progress * 100));
                 }
             }
         });
-        
+
         try {
             for (let i = 1; i <= pdf.numPages; i++) {
                 if (signal?.aborted) {
-                    throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'OCR extraction aborted');
+                    throw new AppError(ErrorCodes.OPERATION_CANCELLED, 'OCR abortado');
                 }
 
-                logger.info(`OCR processing page ${i} of ${pdf.numPages}`);
-                
+                logger.info(`OCR processando página ${i} de ${pdf.numPages}`);
+
                 const canvas = await this.renderPageToImage(pdf, i);
                 const result = await worker.recognize(canvas);
-                
-                canvas.width = 0;
+
+                // Liberar memória do canvas imediatamente
+                canvas.width  = 0;
                 canvas.height = 0;
-                
-                const text = result.data.text;
-                
-                logger.debug(`OCR page ${i} text extracted`, { 
-                    textLength: text.length,
-                    textPreview: text.substring(0, 200) + (text.length > 200 ? '...' : '')
+
+                fullOCRText += '\n' + result.data.text;
+
+                logger.debug(`OCR página ${i}: ${result.data.text.length} caracteres reconhecidos`, {
+                    preview: result.data.text.substring(0, 200)
                 });
-                
-                const pageItems = this.parseManifesto(text, i);
-                allItems.push(...pageItems);
-                
-                logger.debug(`OCR page ${i} items found`, { count: pageItems.length });
             }
+
+            // Parse único de todo o texto OCR
+            const header = parseHeaderInfo(fullOCRText);
+            const items  = parseManifesto(fullOCRText, 1, header);
+
+            logger.info('OCR concluído', { totalPages: pdf.numPages, itemsFound: items.length });
+            return items;
+
         } finally {
             await worker.terminate();
         }
-        
-        logger.info(`OCR extraction completed`, { 
-            totalPages: pdf.numPages, 
-            totalItems: allItems.length 
-        });
-        return allItems;
     }
 
-    static async extract(file: File, onOCRProgress?: (progress: number) => void, signal?: AbortSignal): Promise<ExtractionResult> {
+    static async extract(
+        file: File,
+        onOCRProgress?: (progress: number) => void,
+        signal?: AbortSignal
+    ): Promise<ExtractionResult> {
         let pdf: pdfjsLibType.PDFDocumentProxy | null = null;
-        
+
         try {
             const validation = this.validateFile(file);
             if (!validation.valid) {
                 return { success: false, error: validation.error };
             }
 
-            logger.info(`Iniciando extracao para o arquivo: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+            logger.info(`Iniciando extração: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
 
             const arrayBuffer = await this.fileToArrayBuffer(file);
-            logger.info(`Arquivo convertido para ArrayBuffer`, { size: arrayBuffer.byteLength });
 
             try {
                 const pdfjsLib = await import('pdfjs-dist');
                 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-                logger.info(`PDF.js loaded`, { version: pdfjsLib.version });
-                
+                logger.info(`PDF.js carregado`, { version: pdfjsLib.version });
+
                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                 pdf = await loadingTask.promise;
-                logger.info(`PDF document loaded successfully`, { pages: pdf.numPages });
+                logger.info(`PDF carregado com sucesso`, { pages: pdf.numPages });
             } catch (error) {
-                logger.error('Error loading PDF document:', error instanceof Error ? error : undefined, { 
-                    rawError: error 
-                });
+                logger.error('Erro ao carregar PDF:', error instanceof Error ? error : undefined);
                 return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_CORRUPTED }) };
             }
 
-            let items: CargoItem[];
+            let items: CargoItem[] = [];
             let ocrAttempted = false;
-            
+
+            // 1ª tentativa: extração de texto nativo
             try {
-                items = await this.extractTextFromPDF(pdf, signal);
-                logger.info(`Text extraction result`, { itemCount: items.length });
+                const result = await this.extractTextFromPDF(pdf, signal);
+                items = result.items;
+
+                if (result.isTextPoor) {
+                    logger.info('PDF com texto escasso detectado → acionando OCR como fallback');
+                    items = [];
+                }
             } catch (extractionError) {
-                logger.error('Erro na extracao de texto.', extractionError instanceof Error ? extractionError : undefined, { 
-                    context: 'textExtraction' 
-                });
+                logger.error('Erro na extração de texto:', extractionError instanceof Error ? extractionError : undefined);
                 items = [];
             }
 
+            // 2ª tentativa: OCR (se texto insuficiente)
             if (items.length === 0) {
-                logger.info('Text extraction returned no items. Attempting OCR fallback...');
+                logger.info('Nenhum item extraído via texto. Aplicando OCR...');
                 ocrAttempted = true;
                 try {
                     items = await this.performOCR(pdf, onOCRProgress, signal);
-                    logger.info(`OCR extraction result`, { itemCount: items.length });
                 } catch (ocrError) {
-                    logger.error('Erro na extracao via OCR.', ocrError instanceof Error ? ocrError : undefined, { 
-                        context: 'ocrExtraction' 
-                    });
+                    logger.error('Erro no OCR:', ocrError instanceof Error ? ocrError : undefined);
                     items = [];
                 }
             }
 
             if (items.length === 0) {
-                logger.warn('Nenhum item encontrado após extração de texto e OCR.');
-                return { 
-                    success: false, 
-                    error: new AppError(ErrorCodes.PDF_PARSING_FAILED, 'Nenhum item de carga encontrado no PDF. O arquivo pode estar corrompido ou ter formato incompatível.') 
+                logger.warn('Nenhum item de carga encontrado após todas as tentativas.');
+                return {
+                    success: false,
+                    error: new AppError(
+                        ErrorCodes.PDF_PARSING_FAILED,
+                        'Nenhum item de carga encontrado no PDF. Verifique se o formato do manifesto é compatível.'
+                    )
                 };
             }
 
-            logger.info(`Extracao concluida com sucesso. Itens encontrados: ${items.length}`);
+            logger.info(`Extração concluída: ${items.length} item(ns) encontrado(s)`);
 
             return {
                 success: true,
                 data: {
                     items,
                     metadata: {
-                        pages: pdf.numPages,
+                        pages:       pdf.numPages,
                         extractedAt: new Date(),
-                        method: ocrAttempted ? 'ocr' : 'text',
-                        fileName: file.name,
-                        fileSize: file.size,
+                        method:      ocrAttempted ? 'ocr' : 'text',
+                        fileName:    file.name,
+                        fileSize:    file.size,
                     }
                 }
             };
+
         } catch (error) {
-            logger.error('Erro geral na extração:', error instanceof Error ? error : undefined, { 
-                rawError: error 
-            });
+            logger.error('Erro geral na extração:', error instanceof Error ? error : undefined);
             return { success: false, error: handleApplicationError(error, { code: ErrorCodes.PDF_EXTRACTION_FAILED }) };
         } finally {
             if (pdf) {
                 pdf.destroy();
-                logger.debug('PDF document destroyed and resources released');
+                logger.debug('PDF destruído e recursos liberados');
             }
         }
     }

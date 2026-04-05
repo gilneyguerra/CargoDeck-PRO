@@ -26,13 +26,15 @@ export interface CargoState {
     shipOperationCode: string;
     manifestShipName: string | null;
     manifestVoyage: string | null;
+    manifestAtendimento: string | null;  // Número de atendimento extraído do manifesto
+    manifestRoteiro: string[] | null;    // Roteiro previsto de portos
     searchTerm: string;
     editingCargo: Cargo | null;
     isHydratedFromCloud: boolean;
-    
+
     setShipOperationCode: (code: string) => void;
     setExtractedCargoes: (cargoes: Cargo[]) => void;
-    setManifestDetails: (shipName: string | null, voyage: string | null) => void;
+    setManifestDetails: (shipName: string | null, voyage: string | null, atendimento?: string | null, roteiro?: string[] | null) => void;
     addLocation: (name: string) => void;
     addManualCargo: (cargoData: Omit<Cargo, 'id' | 'status'>) => void;
     updateCargo: (id: string, updates: Partial<Cargo>) => void;
@@ -73,6 +75,8 @@ export const useCargoStore = create<CargoState>()(
             shipOperationCode: 'NS44',
             manifestShipName: null,
             manifestVoyage: null,
+            manifestAtendimento: null,
+            manifestRoteiro: null,
             locations: [
                 {
                     id: initialLocationId,
@@ -104,24 +108,36 @@ export const useCargoStore = create<CargoState>()(
 
             setSearchTerm: (term) => set({ searchTerm: term }),
 
-            setManifestDetails: (shipName, voyage) => set({ 
-                manifestShipName: shipName, 
-                manifestVoyage: voyage 
+            setManifestDetails: (shipName, voyage, atendimento, roteiro) => set({
+                manifestShipName: shipName,
+                manifestVoyage: voyage,
+                manifestAtendimento: atendimento ?? null,
+                manifestRoteiro: roteiro ?? null,
             }),
 
             setExtractedCargoes: (cargoes) => {
                 try {
-                    set((state) => ({ 
-                        unallocatedCargoes: [...state.unallocatedCargoes, ...cargoes], 
-                        manifestsLoaded: true 
+                    // Extrai metadados do manifesto do primeiro item (todos devem ter o mesmo cabeçalho)
+                    const firstCargo = cargoes[0];
+                    const manifestMeta = firstCargo ? {
+                        manifestShipName:    firstCargo.nomeEmbarcacao    ?? null,
+                        manifestAtendimento: firstCargo.numeroAtendimento  ?? null,
+                        manifestRoteiro:     firstCargo.roteiroPrevisto    ?? null,
+                    } : {};
+
+                    set((state) => ({
+                        unallocatedCargoes: [...state.unallocatedCargoes, ...cargoes],
+                        manifestsLoaded: true,
+                        ...manifestMeta,
                     }));
-                    logger.info(`Adicionadas ${cargoes.length} cargas extraídas do PDF.`, { 
+                    logger.info(`Adicionadas ${cargoes.length} cargas extraídas do PDF.`, {
                         cargoCount: cargoes.length,
-                        totalUnallocated: get().unallocatedCargoes.length
+                        totalUnallocated: get().unallocatedCargoes.length,
+                        ...manifestMeta,
                     });
                 } catch (error) {
                     logger.error('Falha ao adicionar cargas extraídas:', error);
-                    throw handleApplicationError(error, { 
+                    throw handleApplicationError(error, {
                         context: 'setExtractedCargoes',
                         cargoCount: cargoes.length
                     });
@@ -619,9 +635,11 @@ export const useCargoStore = create<CargoState>()(
                         shipOperationCode: payload.shipOperationCode ?? state.shipOperationCode,
                         manifestShipName: payload.manifestShipName ?? state.manifestShipName,
                         manifestVoyage: payload.manifestVoyage ?? state.manifestVoyage,
+                        manifestAtendimento: payload.manifestAtendimento ?? state.manifestAtendimento,
+                        manifestRoteiro: payload.manifestRoteiro ?? state.manifestRoteiro,
                         manifestsLoaded: payload.manifestsLoaded ?? state.manifestsLoaded,
-                        activeLocationId: payload.locations && payload.locations.length > 0 
-                            ? payload.locations[0].id 
+                        activeLocationId: payload.locations && payload.locations.length > 0
+                            ? payload.locations[0].id
                             : state.activeLocationId
                     }));
                     logger.info('Estado hidratado do banco de dados.', { 
@@ -647,6 +665,8 @@ export const useCargoStore = create<CargoState>()(
                 shipOperationCode: state.shipOperationCode,
                 manifestShipName: state.manifestShipName,
                 manifestVoyage: state.manifestVoyage,
+                manifestAtendimento: state.manifestAtendimento,
+                manifestRoteiro: state.manifestRoteiro,
                 manifestsLoaded: state.manifestsLoaded,
                 activeLocationId: state.activeLocationId,
             }),
