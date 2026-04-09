@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
+import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
@@ -33,6 +34,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   const [isRotated, setIsRotated] = useState(cargo.isRotated ?? false);
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipAlign, setTooltipAlign] = useState<'center' | 'left' | 'right'>('center');
+  const [tooltipPlacement, setTooltipPlacement] = useState<'top' | 'bottom'>('bottom');
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -78,11 +80,17 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
     if (containerRef.current) {
        const rect = containerRef.current.getBoundingClientRect();
        const screenWidth = window.innerWidth;
+       const screenHeight = window.innerHeight;
        const tooltipWidth = 256;
+       const tooltipHeight = 220; // Estimativa de altura máxima
        const halfTooltip = tooltipWidth / 2;
 
+       const spaceBelow = screenHeight - rect.bottom;
+       const placement = spaceBelow < tooltipHeight ? 'top' : 'bottom';
+       setTooltipPlacement(placement);
+
        setTooltipPos({
-          top: rect.bottom + 8,
+          top: placement === 'bottom' ? rect.bottom + 8 : rect.top - 8,
           left: rect.left + (rect.width / 2)
        });
 
@@ -124,14 +132,14 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
         requiresWeightFix ? "border-red-500 dark:border-red-500 bg-red-100 dark:bg-red-900/30" : ""
       )}
     >
-      {/* Tooltip Global (Hover) - Fixed Portaling logic */}
-      {isHovered && (
+      {/* Tooltip Global (Hover) - Renderizado via Portal no body para evitar cortes por overflow/transform */}
+      {isHovered && createPortal(
         <div 
           style={{ 
             position: 'fixed',
             top: `${tooltipPos.top}px`,
             left: `${tooltipPos.left}px`,
-            transform: tooltipAlign === 'center' ? 'translateX(-50%)' : tooltipAlign === 'right' ? 'translateX(-100%)' : 'none',
+            transform: `translate(${tooltipAlign === 'center' ? '-50%' : tooltipAlign === 'right' ? '-100%' : '0'}, ${tooltipPlacement === 'top' ? '-100%' : '0'})`,
             zIndex: 9999
           }}
           className="w-64 p-3 bg-gray-900/95 dark:bg-neutral-900/95 backdrop-blur-sm text-white dark:text-neutral-100 text-xs font-sans rounded-lg shadow-2xl shadow-black/80 pointer-events-none flex flex-col gap-1 border border-neutral-700/50"
@@ -158,7 +166,8 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
               <span className="text-neutral-500">Rota:</span> {cargo.origemCarga ?? '?'} → {cargo.destinoCarga ?? '?'}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {cargo.status === 'ALLOCATED' ? (
