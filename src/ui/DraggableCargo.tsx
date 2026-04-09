@@ -218,58 +218,72 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
           </div>
         </div>
       ) : (
-        <>
-          {requiresWeightFix && (
-             <div className="w-full text-center text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 p-1 mb-1 rounded flex items-center justify-center gap-1 animate-pulse border border-red-500/30">
-               PESO AUSENTE! CLIQUE PARA EDITAR
+        <div className="flex flex-col gap-2 w-full">
+          {/* Header do Card: ID e Botões */}
+          <div className="flex items-start justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-1">
+             <div className="flex flex-col overflow-hidden">
+                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
+                  {cargo.category || 'CARGA'}
+                </span>
+                <span className="font-black text-sm text-gray-900 dark:text-neutral-100 truncate" style={{ fontSize: `${fontSize}px` }}>
+                  {cargo.identifier}
+                </span>
              </div>
-          )}
-          <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
-            <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
+             <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
+                  className="p-1.5 text-neutral-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                  className="p-1.5 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
+             </div>
           </div>
-          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 text-center" style={{ fontSize: `${fontSize * 0.8}px` }}>{cargo.quantity} x {cargo.weightTonnes.toFixed(1)} t</div>
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col items-start gap-1.5 overflow-hidden">
-              <span className="font-bold text-gray-900 dark:text-neutral-100 leading-tight pr-2 tracking-wide truncate w-full" style={{ fontSize: `${fontSize * 0.9}px` }}>
-                {cargo.category !== 'GENERAL' ? `${cargo.category}: ` : ''}{cargo.identifier}
-              </span>
-              <span className="font-medium text-gray-700 dark:text-neutral-300 leading-tight pr-2 truncate w-full" style={{ fontSize: `${fontSize}px` }}>{cargo.description}</span>
-              {(cargo.origemCarga || cargo.destinoCarga) && (
-                <div className="flex items-center gap-1.5 mt-1">
-                   <span className="text-[9px] text-neutral-400 dark:text-neutral-500 uppercase">{cargo.origemCarga || '???'}</span>
-                   <span className="text-neutral-300 dark:text-neutral-700">→</span>
-                   <span className="flex items-center gap-0.5 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30 text-[10px] font-bold">
-                      <MapPin size={10} className="shrink-0" />
-                      {cargo.destinoCarga || '--'}
+
+          {/* Corpo do Card: Visual e Descrição */}
+          <div className="flex gap-3 items-center min-h-[50px]">
+             <div className="shrink-0 bg-neutral-200 dark:bg-neutral-800 p-1 rounded-sm border border-neutral-300 dark:border-neutral-700 shadow-inner">
+                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
+             </div>
+             <div className="flex-1 min-w-0">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-snug line-clamp-2 italic italic-font italic-weight" style={{ fontSize: `${fontSize * 0.9}px` }}>
+                   {cargo.description}
+                </p>
+             </div>
+          </div>
+
+          {/* Rodapé do Card: Rota e Chips */}
+          <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-neutral-200 dark:border-neutral-800">
+             {(cargo.origemCarga || cargo.destinoCarga) && (
+               <div className="flex items-center gap-1.5 text-[10px]">
+                  <span className="text-neutral-400 font-bold">{cargo.origemCarga || '???'}</span>
+                  <span className="text-neutral-300">→</span>
+                  <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-black border border-indigo-500/20">
+                     <MapPin size={10} />
+                     <span>{cargo.destinoCarga || '--'}</span>
+                  </div>
+               </div>
+             )}
+             <div className="flex flex-wrap gap-1.5">
+                <span className="bg-neutral-200 dark:bg-neutral-800/80 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700">
+                   {cargo.weightTonnes.toFixed(2)} t
+                </span>
+                <span className="bg-neutral-200 dark:bg-neutral-800/80 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700">
+                   {cargo.lengthMeters}x{cargo.widthMeters}m
+                </span>
+                {cargo.isBackload && (
+                   <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border border-amber-200 dark:border-amber-700/50 flex items-center gap-1">
+                      <LogOut size={10} /> BACKLOAD
                    </span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-end gap-1 shrink-0 mt-1">
-              <button
-                onClick={() => onEdit(cargo)}
-                className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-900/20"
-                title="Editar carga"
-                style={{ width: `${buttonSize}px`, height: `${buttonSize}px` }}
-              >
-                <Edit style={{ width: `${buttonSize * 0.7}px`, height: `${buttonSize * 0.7}px` }} />
-              </button>
-              <button
-                onClick={handleDelete}
-                className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-500 transition-colors p-1 rounded hover:bg-red-900/20"
-                title="Excluir carga"
-                style={{ width: `${buttonSize}px`, height: `${buttonSize}px` }}
-              >
-                <Trash2 style={{ width: `${buttonSize * 0.7}px`, height: `${buttonSize * 0.7}px` }} />
-              </button>
-            </div>
+                )}
+             </div>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs text-neutral-600 dark:text-neutral-400 mt-1" style={{ fontSize: `${fontSize * 0.8}px` }}>
-            <span className="bg-neutral-300 dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-400 dark:border-neutral-800">{cargo.weightTonnes.toFixed(1)} t</span>
-            <span className="bg-neutral-300 dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-400 dark:border-neutral-800">{cargo.lengthMeters}x{cargo.widthMeters} m</span>
-            <span className="bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-300 dark:border-indigo-500/20">{cargo.category}</span>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
