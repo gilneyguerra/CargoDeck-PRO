@@ -9,6 +9,23 @@ import { Edit, Trash2 } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
 import { useEffect, useState } from 'react';
 
+/**
+ * Determina se uma cor hexadecimal é "clara" para ajuste de contraste de texto.
+ */
+function isColorLight(hex: string): boolean {
+  if (!hex || hex.length < 7) return false;
+  try {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    // Fórmula de luminância padrão
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.65; // Ajustamos o threshold para ser conservador
+  } catch (e) {
+    return false;
+  }
+}
+
 function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighlight?: boolean, onEdit: (cargo: Cargo) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cargo.id,
@@ -61,6 +78,9 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   const fontSize = getCargoFontSize(cargo);
   const buttonSize = getCargoIconSize(cargo);
   const requiresWeightFix = cargo.weightTonnes === 0 || isNaN(cargo.weightTonnes);
+  
+  const isLightBackground = isColorLight(cargo.color || '#3b82f6');
+  const textColorClass = isLightBackground ? "text-neutral-950" : "text-white/95";
 
   return (
     <div
@@ -107,7 +127,11 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
              <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
              </div>
-             <span className="absolute inset-0 flex items-center justify-center text-white/90 font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] text-center leading-none pointer-events-none" style={{ fontSize: `${Math.max(8, fontSize * 0.9)}px` }}>
+             <span className={cn(
+                "absolute inset-0 flex items-center justify-center font-bold text-center leading-none pointer-events-none",
+                textColorClass,
+                !isLightBackground && "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+             )} style={{ fontSize: `${Math.max(8, fontSize * 0.9)}px` }}>
                 {cargo.quantity > 1 ? `${cargo.quantity}x ` : ''}{cargo.identifier}
              </span>
              {/* Action Buttons Container */}
