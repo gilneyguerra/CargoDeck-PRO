@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { CargoPreview } from './CargoPreview';
-import { Edit, Trash2, LogOut } from 'lucide-react';
+import { Edit, Trash2, LogOut, MapPin } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 /**
  * Determina se uma cor hexadecimal é "clara" para ajuste de contraste de texto.
@@ -34,6 +34,8 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   const { isDragging: dragStoreIsDragging } = useDragStore();
   const [isRotated, setIsRotated] = useState(cargo.isRotated ?? false);
   const [isHovered, setIsHovered] = useState(false);
+  const [tooltipAlign, setTooltipAlign] = useState<'center' | 'left' | 'right'>('center');
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle global shortcuts (R and Delete) when active (hovering or dragging)
   useEffect(() => {
@@ -75,6 +77,24 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
     }
   };
 
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (containerRef.current) {
+       const rect = containerRef.current.getBoundingClientRect();
+       const screenWidth = window.innerWidth;
+       const tooltipWidth = 256; // w-64 em pixels
+       const halfTooltip = tooltipWidth / 2;
+
+       if (rect.left < halfTooltip) {
+          setTooltipAlign('left');
+       } else if (screenWidth - rect.right < halfTooltip) {
+          setTooltipAlign('right');
+       } else {
+          setTooltipAlign('center');
+       }
+    }
+  };
+
   const fontSize = getCargoFontSize(cargo);
   const buttonSize = getCargoIconSize(cargo);
   const requiresWeightFix = cargo.weightTonnes === 0 || isNaN(cargo.weightTonnes);
@@ -84,11 +104,14 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        (containerRef as any).current = node;
+      }}
       style={style}
       {...(requiresWeightFix ? {} : listeners)}
       {...attributes}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "group relative flex flex-col transition-colors cursor-grab select-none",
@@ -102,7 +125,12 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
       )}
     >
       {/* Tooltip Global (Hover) - Posicionado abaixo (top-full) para evitar corte no topo do deck */}
-      <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 bg-gray-900/95 dark:bg-neutral-900/95 backdrop-blur-sm text-white dark:text-neutral-100 text-xs font-sans rounded-lg shadow-2xl shadow-black/80 opacity-0 group-hover:opacity-100 transition-opacity z-[1001] pointer-events-none flex flex-col gap-1 border border-neutral-700/50">
+      <div className={cn(
+        "absolute top-full mt-2 w-64 p-3 bg-gray-900/95 dark:bg-neutral-900/95 backdrop-blur-sm text-white dark:text-neutral-100 text-xs font-sans rounded-lg shadow-2xl shadow-black/80 opacity-0 group-hover:opacity-100 transition-opacity z-[2000] pointer-events-none flex flex-col gap-1 border border-neutral-700/50",
+        tooltipAlign === 'center' && "left-1/2 -translate-x-1/2",
+        tooltipAlign === 'left' && "left-0 -translate-x-0",
+        tooltipAlign === 'right' && "right-0 left-auto translate-x-0"
+      )}>
          <div className="font-bold border-b border-neutral-700/50 pb-1 mb-1 truncate text-center text-indigo-400">{cargo.identifier}</div>
          <div className="text-[10px] break-words line-clamp-2 text-neutral-300">{cargo.description}</div>
          <div className="grid grid-cols-2 gap-2 mt-1 bg-black/30 p-1.5 rounded">
@@ -140,6 +168,20 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
              )} style={{ fontSize: `${Math.max(8, fontSize * 0.9)}px` }}>
                 {cargo.quantity > 1 ? `${cargo.quantity}x ` : ''}{cargo.identifier}
              </span>
+
+             {/* Destino Badge (Deck) */}
+             {cargo.destinoCarga && (
+               <div 
+                 className={cn(
+                   "absolute bottom-0 right-0 px-1 py-0.5 rounded-tl-sm font-black tracking-tighter shadow-sm z-20 pointer-events-none",
+                   isLightBackground ? "bg-black/10 text-black/60" : "bg-white/20 text-white/80"
+                 )}
+                 style={{ fontSize: `${Math.max(6, fontSize * 0.7)}px` }}
+               >
+                 {cargo.destinoCarga}
+               </div>
+             )}
+
              {/* Action Buttons Container */}
              <div className="absolute -top-3 -right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                {cargo.isBackload && (
@@ -182,11 +224,16 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
                 {cargo.category !== 'GENERAL' ? `${cargo.category}: ` : ''}{cargo.identifier}
               </span>
               <span className="font-medium text-gray-700 dark:text-neutral-300 leading-tight pr-2 truncate w-full" style={{ fontSize: `${fontSize}px` }}>{cargo.description}</span>
-              {/* Origem → Destino quando disponível */}
+              {/* Origem → Destino com destaque */}
               {(cargo.origemCarga || cargo.destinoCarga) && (
-                <span className="text-neutral-500 dark:text-neutral-500 leading-tight truncate w-full" style={{ fontSize: `${fontSize * 0.75}px` }}>
-                  {cargo.origemCarga ?? '?'} → {cargo.destinoCarga ?? '?'}
-                </span>
+                <div className="flex items-center gap-1.5 mt-1">
+                   <span className="text-[9px] text-neutral-400 dark:text-neutral-500 uppercase">{cargo.origemCarga || '???'}</span>
+                   <span className="text-neutral-300 dark:text-neutral-700">→</span>
+                   <span className="flex items-center gap-0.5 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30 text-[10px] font-bold">
+                      <MapPin size={10} className="shrink-0" />
+                      {cargo.destinoCarga || '--'}
+                   </span>
+                </div>
               )}
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
