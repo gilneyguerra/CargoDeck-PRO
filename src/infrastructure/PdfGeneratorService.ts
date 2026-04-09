@@ -66,7 +66,7 @@ export class PdfGeneratorService {
     if (roteiro && roteiro.length > 0) {
       doc.setFontSize(9);
       doc.setTextColor(180, 200, 255);
-      doc.text(`Roteiro: ${roteiro.join(' → ')}`, pageWidth / 2, 30, { align: 'center' });
+      doc.text(`Roteiro: ${roteiro.join(' -> ')}`, pageWidth / 2, 30, { align: 'center' });
     }
 
     // ── Linha separadora ─────────────────────────────────────────────────────
@@ -138,7 +138,6 @@ export class PdfGeneratorService {
         doc.setTextColor(80, 80, 100);
         doc.text('ID / CÓDIGO',            margin + 5,   y + 4);
         doc.text('DESCRIÇÃO',              margin + 50,  y + 4);
-        doc.text('ORIG → DEST',            margin + 120, y + 4);
         doc.text('DIM (CxL m)',            margin + 175, y + 4);
         doc.text('PESO',                   margin + 210, y + 4);
         doc.text('CAT',                    pageWidth - margin - 3, y + 4, { align: 'right' });
@@ -170,16 +169,10 @@ export class PdfGeneratorService {
           doc.setFont('helvetica', 'bold');
           doc.text(idText, margin + 5, y + 4);
 
-          // Descrição
+          // Descrição (com limite estendido)
           doc.setFont('helvetica', 'normal');
-          const desc = (cargo.description || '').substring(0, 35);
+          const desc = (cargo.description || '').substring(0, 75);
           doc.text(desc, margin + 50, y + 4);
-
-          // Origem → Destino
-          const oriDest = cargo.origemCarga || cargo.destinoCarga
-            ? `${(cargo.origemCarga || '?').substring(0, 5)} → ${(cargo.destinoCarga || '?').substring(0, 6)}`
-            : '-';
-          doc.text(oriDest, margin + 120, y + 4);
 
           // Dimensões
           const dims = (cargo.lengthMeters && cargo.widthMeters)

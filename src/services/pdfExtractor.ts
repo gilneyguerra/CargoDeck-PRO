@@ -83,15 +83,20 @@ interface ManifestHeader {
  */
 function normalizeNumber(raw: string): number {
     const s = raw.trim();
+    // Formato BR: "7.238,00" ou "450,00" → vírgula é decimal, ponto é milhar
     const hasCommaDecimal = /\d,\d{1,2}$/.test(s);
+    // Formato US: "7238.00" → ponto é decimal, vírgula é milhar
     const hasDotDecimal   = /\d\.\d{1,2}$/.test(s);
 
     let normalized: string;
     if (hasCommaDecimal) {
+        // Remove pontos de milhar, troca vírgula por ponto decimal
         normalized = s.replace(/\./g, '').replace(',', '.');
     } else if (hasDotDecimal) {
+        // Remove vírgulas de milhar, mantém ponto decimal
         normalized = s.replace(/,/g, '');
     } else {
+        // Sem casa decimal explícita — trata tudo como inteiro
         normalized = s.replace(/[.,]/g, '');
     }
     return parseFloat(normalized) || 0;
@@ -158,11 +163,12 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     }
 
     // 2. Nome da Embarcação
-    // Formato TAGAZ: "EQUIPAMENTO   30127695   TAGAZ"
-    //                 ⇒ "TAGAZ" é o nome da embarcação
+    // Formato TAGAZ: "EQUIPAMENTO   30127695   CBO FLAMENGO"
+    //                 ⇒ "CBO FLAMENGO" é o nome da embarcação (pode ser composto)
     const embarcacaoPatterns = [
-        /EQUIPAMENTO\s+\d+\s+([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35}?)(?=\s{2,}|\s+DATA:|\s+MANIFESTO|$)/m,
-        /(?:embarca[çc][ãa]o|navio|vessel|m\/v)\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-Za-zÀ-ÿ0-9\s\-]{3,40}?)(?:\s*\n|\s{2,})/im,
+        // Greedy: captura tudo até 2+ espaços ou fim de linha, incluindo nomes compostos
+        /EQUIPAMENTO\s+\d+\s+([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})(?=\s{2,}|\s*DATA:|\s*MANIFESTO|\s*$)/m,
+        /(?:embarca[çc][ãa]o|navio|vessel|m\/v)\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-Za-zÀ-ÿ0-9\s\-]{3,40})(?=\s*\n|\s{2,})/im,
     ];
     for (const pat of embarcacaoPatterns) {
         const m = fullText.match(pat);
