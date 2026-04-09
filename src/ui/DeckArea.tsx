@@ -9,6 +9,7 @@ import type { CargoLocation } from '@/domain/Location';
 import { DeckSettingsModal } from './DeckSettingsModal';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import DraggableCargo from './DraggableCargo';
+import { metersToPixels } from '@/lib/scaling';
 
 
 function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoLocation, isActive: boolean, onClick: () => void, onEdit: (loc: CargoLocation) => void, onDelete: (id: string) => void }) {
@@ -91,15 +92,16 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
     const isOverArea = maxArea > 0 && currentOccupiedArea > maxArea;
 
      return (
-       <div 
-         ref={setNodeRef}
-         className={cn(
-           "flex-1 min-h-[80px] flex flex-col items-start p-2 relative transition-colors",
-           !isLast && "border-r border-dashed border-neutral-400 dark:border-neutral-700/50",
-           isOver ? "bg-indigo-500/20" : "",
-           isOverArea && !isOver ? "bg-red-950/20" : ""
-         )}
-       >
+        <div 
+          ref={setNodeRef}
+          className={cn(
+            "flex-1 min-h-[80px] flex flex-col items-start p-2 relative transition-colors",
+            !isLast && "border-r border-dashed border-neutral-400 dark:border-neutral-700/50",
+            isOver ? "bg-indigo-500/20" : "",
+            isOverArea && !isOver ? "bg-red-950/20" : ""
+          )}
+          style={{ minWidth: metersToPixels(sideWidth) }}
+        >
       <div className="w-full flex justify-between items-center mb-2 px-1 border-b border-neutral-300 dark:border-neutral-800/50 pb-1">
          <span className="opacity-40 font-bold text-[9px] tracking-widest">{side === 'port' ? 'BOMBORDO' : side === 'center' ? 'CENTRO' : 'BORESTE'}</span>
          <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded", isOverArea ? "bg-red-500/20 text-red-400" : "bg-black/30 dark:bg-black/30 text-neutral-600 dark:text-neutral-500")}>
@@ -273,9 +275,9 @@ export function DeckArea() {
                 </div>
             </div>
             
-            <div className="flex-1 bg-neutral-300 dark:bg-[#101014] border border-neutral-400 dark:border-neutral-800/50 rounded-xl p-4 sm:p-6 relative flex flex-col items-center overflow-auto shadow-inner">
-                <div className="w-full max-w-[800px] sm:max-w-full md:max-w-[1000px] lg:max-w-[1200px] min-h-[600px] sm:min-h-[800px] h-full bg-neutral-200 dark:bg-[#18181f] border border-neutral-400 dark:border-neutral-800 rounded-t-[50px] sm:rounded-t-[100px] rounded-b-xl relative flex flex-col p-4 sm:p-6 shadow-2xl">
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 text-neutral-500 dark:text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Proa</div>
+            <div className="flex-1 bg-neutral-300 dark:bg-[#101014] border border-neutral-400 dark:border-neutral-800/50 rounded-xl p-4 sm:p-6 relative flex flex-col items-center overflow-auto shadow-inner scrollbar-thin scrollbar-thumb-neutral-400 dark:scrollbar-thumb-neutral-700">
+                <div className="w-fit min-w-full sm:max-w-full h-full bg-neutral-200 dark:bg-[#18181f] border border-neutral-400 dark:border-neutral-800 rounded-t-[50px] sm:rounded-t-[100px] rounded-b-xl relative flex flex-col p-4 sm:p-6 shadow-2xl">
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 text-neutral-500 dark:text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase whitespace-nowrap">Proa</div>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-neutral-500 dark:text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Popa</div>
                     <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 text-neutral-500 dark:text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Bombordo</div>
                     <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 rotate-90 text-neutral-500 dark:text-neutral-600 text-[10px] font-bold tracking-[0.3em] uppercase">Boreste</div>
