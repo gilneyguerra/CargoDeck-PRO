@@ -321,9 +321,10 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
     // ── Padrão 1 (Principal): Petrobras/TAGAZ com dimensões ───────────────────
     // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
-    // Print mostra espaços simples em algumas separações: "0001 326490679", "11.989,20 8.877.197,67 BRL"
+    // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
+    // Ou sem BRL e sem Valor (como no screenshot: "1,21x1,12x1,80 900,00 SUB/OPSUB/...")
     // Grupos: [1]=seq [2]=NF [3]=descrição [4]=C [5]=L [6]=A [7]=peso_kg
-    const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s{2,}(\d+[,.]\d+)x(\d+[,.]\d+)x(\d+[,.]\d+)\s+([\d.,]+)\s+[\d.,]+\s+BRL/gi;
+    const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,]+)[xX×]([\d.,]+)[xX×]([\d.,]+)\s+([\d.,]+)/gi;
 
     let match: RegExpExecArray | null;
     while ((match = petrobrasPattern.exec(text)) !== null) {
@@ -369,9 +370,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     petrobrasPattern.lastIndex = 0;
 
     // ── Padrão 2: Petrobras sem dimensões (líquidos/a granel) ────────────────
-    // Este padrão captura linhas sem o bloco de dimensões no meio.
+    // Este padrão captura linhas sem o bloco de dimensões no meio. Como requer segurança, avalia opcional do BRL e se a linha contem ou não
     if (items.length === 0) {
-        const pattern2 = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,]+)\s+[\d.,]+\s+BRL/gi;
+        const pattern2 = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,]+)(?:\s+[\d.,]+)?(?:\s+(?:BRL|USD|EUR))?(?:\s+[a-zA-Z0-9\/_-]+)?\s*(?:\r?\n|$)/gi;
         while ((match = pattern2.exec(text)) !== null) {
             try {
                 const rawDescription = match[3].trim();
