@@ -213,8 +213,10 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     if (sectionHeaderMatch) {
         const code1 = sectionHeaderMatch[1].trim();
         const code2 = sectionHeaderMatch[3].trim();
-        // Verificar que não são palavras de rodapé
-        if (!code1.match(/^(PETROBRAS|MANIFESTO|BASE|EMPRESA|RECEBIMENTO)$/i)) {
+        const blacklist = /^(PETROBRAS|MANIFESTO|BASE|EMPRESA|RECEBIMENTO|UN|UND|KG|TON|TN|PC|SC|CX|GL|LT|PC|FT3|M3|BBL)$/i;
+        
+        // Verificar que não são palavras de rodapé ou unidades de medida
+        if (!code1.match(blacklist)) {
             header.origemCarga  = code1;
             header.destinoCarga = code2;
         }
