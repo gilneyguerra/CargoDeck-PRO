@@ -82,24 +82,35 @@ interface ManifestHeader {
  * Suporta: "9.000,00" (BR), "9,000.00" (US), "9000"
  */
 function normalizeNumber(raw: string): number {
-    const s = raw.trim();
-    // Formato BR: "7.238,00" ou "450,00" → vírgula é decimal, ponto é milhar
-    const hasCommaDecimal = /\d,\d{1,2}$/.test(s);
-    // Formato US: "7238.00" → ponto é decimal, vírgula é milhar
-    const hasDotDecimal   = /\d\.\d{1,2}$/.test(s);
+    let s = raw.trim();
 
-    let normalized: string;
-    if (hasCommaDecimal) {
-        // Remove pontos de milhar, troca vírgula por ponto decimal
-        normalized = s.replace(/\./g, '').replace(',', '.');
-    } else if (hasDotDecimal) {
-        // Remove vírgulas de milhar, mantém ponto decimal
-        normalized = s.replace(/,/g, '');
-    } else {
-        // Sem casa decimal explícita — trata tudo como inteiro
-        normalized = s.replace(/[.,]/g, '');
+    const commaIndex = s.lastIndexOf(',');
+    const dotIndex = s.lastIndexOf('.');
+
+    if (commaIndex > -1 && dotIndex > -1) {
+        if (commaIndex > dotIndex) {
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else if (commaIndex > -1) {
+        // Se a vírgula é a única pontuação, usamos como decimal
+        s = s.replace(',', '.');
+    } else if (dotIndex > -1) {
+        // Se o ponto é a única pontuação, precisamos adivinhar se é decimal ou milhar.
+        // No Brasil (Petrobras), milhares usam ponto. Logo, se terminar com 3 dígitos exatos, é milhar.
+        // Mas atenção a falhas de leitura OCR (reconhece ",00" como ".000"). Assumimos milhar APENAS
+        // se tivermos certeza, mas o fallback natural para "." no JS é decimal.
+        if (/\.\d{3}$/.test(s)) {
+            // Se exatamente tem 3 algarismos após o ponto, era um separador de milhares BR (Ex: 4.500)
+            s = s.replace(/\./g, '');
+        } else {
+            // Se tem 1 ou 2 algarismos, é o decimal usual (Ex: 450.00)
+            // Não fazemos replace do dot porque o JS usa ponto para decimais
+        }
     }
-    return parseFloat(normalized) || 0;
+
+    return parseFloat(s) || 0;
 }
 
 function kgToTonnes(kg: number): number { return kg / 1000; }

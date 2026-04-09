@@ -77,17 +77,17 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
       )}
     >
       {cargo.status === 'ALLOCATED' ? (
-        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-full flex flex-col items-center justify-center group overflow-visible">
              {/* We rotate the cargo preview if isRotated is true */}
              <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
              </div>
-             <span className="absolute inset-0 flex items-center justify-center text-white/90 font-bold drop-shadow-md text-center leading-none" style={{ fontSize: `${Math.max(10, fontSize)}px` }}>
+             <span className="absolute inset-0 flex items-center justify-center text-white/90 font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] text-center leading-none pointer-events-none" style={{ fontSize: `${Math.max(8, fontSize * 0.9)}px` }}>
                 {cargo.quantity > 1 ? `${cargo.quantity}x ` : ''}{cargo.identifier}
              </span>
              <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-                className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-2 -right-2 bg-red-600/90 text-white rounded-full w-5 h-5 flex flex-col items-center justify-center text-[10px] hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md z-50 border border-white/20"
                 title="Remover"
              >
                 ✕

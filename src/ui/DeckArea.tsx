@@ -26,7 +26,7 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoL
           className={cn(
             "px-4 py-2 text-sm font-medium transition-colors border-b-2 mb-[-1px] flex items-center gap-2 flex-1",
             isActive 
-              ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t-md" 
+              ? "border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-500/20 rounded-t-md font-bold" 
               : "border-transparent text-neutral-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200"
           )}
         >
@@ -34,7 +34,7 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoL
           {tabWeight > 0 && (
              <span className={cn(
                 "text-[10px] px-1.5 py-0.5 rounded-full font-bold tracking-wide",
-                isActive ? "bg-indigo-500/20 text-indigo-200" : "bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-500"
+                isActive ? "bg-indigo-500/30 text-indigo-800 dark:text-indigo-200" : "bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-500"
              )}>
                {tabWeight.toFixed(1)} t
              </span>
@@ -258,7 +258,7 @@ export function DeckArea() {
                     />
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 dark:text-neutral-400" />
                       {searchMessage && (
-                        <div className="text-sm text-yellow-400 px-2 py-1 bg-yellow-400/10 rounded border border-yellow-400/20 whitespace-nowrap flex-shrink-0">
+                        <div className="text-sm font-medium text-yellow-700 bg-yellow-100 border-yellow-300 dark:text-yellow-400 dark:bg-yellow-400/10 border dark:border-yellow-400/20 px-2 py-1 rounded whitespace-nowrap flex-shrink-0">
                           {searchMessage}
                         </div>
                       )}
