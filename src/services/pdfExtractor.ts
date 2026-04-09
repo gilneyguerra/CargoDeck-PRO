@@ -97,17 +97,11 @@ function normalizeNumber(raw: string): number {
         // Se a vírgula é a única pontuação, usamos como decimal
         s = s.replace(',', '.');
     } else if (dotIndex > -1) {
-        // Se o ponto é a única pontuação, precisamos adivinhar se é decimal ou milhar.
-        // No Brasil (Petrobras), milhares usam ponto. Logo, se terminar com 3 dígitos exatos, é milhar.
-        // Mas atenção a falhas de leitura OCR (reconhece ",00" como ".000"). Assumimos milhar APENAS
-        // se tivermos certeza, mas o fallback natural para "." no JS é decimal.
-        if (/\.\d{3}$/.test(s)) {
-            // Se exatamente tem 3 algarismos após o ponto, era um separador de milhares BR (Ex: 4.500)
-            s = s.replace(/\./g, '');
-        } else {
-            // Se tem 1 ou 2 algarismos, é o decimal usual (Ex: 450.00)
-            // Não fazemos replace do dot porque o JS usa ponto para decimais
-        }
+        // Se o ponto é a única pontuação, Tesseract pode ter lido ",00" como ".000".
+        // Vamos varrer e assumir que o ponto que resta é DECIMAL. 
+        // Ex: "450.000" -> parseFloat("450.000") = 450
+        // Petrobras não deve fornecer "4.500" isolado sem decimais (eles dariam 4.500,00).
+        // Se fornecerem, parseFloat lerá como 4.5 e exigirá checagem visual. Segurança em 1o lugar.
     }
 
     return parseFloat(s) || 0;
@@ -338,7 +332,6 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
             const width    = normalizeDimension(match[5]);
             const height   = normalizeDimension(match[6]);
             const weightKg = normalizeNumber(match[7]);
-            if (weightKg === 0) continue;
 
             const identifier = extractIdentifier(rawDescription) ?? match[2];
             const desc       = rawDescription.substring(0, 120);
@@ -381,7 +374,6 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 if (rawDescription.match(/^(PETROBRAS|MANIFESTO|TRANSPORTE|PAG:|EMPRESA|ATENDIMENTO|ROTEIRO)/i)) continue;
 
                 const weightKg = normalizeNumber(match[4]);
-                if (weightKg === 0) continue;
 
                 const identifier = extractIdentifier(rawDescription) ?? match[2];
                 const id   = `${identifier}-${match[1]}`;
@@ -424,7 +416,6 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 const width  = normalizeDimension(match[3]);
                 const height = normalizeDimension(match[4]);
                 const weightKg = normalizeNumber(match[5]);
-                if (weightKg === 0) continue;
 
                 const identifier = extractIdentifier(rawDescription) ?? `P${pageNumber}-${items.length + 1}`;
                 const id = `${pageNumber}-${identifier}`;
