@@ -45,33 +45,32 @@ export class PdfGeneratorService {
 
     // ── Cabeçalho ────────────────────────────────────────────────────────────
     doc.setFillColor(30, 30, 50);
-    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.rect(0, 0, pageWidth, 28, 'F');
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('PLANO DE CARGA CONSOLIDADO', pageWidth / 2, 14, { align: 'center' });
+    doc.text('PLANO DE CARGA CONSOLIDADO', pageWidth / 2, 12, { align: 'center' });
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Embarcação: ${shipName.toUpperCase()}`, margin, 22);
 
     const atendimentoText = atendimento ? `Atendimento: ${atendimento}` : voyage ? `Voyage: ${voyage}` : '';
     if (atendimentoText) {
-      doc.text(atendimentoText, pageWidth / 2, 22, { align: 'center' });
+      doc.text(atendimentoText, margin, 21);
     }
 
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 22, { align: 'right' });
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 21, { align: 'right' });
 
     if (roteiro && roteiro.length > 0) {
       doc.setFontSize(9);
       doc.setTextColor(180, 200, 255);
-      doc.text(`Roteiro: ${roteiro.join(' -> ')}`, pageWidth / 2, 30, { align: 'center' });
+      doc.text(`Roteiro: ${roteiro.join(' ➔ ')}`, pageWidth / 2, 21, { align: 'center' });
     }
 
     // ── Linha separadora ─────────────────────────────────────────────────────
     doc.setTextColor(0, 0, 0);
-    let y = 42;
+    let y = 36;
 
     // ── Sumário Geral ─────────────────────────────────────────────────────────
     const allCargoes = this.getAllAllocatedCargoes(locations);
