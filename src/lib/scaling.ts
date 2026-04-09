@@ -40,5 +40,5 @@ export function getCargoFontSize(_cargo: Cargo): number {
  * Get icon size based on cargo size for consistent icon scaling
  */
 export function getCargoIconSize(_cargo: Cargo): number {
-  return 12;
+  return 24;
 }

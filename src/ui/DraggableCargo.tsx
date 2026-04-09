@@ -152,7 +152,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
                   className="bg-blue-600/90 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-500 drop-shadow-md border border-white/20"
                   title="Editar Carga"
                >
-                 <Edit size={12} />
+                 <Edit size={buttonSize * 0.6} />
                </button>
                <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(); }}
@@ -203,7 +203,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
                 title="Editar carga"
                 style={{ width: `${buttonSize}px`, height: `${buttonSize}px` }}
               >
-                <Edit style={{ width: `${buttonSize * 0.8}px`, height: `${buttonSize * 0.8}px` }} />
+                <Edit style={{ width: `${buttonSize * 0.7}px`, height: `${buttonSize * 0.7}px` }} />
               </button>
               <button
                 onClick={handleDelete}
@@ -211,7 +211,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
                 title="Excluir carga"
                 style={{ width: `${buttonSize}px`, height: `${buttonSize}px` }}
               >
-                <Trash2 style={{ width: `${buttonSize * 0.8}px`, height: `${buttonSize * 0.8}px` }} />
+                <Trash2 style={{ width: `${buttonSize * 0.7}px`, height: `${buttonSize * 0.7}px` }} />
               </button>
             </div>
           </div>
