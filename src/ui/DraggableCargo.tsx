@@ -72,7 +72,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "group relative flex flex-col transition-colors cursor-grab select-none",
-        isDragging ? "opacity-50" : (requiresWeightFix ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing"),
+        isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
           ? "p-0 rounded-sm hover:-translate-y-0.5 transition-transform shadow-md"
           : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 hover:border-indigo-500/50",
@@ -80,9 +80,9 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
         requiresWeightFix ? "border-red-500 dark:border-red-500 bg-red-100 dark:bg-red-900/30" : ""
       )}
     >
-      {/* Tooltip Global (Hover) aplicável em todos os estados */}
-      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 p-3 bg-gray-900 dark:bg-neutral-800 text-white dark:text-neutral-100 text-xs font-sans rounded-lg shadow-xl shadow-black/50 opacity-0 group-hover:opacity-100 transition-opacity z-[100] pointer-events-none flex flex-col gap-1 border border-neutral-700">
-         <div className="font-bold border-b border-neutral-700 pb-1 mb-1 truncate text-center">{cargo.identifier}</div>
+      {/* Tooltip Global (Hover) - Posicionado abaixo (top-full) para evitar corte no topo do deck */}
+      <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 bg-gray-900/95 dark:bg-neutral-900/95 backdrop-blur-sm text-white dark:text-neutral-100 text-xs font-sans rounded-lg shadow-2xl shadow-black/80 opacity-0 group-hover:opacity-100 transition-opacity z-[1001] pointer-events-none flex flex-col gap-1 border border-neutral-700/50">
+         <div className="font-bold border-b border-neutral-700/50 pb-1 mb-1 truncate text-center text-indigo-400">{cargo.identifier}</div>
          <div className="text-[10px] break-words line-clamp-2 text-neutral-300">{cargo.description}</div>
          <div className="grid grid-cols-2 gap-2 mt-1 bg-black/30 p-1.5 rounded">
             <div>
