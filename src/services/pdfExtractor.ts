@@ -597,6 +597,26 @@ export class PDFExtractor {
         return canvas;
     }
 
+    private static rotateCanvas(original: HTMLCanvasElement, degrees: number): HTMLCanvasElement {
+        const rotated = document.createElement('canvas');
+        const ctx = rotated.getContext('2d');
+        if (!ctx) return original;
+
+        // Se giro for de 90 ou -90 (270), invertemos as dimensões espaciais
+        if (Math.abs(degrees) === 90 || Math.abs(degrees) === 270) {
+            rotated.width = original.height;
+            rotated.height = original.width;
+        } else {
+            rotated.width = original.width;
+            rotated.height = original.height;
+        }
+
+        ctx.translate(rotated.width / 2, rotated.height / 2);
+        ctx.rotate((degrees * Math.PI) / 180);
+        ctx.drawImage(original, -original.width / 2, -original.height / 2);
+        return rotated;
+    }
+
     private static async performOCR(
         pdf: pdfjsLibType.PDFDocumentProxy,
         onProgress?: (progress: number) => void,
@@ -622,17 +642,41 @@ export class PDFExtractor {
 
                 logger.info(`OCR processando página ${i} de ${pdf.numPages}`);
 
-                const canvas = await this.renderPageToImage(pdf, i);
-                const result = await worker.recognize(canvas);
+                const baseCanvas = await this.renderPageToImage(pdf, i);
+                let text = '';
+                
+                // Heurística de Rotação Espacial (Mitigação para scanners invertidos)
+                // O formato natural do manifesto é Paisagem. Logo, Width > Height
+                const isPortrait = baseCanvas.height > baseCanvas.width;
+                // Se estiver retrato, giramos; caso contário operamos no natural
+                const anglesToTry = isPortrait ? [-90, 90] : [0, 180];
+                
+                for (const angle of anglesToTry) {
+                    const canvasToOcr = angle === 0 ? baseCanvas : this.rotateCanvas(baseCanvas, angle);
+                    const result = await worker.recognize(canvasToOcr);
+                    text = result.data.text;
+                    
+                    if (angle !== 0) {
+                        // Desaloca o canvas rotacionado (temp memory)
+                        canvasToOcr.width = 0;
+                        canvasToOcr.height = 0;
+                    }
+                    
+                    // Validação semântica: O OCR conseguiu ler alguma palavra chave de manifesto?
+                    if (/(MANIFESTO|PETROBRAS|CARGA|EQUIPAMENTO|ATENDIMENTO|ROTEIRO|PLANO|ORIGEM)/i.test(text)) {
+                         logger.info(`OCR detectou orientação correta da página ${i} no ângulo ${angle}º`);
+                         break; // Sucesso na orientação encontrada
+                    }
+                }
 
-                // Liberar memória do canvas imediatamente
-                canvas.width  = 0;
-                canvas.height = 0;
+                // Liberar memória do canvas base
+                baseCanvas.width  = 0;
+                baseCanvas.height = 0;
 
-                fullOCRText += '\n' + result.data.text;
+                fullOCRText += '\n' + text;
 
-                logger.debug(`OCR página ${i}: ${result.data.text.length} caracteres reconhecidos`, {
-                    preview: result.data.text.substring(0, 200)
+                logger.debug(`OCR página ${i}: caracteres reconhecidos`, {
+                    preview: text.substring(0, 200).replace(/\n/g, ' ')
                 });
             }
 
