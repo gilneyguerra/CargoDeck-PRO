@@ -6,6 +6,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { PDFExtractor, CargoItem, ExtractionResult } from '../services/pdfExtractor';
 import { AppError, handleApplicationError } from '../services/errorHandler';
+import { useCargoStore } from '@/features/cargoStore';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
 
@@ -67,6 +68,7 @@ export function usePDFUpload() {
             setState(prev => ({ ...prev, progress: 15 }));
 
             // 2. Extrair dados do PDF (com callback de progresso para OCR)
+            const currentShipCode = useCargoStore.getState().shipOperationCode;
             const extractionResult: ExtractionResult = await PDFExtractor.extract(
                 file, 
                 (ocrProgress) => {
@@ -78,7 +80,8 @@ export function usePDFUpload() {
                         isOCR: true 
                     }));
                 },
-                signal
+                signal,
+                currentShipCode
             );
 
             if (signal.aborted) {

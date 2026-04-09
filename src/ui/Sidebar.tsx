@@ -8,6 +8,7 @@ import type { CargoItem } from '@/services/pdfExtractor';
 import { ManualCargoModal } from './ManualCargoModal';
 import { EditCargoModal } from './EditCargoModal';
 import DraggableCargo from './DraggableCargo';
+import { BackloadResolutionModal } from './BackloadResolutionModal';
 
 // ─── Helpers para mapeamento de itens extraídos do PDF ───────────────────────
 
@@ -53,6 +54,8 @@ export function Sidebar() {
     const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, clearUnallocatedCargoes } = useCargoStore();
     const { loading: isProcessing, progress: progressPercent, error, upload, reset, isOCR } = usePDFUpload();
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [isBackloadModalOpen, setIsBackloadModalOpen] = useState(false);
+    const [pendingBackloads, setPendingBackloads] = useState<Cargo[]>([]);
     const [destinationFilter, setDestinationFilter] = useState<string>('TODOS');
 
     // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
@@ -105,7 +108,20 @@ export function Sidebar() {
                         roteiroPrevisto:   item.roteiroPrevisto,
                     };
                 });
-                useCargoStore.getState().setExtractedCargoes(mappedCargoes);
+                
+                // Separa cargas que são de Desembarque (Backload) para tratamento especial
+                const loadingCargoes = mappedCargoes.filter(c => !c.isBackload);
+                const backloadCargoes = mappedCargoes.filter(c => c.isBackload);
+
+                if (backloadCargoes.length > 0) {
+                    setPendingBackloads(backloadCargoes);
+                    setIsBackloadModalOpen(true);
+                }
+
+                // Adiciona ao store apenas o que for carga chegando (Loading)
+                if (loadingCargoes.length > 0) {
+                    useCargoStore.getState().setExtractedCargoes(loadingCargoes);
+                }
             }
             e.target.value = '';
         }
@@ -239,7 +255,13 @@ export function Sidebar() {
       </div>
 
       <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-      <EditCargoModal isOpen={!!editingCargo} cargo={editingCargo} onClose={() => setEditingCargo(null)} />
+      {editingCargo && <EditCargoModal isOpen={!!editingCargo} cargo={editingCargo} onClose={() => setEditingCargo(null)} />}
+      
+      <BackloadResolutionModal 
+        isOpen={isBackloadModalOpen}
+        onClose={() => setIsBackloadModalOpen(false)}
+        extractedBackloads={pendingBackloads}
+      />
     </aside>
   );
 }

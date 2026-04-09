@@ -279,7 +279,7 @@ function extractIdentifier(text: string): string | undefined {
  *
  * Padrões de fallback para outros formatos de manifesto.
  */
-function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): CargoItem[] {
+function parseManifesto(text: string, pageNumber: number, header: ManifestHeader, currentShipCode?: string): CargoItem[] {
     const items: CargoItem[] = [];
     const seenIds = new Set<string>();
 
@@ -315,11 +315,6 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     }
 
     // ── Padrão 1 (Principal): Petrobras/TAGAZ com dimensões ───────────────────
-    // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
-    // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
-    // Ou sem BRL e sem Valor (como no screenshot: "1,21x1,12x1,80 900,00 SUB/OPSUB/...")
-    // Groupos: [1]=seq [2]=NF [3]=descrição [4]=C [5]=L [6]=A [7]=peso_kg
-    // Nota: OCR pode trocar '1' por 'l'/'I', e '0' por 'O'. Por isso [\d.,lI|oO] e espaços extras no [xX×]
     const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi;
 
     let match: RegExpExecArray | null;
@@ -335,9 +330,19 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
             const identifier = extractIdentifier(rawDescription) ?? match[2];
             const desc       = rawDescription.substring(0, 120);
-            const isBackload = BACKLOAD_KEYWORDS.some(kw => desc.toLowerCase().includes(kw));
-            const tipo       = detectCargoType(desc);
             const sec        = getSectionFor(match.index ?? 0);
+            
+            const origem = sec.origem || header.origemCarga || '';
+            const destino = sec.destino || header.destinoCarga || '';
+            
+            // Lógica de Detecção Espacial de Backload
+            const isSpatialBackload = currentShipCode && 
+                                     origem.toUpperCase().includes(currentShipCode.toUpperCase()) && 
+                                     !destino.toUpperCase().includes(currentShipCode.toUpperCase());
+            const isKeywordBackload = BACKLOAD_KEYWORDS.some(kw => desc.toLowerCase().includes(kw));
+            const isBackload = !!(isSpatialBackload || isKeywordBackload);
+
+            const tipo       = detectCargoType(desc);
             const id         = `${identifier}-${match[1]}`;
 
             if (!seenIds.has(id)) {
@@ -350,12 +355,13 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     volume: length * width * height,
                     length, width, height,
                     bay: pageNumber,
-                    isBackload, tipoDetectado: tipo,
+                    isBackload, 
+                    tipoDetectado: tipo,
                     nomeEmbarcacao:    header.nomeEmbarcacao,
                     numeroAtendimento: header.numeroAtendimento,
                     roteiroPrevisto:   header.roteiroPrevisto,
-                    origemCarga:       sec.origem  || header.origemCarga,
-                    destinoCarga:      sec.destino || header.destinoCarga,
+                    origemCarga:       origem,
+                    destinoCarga:      destino,
                 });
             }
         } catch (e) {
@@ -365,7 +371,6 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     petrobrasPattern.lastIndex = 0;
 
     // ── Padrão 2: Petrobras sem dimensões (líquidos/a granel) ────────────────
-    // Este padrão captura linhas sem o bloco de dimensões no meio. Como requer segurança, avalia opcional do BRL e se a linha contem ou não
     if (items.length === 0) {
         const pattern2 = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,]+)(?:\s+[\d.,]+)?(?:\s+(?:BRL|USD|EUR))?(?:\s+[a-zA-Z0-9\/_-]+)?\s*(?:\r?\n|$)/gi;
         while ((match = pattern2.exec(text)) !== null) {
@@ -378,6 +383,15 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 const identifier = extractIdentifier(rawDescription) ?? match[2];
                 const id   = `${identifier}-${match[1]}`;
                 const sec  = getSectionFor(match.index ?? 0);
+                
+                const origem = sec.origem || header.origemCarga || '';
+                const destino = sec.destino || header.destinoCarga || '';
+                
+                const isSpatialBackload = currentShipCode && 
+                                         origem.toUpperCase().includes(currentShipCode.toUpperCase()) && 
+                                         !destino.toUpperCase().includes(currentShipCode.toUpperCase());
+                const isKeywordBackload = BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw));
+                const isBackload = !!(isSpatialBackload || isKeywordBackload);
 
                 if (!seenIds.has(id)) {
                     seenIds.add(id);
@@ -387,13 +401,13 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                         weight: kgToTonnes(weightKg),
                         weightKg, volume: 0,
                         bay: pageNumber,
-                        isBackload: BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw)),
+                        isBackload,
                         tipoDetectado: detectCargoType(rawDescription),
                         nomeEmbarcacao:    header.nomeEmbarcacao,
                         numeroAtendimento: header.numeroAtendimento,
                         roteiroPrevisto:   header.roteiroPrevisto,
-                        origemCarga:       sec.origem  || header.origemCarga,
-                        destinoCarga:      sec.destino || header.destinoCarga,
+                        origemCarga:       origem,
+                        destinoCarga:      destino,
                     });
                 }
             } catch (e) {
@@ -419,6 +433,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
                 const identifier = extractIdentifier(rawDescription) ?? `P${pageNumber}-${items.length + 1}`;
                 const id = `${pageNumber}-${identifier}`;
+                
+                const isKeywordBackload = BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw));
+
                 if (!seenIds.has(id)) {
                     seenIds.add(id);
                     items.push({
@@ -429,7 +446,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                         volume: length * width * height,
                         length, width, height,
                         bay: pageNumber,
-                        isBackload: BACKLOAD_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw)),
+                        isBackload: isKeywordBackload,
                         tipoDetectado: detectCargoType(rawDescription),
                         ...header,
                     });
@@ -525,7 +542,8 @@ export class PDFExtractor {
      */
     private static async extractTextFromPDF(
         pdf: pdfjsLibType.PDFDocumentProxy,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        currentShipCode?: string
     ): Promise<{ items: CargoItem[]; isTextPoor: boolean }> {
         let totalChars = 0;
         let fullText   = '';
@@ -560,7 +578,7 @@ export class PDFExtractor {
 
         // Parse de todo o texto de uma vez (o manifesto Petrobras é contínuo entre páginas)
         const header = parseHeaderInfo(fullText);
-        const items  = parseManifesto(fullText, 1, header);
+        const items  = parseManifesto(fullText, 1, header, currentShipCode);
 
         const avgCharsPerPage = totalChars / pdf.numPages;
         const isTextPoor      = avgCharsPerPage < PDFExtractor.MIN_TEXT_DENSITY;
@@ -625,7 +643,8 @@ export class PDFExtractor {
     private static async performOCR(
         pdf: pdfjsLibType.PDFDocumentProxy,
         onProgress?: (progress: number) => void,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        currentShipCode?: string
     ): Promise<CargoItem[]> {
         logger.info('Iniciando extração via OCR (Tesseract.js)');
         let fullOCRText = '';
@@ -687,7 +706,7 @@ export class PDFExtractor {
 
             // Parse único de todo o texto OCR
             const header = parseHeaderInfo(fullOCRText);
-            const items  = parseManifesto(fullOCRText, 1, header);
+            const items  = parseManifesto(fullOCRText, 1, header, currentShipCode);
 
             logger.info('OCR concluído', { totalPages: pdf.numPages, itemsFound: items.length });
             return items;
@@ -700,7 +719,8 @@ export class PDFExtractor {
     static async extract(
         file: File,
         onOCRProgress?: (progress: number) => void,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        currentShipCode?: string
     ): Promise<ExtractionResult> {
         let pdf: pdfjsLibType.PDFDocumentProxy | null = null;
 
@@ -732,7 +752,7 @@ export class PDFExtractor {
 
             // 1ª tentativa: extração de texto nativo
             try {
-                const result = await this.extractTextFromPDF(pdf, signal);
+                const result = await this.extractTextFromPDF(pdf, signal, currentShipCode);
                 items = result.items;
 
                 if (result.isTextPoor) {
@@ -749,7 +769,7 @@ export class PDFExtractor {
                 logger.info('Nenhum item extraído via texto. Aplicando OCR...');
                 ocrAttempted = true;
                 try {
-                    items = await this.performOCR(pdf, onOCRProgress, signal);
+                    items = await this.performOCR(pdf, onOCRProgress, signal, currentShipCode);
                 } catch (ocrError) {
                     logger.error('Erro no OCR:', ocrError instanceof Error ? ocrError : undefined);
                     items = [];

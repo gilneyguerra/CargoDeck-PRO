@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { CargoPreview } from './CargoPreview';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, LogOut } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
 import { useEffect, useState } from 'react';
 
@@ -96,6 +96,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
         cargo.status === 'ALLOCATED' 
           ? "p-0 rounded-sm hover:-translate-y-0.5 transition-transform shadow-md"
           : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 hover:border-indigo-500/50",
+        cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-amber-500/60 bg-amber-500/5 dark:bg-amber-900/10" : "",
         isHighlight ? "bg-yellow-200/50 dark:bg-yellow-900/50 border-yellow-500 dark:border-yellow-400" : "",
         requiresWeightFix ? "border-red-500 dark:border-red-500 bg-red-100 dark:bg-red-900/30" : ""
       )}
@@ -114,6 +115,11 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
                <span className="font-mono text-emerald-400 font-bold">{cargo.weightTonnes.toFixed(2)} t</span>
             </div>
          </div>
+         {cargo.isBackload && (
+            <div className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 font-bold text-[9px] uppercase tracking-wider">
+               <LogOut size={10} /> DESEMBARQUE / BACKLOAD
+            </div>
+         )}
          {(cargo.origemCarga || cargo.destinoCarga) && (
             <div className="text-[10px] text-neutral-400 mt-1">
                <span className="text-neutral-500">Rota:</span> {cargo.origemCarga ?? '?'} → {cargo.destinoCarga ?? '?'}
@@ -136,6 +142,11 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
              </span>
              {/* Action Buttons Container */}
              <div className="absolute -top-3 -right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+               {cargo.isBackload && (
+                 <div className="bg-amber-500 text-white p-1 rounded-full shadow-sm">
+                   <LogOut size={10} />
+                 </div>
+               )}
                <button
                   onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
                   className="bg-blue-600/90 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-500 drop-shadow-md border border-white/20"
@@ -179,8 +190,10 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
               )}
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
-              {cargo.observations === 'BACKLOAD' && (
-                <span className="bg-amber-200/20 dark:bg-amber-500/20 text-amber-700 dark:text-amber-500 px-1 py-0.5 rounded uppercase font-bold tracking-wider" style={{ fontSize: `${fontSize * 0.6}px` }}>Backload</span>
+              {cargo.isBackload && (
+                <span className="bg-amber-500 text-white px-1.5 py-0.5 rounded text-[9px] font-bold flex items-center gap-1 uppercase">
+                  <LogOut size={8} /> Backload
+                </span>
               )}
             </div>
             <div className="flex items-end gap-1 shrink-0 mt-1">
