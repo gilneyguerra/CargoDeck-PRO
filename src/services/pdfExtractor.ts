@@ -310,8 +310,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
     // ── Padrão 1 (Principal): Petrobras/TAGAZ com dimensões ───────────────────
     // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
+    // Print mostra espaços simples em algumas separações: "0001 326490679", "11.989,20 8.877.197,67 BRL"
     // Grupos: [1]=seq [2]=NF [3]=descrição [4]=C [5]=L [6]=A [7]=peso_kg
-    const petrobrasPattern = /\b(\d{3,4})\s{2,}(\d{6,12})\s{2,}\d{4}\/\d{4}\s{2,}[\d,.]+\s{2,}(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s{2,}(.{5,150}?)\s{2,}(\d+[,.]\d+)x(\d+[,.]\d+)x(\d+[,.]\d+)\s{2,}([\d.,]+)\s{2,}[\d.,]+\s{2,}BRL/gi;
+    const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s{2,}(\d+[,.]\d+)x(\d+[,.]\d+)x(\d+[,.]\d+)\s+([\d.,]+)\s+[\d.,]+\s+BRL/gi;
 
     let match: RegExpExecArray | null;
     while ((match = petrobrasPattern.exec(text)) !== null) {
@@ -357,10 +358,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     petrobrasPattern.lastIndex = 0;
 
     // ── Padrão 2: Petrobras sem dimensões (líquidos/a granel) ────────────────
-    // Itens com 0,00x0,00x0,00 são capturados pelo padrão 1.
     // Este padrão captura linhas sem o bloco de dimensões no meio.
     if (items.length === 0) {
-        const pattern2 = /\b(\d{3,4})\s{2,}(\d{6,12})\s{2,}\d{4}\/\d{4}\s{2,}[\d,.]+\s{2,}(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s{2,}(.{5,150}?)\s{2,}([\d.,]+)\s{2,}[\d.,]+\s{2,}BRL/gi;
+        const pattern2 = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,]+)\s+[\d.,]+\s+BRL/gi;
         while ((match = pattern2.exec(text)) !== null) {
             try {
                 const rawDescription = match[3].trim();
