@@ -2,10 +2,7 @@
 /**
  * @file Serviço robusto para extração de dados de PDFs de manifestos de carga (CargoDeck-PRO).
  */
-import type * as pdfjsLibType from 'pdfjs-dist';
-import { createWorker } from 'tesseract.js';
-import { AppError, handleApplicationError } from './errorHandler';
-import { ErrorCodes } from '../lib/errorCodes';
+import { handleApplicationError } from './errorHandler';
 import { logger } from '../utils/logger';
 
 // ─── Interfaces Públicas ────────────────────────────────────────────────────
@@ -175,7 +172,13 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 }
 
 export class PDFExtractor {
-    static async extract(file: File, onProgress?: (p: number) => void, signal?: AbortSignal, currentShipCode?: string): Promise<ExtractionResult> {
+    static validateFile(file: File) {
+        if (file.type !== 'application/pdf') return { valid: false };
+        if (file.size > 50 * 1024 * 1024) return { valid: false };
+        return { valid: true };
+    }
+
+    static async extract(file: File, _onProgress?: (p: number) => void, _signal?: AbortSignal, currentShipCode?: string): Promise<ExtractionResult> {
         try {
             const pdfjsLib = await import('pdfjs-dist');
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';

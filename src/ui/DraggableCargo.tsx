@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
-import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
+import { getCargoFontSize } from '@/lib/scaling';
 import { CargoPreview } from './CargoPreview';
 import { Edit, Trash2, LogOut, MapPin } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
@@ -105,7 +105,6 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   };
 
   const fontSize = getCargoFontSize(cargo);
-  const buttonSize = getCargoIconSize(cargo);
   const requiresWeightFix = cargo.weightTonnes === 0 || isNaN(cargo.weightTonnes);
   const isLightBackground = isColorLight(cargo.color || '#3b82f6');
   const textColorClass = isLightBackground ? "text-neutral-950" : "text-white/95";
