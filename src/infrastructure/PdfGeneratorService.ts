@@ -224,7 +224,6 @@ export class PdfGeneratorService {
     if (atendimento) {
       doc.text(`Nº Atendimento: ${atendimento}`, margin, y);
     }
-    doc.text(`${shipName}`, pageWidth / 2, y, { align: 'center' });
 
     // Linhas de assinatura
     y += 8;
