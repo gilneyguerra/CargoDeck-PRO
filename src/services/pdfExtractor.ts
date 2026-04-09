@@ -82,7 +82,7 @@ interface ManifestHeader {
  * Suporta: "9.000,00" (BR), "9,000.00" (US), "9000"
  */
 function normalizeNumber(raw: string): number {
-    let s = raw.trim();
+    let s = raw.trim().replace(/[lI|]/g, '1').replace(/[oO]/g, '0');
 
     const commaIndex = s.lastIndexOf(',');
     const dotIndex = s.lastIndexOf('.');
@@ -116,7 +116,8 @@ function normalizeNumber(raw: string): number {
 function kgToTonnes(kg: number): number { return kg / 1000; }
 
 function normalizeDimension(raw: string): number {
-    return parseFloat(raw.replace(',', '.')) || 0;
+    const s = raw.trim().replace(/[lI|]/g, '1').replace(/[oO]/g, '0');
+    return parseFloat(s.replace(',', '.')) || 0;
 }
 
 // ─── Palavras-chave ──────────────────────────────────────────────────────────
@@ -323,8 +324,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
     // Ex: "0032   326279595   0001/0002   1.00   UN   CETSA TIGER: 805154-2 ESLINGA ...   2,70x1,50x1,50   7.238,00   25.000,00   BRL"
     // Ou sem BRL e sem Valor (como no screenshot: "1,21x1,12x1,80 900,00 SUB/OPSUB/...")
-    // Grupos: [1]=seq [2]=NF [3]=descrição [4]=C [5]=L [6]=A [7]=peso_kg
-    const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,]+)[xX×]([\d.,]+)[xX×]([\d.,]+)\s+([\d.,]+)/gi;
+    // Groupos: [1]=seq [2]=NF [3]=descrição [4]=C [5]=L [6]=A [7]=peso_kg
+    // Nota: OCR pode trocar '1' por 'l'/'I', e '0' por 'O'. Por isso [\d.,lI|oO] e espaços extras no [xX×]
+    const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(?:UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi;
 
     let match: RegExpExecArray | null;
     while ((match = petrobrasPattern.exec(text)) !== null) {
@@ -411,7 +413,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
     // ── Padrão 3 (Fallback genérico): Descrição + CxLxA + KG ─────────────────
     if (items.length === 0) {
-        const pattern3 = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-:\/]{3,80}?)\s+(\d+[,.]?\d{1,2})\s*[xX×]\s*(\d+[,.]?\d{1,2})\s*[xX×]\s*(\d+[,.]?\d{1,2})\s*(?:m|M)?\s+([\d.,]+)\s*[Kk][Gg]/g;
+        const pattern3 = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-:\/]{3,80}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*(?:m|M)?\s+([\d.,lI|oO]+)\s*[Kk][Gg]/g;
         while ((match = pattern3.exec(text)) !== null) {
             try {
                 const rawDescription = match[1].trim();
