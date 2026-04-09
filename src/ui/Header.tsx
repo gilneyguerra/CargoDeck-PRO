@@ -1,7 +1,7 @@
 import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle, Sun, Moon } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { AuthModal } from './AuthModal';
@@ -75,25 +75,36 @@ export function Header() {
      }
   };
 
-  let totalPort = 0;
-  let totalStarboard = 0;
-  let totalTopHeavyMoment = 0;
-  let currentTotalWeight = 0;
+  const { totalPort, totalStarboard, totalTopHeavyMoment, currentTotalWeight } = useMemo(() => {
+    let port = 0;
+    let starboard = 0;
+    let topHeavy = 0;
+    let weight = 0;
 
-   locations.forEach(loc => {
-     const elev = loc.config.elevationMeters !== undefined ? loc.config.elevationMeters : 30;
-     loc.bays.forEach(bay => {
-       bay.allocatedCargoes.forEach(c => {
-         currentTotalWeight += c.weightTonnes * c.quantity;
-         if (c.positionInBay === 'port') totalPort += c.weightTonnes * c.quantity;
-         else if (c.positionInBay === 'starboard') totalStarboard += c.weightTonnes * c.quantity;
+    locations.forEach(loc => {
+      const elev = loc.config.elevationMeters !== undefined ? loc.config.elevationMeters : 30;
+      loc.bays.forEach(bay => {
+        bay.allocatedCargoes.forEach(c => {
+          const cargoWeight = c.weightTonnes * c.quantity;
+          weight += cargoWeight;
+          
+          if (c.positionInBay === 'port') port += cargoWeight;
+          else if (c.positionInBay === 'starboard') starboard += cargoWeight;
 
-         const cargoHeight = c.heightMeters || 2.5; 
-         const centerOfGravityZ = elev + (cargoHeight / 2);
-         totalTopHeavyMoment += (c.weightTonnes * c.quantity * centerOfGravityZ);
-       });
-     });
-   });
+          const cargoHeight = c.heightMeters || 2.5; 
+          const centerOfGravityZ = elev + (cargoHeight / 2);
+          topHeavy += (cargoWeight * centerOfGravityZ);
+        });
+      });
+    });
+
+    return { 
+      totalPort: port, 
+      totalStarboard: starboard, 
+      totalTopHeavyMoment: topHeavy, 
+      currentTotalWeight: weight 
+    };
+  }, [locations]);
 
   const listDiff = Math.abs(totalPort - totalStarboard);
   const isListing = listDiff > 50; 

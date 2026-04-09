@@ -200,24 +200,22 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     );
     if (sectionHeaderMatch) {
         const code1 = sectionHeaderMatch[1].trim();
-        const nome1 = sectionHeaderMatch[2].trim();
         const code2 = sectionHeaderMatch[3].trim();
-        const nome2 = sectionHeaderMatch[4].trim();
         // Verificar que não são palavras de rodapé
         if (!code1.match(/^(PETROBRAS|MANIFESTO|BASE|EMPRESA|RECEBIMENTO)$/i)) {
-            header.origemCarga  = `${code1} - ${nome1}`;
-            header.destinoCarga = `${code2} - ${nome2}`;
+            header.origemCarga  = code1;
+            header.destinoCarga = code2;
         }
     }
 
     // Fallback: buscar por rótulos "Origem:" e "Destino:"
     if (!header.origemCarga) {
-        const m = fullText.match(/(?:local\s+de\s+)?origem\s*[:\-]?\s*([A-Z]{2,6}\s*[-–]\s*[^\n\r]{3,60})/i);
-        if (m?.[1]) header.origemCarga = m[1].trim().substring(0, 70);
+        const m = fullText.match(/(?:local\s+de\s+)?origem\s*[:\-]?\s*([A-Z]{2,6})\s*[-–]/i);
+        if (m?.[1]) header.origemCarga = m[1].trim();
     }
     if (!header.destinoCarga) {
-        const m = fullText.match(/(?:local\s+de\s+)?destino\s*[:\-]?\s*([A-Z]{2,6}\s*[-–]\s*[^\n\r]{3,60})/i);
-        if (m?.[1]) header.destinoCarga = m[1].trim().substring(0, 70);
+        const m = fullText.match(/(?:local\s+de\s+)?destino\s*[:\-]?\s*([A-Z]{2,6})\s*[-–]/i);
+        if (m?.[1]) header.destinoCarga = m[1].trim();
     }
 
     logger.debug('Header do manifesto extraído', {
@@ -284,15 +282,15 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
     if (sectionHeaders.length > 0 && !localOrigem) {
         const sh = sectionHeaders[0];
-        localOrigem  = `${sh[1].trim()} - ${sh[2].trim()}`;
-        localDestino = `${sh[3].trim()} - ${sh[4].trim()}`;
+        localOrigem  = sh[1].trim();
+        localDestino = sh[3].trim();
     }
 
     type SectionMeta = { pos: number; origem: string; destino: string };
     const sections: SectionMeta[] = sectionHeaders.map(sh => ({
         pos:     sh.index ?? 0,
-        origem:  `${sh[1].trim()} - ${sh[2].trim()}`,
-        destino: `${sh[3].trim()} - ${sh[4].trim()}`,
+        origem:  sh[1].trim(),
+        destino: sh[3].trim(),
     }));
 
     function getSectionFor(pos: number): { origem: string; destino: string } {

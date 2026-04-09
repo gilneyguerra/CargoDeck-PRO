@@ -53,15 +53,14 @@ export function Sidebar() {
     const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, clearUnallocatedCargoes } = useCargoStore();
     const { loading: isProcessing, progress: progressPercent, error, upload, reset, isOCR } = usePDFUpload();
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-    const [categoryFilter, setCategoryFilter] = useState<CargoFilter>('ALL');
+    const [destinationFilter, setDestinationFilter] = useState<string>('TODOS');
 
-    const filterButtons: { key: CargoFilter; label: string; color: string }[] = [
-        { key: 'ALL', label: 'TODOS', color: 'text-neutral-400' },
-        { key: 'GENERAL', label: 'GERAL', color: 'text-blue-400' },
-        { key: 'CONTAINER', label: 'CONTÊINER', color: 'text-orange-400' },
-        { key: 'HEAVY', label: 'PESADO', color: 'text-red-400' },
-        { key: 'HAZARDOUS', label: 'PERIGOSO', color: 'text-yellow-400' },
-        { key: 'FRAGILE', label: 'FRÁGIL', color: 'text-purple-400' },
+    // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
+    const availableDestinations = Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga || 'S/D').filter(Boolean))).sort();
+    
+    const filterButtons = [
+        { key: 'TODOS', label: 'TODOS' },
+        ...availableDestinations.map(dest => ({ key: dest, label: dest }))
     ];
 
     const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
@@ -168,12 +167,12 @@ export function Sidebar() {
           {filterButtons.map(btn => (
             <button
               key={btn.key}
-              onClick={() => setCategoryFilter(btn.key)}
+              onClick={() => setDestinationFilter(btn.key)}
               className={cn(
-                "px-2 py-1 text-[9px] font-bold tracking-wider rounded transition-all",
-                categoryFilter === btn.key 
-                  ? "bg-indigo-600 text-white border border-indigo-500" 
-                  : "bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-500 hover:text-gray-700 dark:hover:text-neutral-300 hover:bg-neutral-400 dark:hover:bg-neutral-700 border border-transparent"
+                "px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-full transition-all border",
+                destinationFilter === btn.key 
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm" 
+                  : "bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-200 hover:bg-neutral-300 dark:hover:bg-neutral-700 border-transparent cursor-pointer"
               )}
             >
               {btn.label}
@@ -187,9 +186,9 @@ export function Sidebar() {
           <h2 className="text-xs font-bold tracking-widest text-neutral-600 dark:text-neutral-400 uppercase">Não Alocadas</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md font-medium">
-              {categoryFilter === 'ALL' 
+              {destinationFilter === 'TODOS' 
                 ? unallocatedCargoes.length 
-                : unallocatedCargoes.filter(c => c.category === categoryFilter).length}
+                : unallocatedCargoes.filter(c => (c.destinoCarga || 'S/D') === destinationFilter).length}
             </span>
             <button
               onClick={async () => {
@@ -223,7 +222,8 @@ export function Sidebar() {
   .filter(cargo => {
     const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'ALL' || cargo.category === categoryFilter;
+    const cargoDestination = cargo.destinoCarga || 'S/D';
+    const matchesCategory = destinationFilter === 'TODOS' || cargoDestination === destinationFilter;
     return matchesSearch && matchesCategory;
   })
   .map(cargo => (
