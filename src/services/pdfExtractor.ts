@@ -2,8 +2,9 @@
 /**
  * @file Serviço robusto para extração de dados de PDFs de manifestos de carga (CargoDeck-PRO).
  */
-import { handleApplicationError } from './errorHandler';
+import { AppError, handleApplicationError } from './errorHandler';
 import { logger } from '../utils/logger';
+import { ErrorCodes } from '../lib/errorCodes';
 
 // ─── Interfaces Públicas ────────────────────────────────────────────────────
 
@@ -172,9 +173,13 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 }
 
 export class PDFExtractor {
-    static validateFile(file: File) {
-        if (file.type !== 'application/pdf') return { valid: false };
-        if (file.size > 50 * 1024 * 1024) return { valid: false };
+    static validateFile(file: File): { valid: true } | { valid: false; error: AppError } {
+        if (file.type !== 'application/pdf') {
+            return { valid: false, error: new AppError(ErrorCodes.PDF_INVALID_TYPE) };
+        }
+        if (file.size > 50 * 1024 * 1024) {
+            return { valid: false, error: new AppError(ErrorCodes.PDF_TOO_LARGE) };
+        }
         return { valid: true };
     }
 
@@ -200,8 +205,6 @@ export class PDFExtractor {
     }
 }
 
-export interface ExtractionResult {
-    success: boolean;
-    data?: { items: CargoItem[]; metadata: any };
-    error?: any;
-}
+export type ExtractionResult = 
+    | { success: true; data: { items: CargoItem[]; metadata: any }; error?: never }
+    | { success: false; error: AppError; data?: never };
