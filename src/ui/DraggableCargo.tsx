@@ -25,7 +25,7 @@ function isColorLight(hex: string): boolean {
   }
 }
 
-function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighlight?: boolean, onEdit: (cargo: Cargo) => void }) {
+function DraggableCargo({ cargo, isHighlight, isDimmed, onEdit }: { cargo: Cargo, isHighlight?: boolean, isDimmed?: boolean, onEdit: (cargo: Cargo) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cargo.id,
   });
@@ -44,7 +44,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
 
   useEffect(() => {
     const isActive = dragStoreIsDragging || isHovered;
-    if (!isActive) return;
+    if (!isActive || isDimmed) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
@@ -63,7 +63,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dragStoreIsDragging, isHovered, cargo.id, deleteCargo]);
+  }, [dragStoreIsDragging, isHovered, cargo.id, deleteCargo, isDimmed]);
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -76,6 +76,7 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   };
 
   const handleMouseEnter = () => {
+    if (isDimmed) return;
     setIsHovered(true);
     if (containerRef.current) {
        const rect = containerRef.current.getBoundingClientRect();
@@ -109,6 +110,9 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
   const isLightBackground = isColorLight(cargo.color || '#3b82f6');
   const textColorClass = isLightBackground ? "text-neutral-950" : "text-white/95";
 
+  // Desabilita as interações de drag and drop na peça ofuscada
+  const dndListeners = isDimmed || requiresWeightFix ? {} : listeners;
+
   return (
     <div
       ref={(node) => {
@@ -116,18 +120,20 @@ function DraggableCargo({ cargo, isHighlight, onEdit }: { cargo: Cargo, isHighli
         (containerRef as any).current = node;
       }}
       style={style}
-      {...(requiresWeightFix ? {} : listeners)}
+      {...dndListeners}
       {...attributes}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative flex flex-col transition-colors cursor-grab select-none",
-        isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
+        "group relative flex flex-col transition-all duration-300 select-none",
+        isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
+        isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
-          ? "p-0 rounded-sm hover:-translate-y-0.5 transition-transform shadow-md"
-          : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 hover:border-indigo-500/50 min-w-[44px] min-h-[44px] w-full overflow-visible",
+          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-md"
+          : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 min-w-[44px] min-h-[44px] w-full overflow-visible",
+        !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-indigo-500/50" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-amber-500/60 bg-amber-500/5 dark:bg-amber-900/10" : "",
-        isHighlight ? "bg-yellow-200/50 dark:bg-yellow-900/50 border-yellow-500 dark:border-yellow-400" : "",
+        isHighlight ? "ring-2 ring-offset-1 ring-yellow-400 dark:ring-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.8)] z-50 transform scale-[1.03]" : "",
         requiresWeightFix ? "border-red-500 dark:border-red-500 bg-red-100 dark:bg-red-900/30" : ""
       )}
     >

@@ -109,17 +109,23 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
          </span>
      </div>
       
-            <div className="flex flex-wrap gap-2 items-start content-start justify-center w-full">
-              {cargoes.map(cargo => (
-                <DraggableCargo 
-                  key={cargo.id} 
-                  cargo={cargo} 
-                  isHighlight={searchTerm.length > 0 && 
-                    (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                     cargo.description.toLowerCase().includes(searchTerm.toLowerCase()))}
-                  onEdit={onEdit}
-                />
-              ))}
+            <div className="flex flex-wrap gap-2 items-start content-start justify-center w-full relative">
+              {cargoes.map(cargo => {
+                const isMatch = searchTerm.length > 0 && 
+                  (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                   cargo.description.toLowerCase().includes(searchTerm.toLowerCase()));
+                const isDimmed = searchTerm.length > 0 && !isMatch;
+
+                return (
+                  <DraggableCargo 
+                    key={cargo.id} 
+                    cargo={cargo} 
+                    isHighlight={isMatch}
+                    isDimmed={isDimmed}
+                    onEdit={onEdit}
+                  />
+                );
+              })}
             </div>
     </div>
   );
