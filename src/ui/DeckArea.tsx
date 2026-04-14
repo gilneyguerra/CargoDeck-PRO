@@ -84,10 +84,6 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
         ? (deckConfig.centerWidthMeters || 5) 
         : (deckConfig.starboardWidthMeters || 5);
 
-    const bayLength = deckConfig.bayLengthMeters !== undefined 
-       ? deckConfig.bayLengthMeters 
-       : (deckConfig.numberOfBays > 0 ? (deckConfig.lengthMeters / deckConfig.numberOfBays) : 0);
-
      return (
         <div 
           ref={setNodeRef}
@@ -138,12 +134,6 @@ return (
       "bg-neutral-200 dark:bg-[#1f1f26] border-dashed border-neutral-400 dark:border-[#2d2d38]"
     )}
   >
-      <div className="absolute top-2 left-2 flex items-center gap-2">
-        <span className="bg-black/30 dark:bg-black/40 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-neutral-400 dark:border-neutral-800/50">
-          Baia {String(bay.number).padStart(2, '0')}
-        </span>
-      </div>
-
       <div className="absolute top-2 left-2 flex items-center gap-2">
         <span className="bg-black/30 dark:bg-black/40 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-neutral-400 dark:border-neutral-800/50">
           Baia {String(bay.number).padStart(2, '0')}
