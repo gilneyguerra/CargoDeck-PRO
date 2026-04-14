@@ -63,7 +63,7 @@ function normalizeDimension(raw: string): number {
 
 const BACKLOAD_KEYWORDS = ['desembarque', 'removido', 'removida', 'retorno', 'backload', 'descarga', 'offload'];
 
-const SHIP_CODE_BLACKLIST = /^(PETROBRAS|MANIFESTO|BASE|EMPRESA|RECEBIMENTO|UN|UND|KG|TON|TN|PC|SC|CX|GL|LT|FT3|M3|BBL|OUT|OBS|DATA|HORA|PAG|PARA|PORTO|LOCAL|AREA|ATENDIMENTO|ROTEIRO)$/i;
+const SHIP_CODE_BLACKLIST = /^(PETROBRAS|MANIFESTO|BASE|EMPRESA|RECEBIMENTO|UN|UND|KG|TON|TN|PC|SC|CX|GL|LT|FT3|M3|BBL|OUT|OBS|DATA|HORA|PAG|PARA|PORTO|LOCAL|AREA|ATENDIMENTO|ROTEIRO|ORIGEM|DESTINO|DE|DO|DA|NA|NO|EM|AO|OS|AS|IT|AT|RT|EMB|SUB)$/i;
 
 const CARGO_TYPES: Record<string, string> = {
     'CONTAINER': 'CONTAINER', 'CONT ': 'CONTAINER', 'CESTA': 'BASKET', 'BASKET': 'BASKET',
@@ -85,14 +85,27 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     }
 
     const roteiroMatch = fullText.match(/Roteiro\s+previsto\s+([A-Z0-9]{2,6}(?:\s*->\s*[A-Z0-9]{2,6}){2,})/i);
+    let validCodes = new Set<string>();
     if (roteiroMatch) {
         header.roteiroPrevisto = roteiroMatch[1].split(/\s*->\s*/).map(s => s.trim().toUpperCase());
+        validCodes = new Set(header.roteiroPrevisto);
     }
 
-    const sectionHeaderMatch = fullText.match(/\b([A-Z]{2,6})\s{2,}([A-Z\sÀ-ÿ]{3,35})\s{3,}([A-Z]{2,6})\s{2,}([A-Z\sÀ-ÿ]{3,35})/);
-    if (sectionHeaderMatch && !sectionHeaderMatch[1].match(SHIP_CODE_BLACKLIST)) {
-        header.origemCarga = sectionHeaderMatch[1].trim();
-        header.destinoCarga = sectionHeaderMatch[3].trim();
+    const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
+    let secMatch;
+    while ((secMatch = sectionHeaderRegex.exec(fullText)) !== null) {
+        const origemAcronym = secMatch[1].trim().toUpperCase();
+        const destinoAcronym = secMatch[3].trim().toUpperCase();
+        
+        if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) continue;
+        
+        if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) {
+            continue;
+        }
+
+        header.origemCarga = origemAcronym;
+        header.destinoCarga = destinoAcronym;
+        break; // Tenta pegar o primeiro válido
     }
 
     return header;
@@ -116,12 +129,17 @@ function extractIdentifier(text: string): string | undefined {
 // ─── Parser Principal ────────────────────────────────────────────────────────
 
 function parseManifesto(text: string, pageNumber: number, header: ManifestHeader, currentShipCode?: string): CargoItem[] {
-    const items: CargoItem[] = [];
-    const seenIds = new Set<string>();
-
-    const sectionHeaderRegex = /\b([A-Z]{2,6})\s{2,}([A-Z\sÀ-ÿ]{3,35})\s{3,}([A-Z]{2,6})\s{2,}([A-Z\sÀ-ÿ]{3,35})/g;
+    const validCodes = new Set(header.roteiroPrevisto || []);
+    const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
+    
     const sectionHeaders = [...text.matchAll(sectionHeaderRegex)]
-        .filter(sh => !sh[1].match(SHIP_CODE_BLACKLIST) && !sh[3].match(SHIP_CODE_BLACKLIST))
+        .filter(sh => {
+            const origemAcronym = sh[1].trim().toUpperCase();
+            const destinoAcronym = sh[3].trim().toUpperCase();
+            if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) return false;
+            if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) return false;
+            return true;
+        })
         .map(sh => ({ pos: sh.index ?? 0, origem: sh[1].trim(), destino: sh[3].trim() }));
 
     function getSectionFor(pos: number) {
@@ -133,9 +151,37 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
         return best;
     }
 
-    // Padrão 1: Com dimensões
+    const allParsedItems: Array<{ index: number, isEmbalagem: boolean, data: Partial<CargoItem>, hasExplicitId?: boolean, rawDesc: string }> = [];
+
+    // Padrão: Embalagens Cadastradas (cestas que contém outras cargas)
+    const embalagemPattern = /\bEMBALAGEM CADASTRADA\s+([A-Z]{3,4}\s?\d{6,7}[-]?\d?)\s+(.{3,100}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi;
+    let embMatch: RegExpExecArray | null;
+    while ((embMatch = embalagemPattern.exec(text)) !== null) {
+        try {
+            const identifier = embMatch[1].replace(/\s+/, ' ').trim();
+            const rawDesc = `EMBALAGEM CADASTRADA ${identifier} ${embMatch[2].trim()}`;
+            const length = normalizeDimension(embMatch[3]);
+            const width = normalizeDimension(embMatch[4]);
+            const height = normalizeDimension(embMatch[5]);
+            const rawWeight = normalizeNumber(embMatch[6]);
+            
+            allParsedItems.push({
+                index: embMatch.index,
+                isEmbalagem: true,
+                hasExplicitId: true,
+                rawDesc,
+                data: {
+                    identifier,
+                    description: rawDesc,
+                    weight: rawWeight, // Peso em KG por enquanto
+                    length, width, height,
+                }
+            });
+        } catch (e) { logger.warn('Erro parse embalagem', e); }
+    }
+
+    // Padrão: Cargas Normais
     const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi;
-    
     let m: RegExpExecArray | null;
     while ((m = petrobrasPattern.exec(text)) !== null) {
         try {
@@ -150,23 +196,88 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
             const isTon = unit.includes('TON') || unit === 'TN';
             const weightTonnes = isTon ? rawWeight : kgToTonnes(rawWeight);
 
-            const identifier = extractIdentifier(rawDesc) ?? m[2];
-            const sec = getSectionFor(m.index ?? 0);
+            const explicitId = extractIdentifier(rawDesc);
+            const hasExplicitId = !!explicitId;
+            const identifier = explicitId ?? m[2];
             const id = `${identifier}-${m[1]}`;
 
+            allParsedItems.push({
+                index: m.index,
+                isEmbalagem: false,
+                hasExplicitId,
+                rawDesc,
+                data: {
+                    id,
+                    identifier,
+                    description: rawDesc.substring(0, 120),
+                    weight: weightTonnes,
+                    weightKg: isTon ? weightTonnes * 1000 : rawWeight,
+                    volume: length * width * height,
+                    length, width, height, bay: pageNumber
+                }
+            });
+        } catch (e) { logger.warn('Erro item pat1', e); }
+    }
+
+    // Processar os items extraídos na ordem em que aparecem no PDF
+    allParsedItems.sort((a, b) => a.index - b.index);
+
+    const items: CargoItem[] = [];
+    const seenIds = new Set<string>();
+    let skipLooseItemsMode = false;
+
+    for (const item of allParsedItems) {
+        if (item.isEmbalagem) {
+            skipLooseItemsMode = true; // Ativa skipping, sub-itens serão ignorados
+            const sec = getSectionFor(item.index);
+            const id = `${item.data.identifier}-EMB-${item.index}`;
+            
             if (!seenIds.has(id)) {
                 seenIds.add(id);
+                // rawWeight das cestas quase sempre vem em KG no manifesto
+                const weightTonnes = kgToTonnes(item.data.weight!);
+
                 items.push({
-                    id, identifier, description: rawDesc.substring(0, 120),
-                    weight: weightTonnes, weightKg: isTon ? weightTonnes * 1000 : rawWeight,
-                    volume: length * width * height, length, width, height, bay: pageNumber,
-                    origemCarga: sec.origem, destinoCarga: sec.destino,
-                    isBackload: !!(currentShipCode && sec.origem.includes(currentShipCode) && !sec.destino.includes(currentShipCode)) || BACKLOAD_KEYWORDS.some(kw => rawDesc.toLowerCase().includes(kw)),
-                    tipoDetectado: detectCargoType(rawDesc),
-                    nomeEmbarcacao: header.nomeEmbarcacao, numeroAtendimento: header.numeroAtendimento, roteiroPrevisto: header.roteiroPrevisto
-                });
+                    ...item.data,
+                    id,
+                    weight: weightTonnes,
+                    weightKg: item.data.weight!,
+                    volume: item.data.length! * item.data.width! * (item.data.height || 1),
+                    bay: pageNumber,
+                    origemCarga: sec.origem,
+                    destinoCarga: sec.destino,
+                    isBackload: !!(currentShipCode && sec.origem.includes(currentShipCode) && !sec.destino.includes(currentShipCode)) || BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
+                    tipoDetectado: detectCargoType(item.rawDesc) || 'BASKET',
+                    nomeEmbarcacao: header.nomeEmbarcacao, 
+                    numeroAtendimento: header.numeroAtendimento, 
+                    roteiroPrevisto: header.roteiroPrevisto
+                } as CargoItem);
             }
-        } catch (e) { logger.warn('Erro item pat1', e); }
+        } else {
+            // Item normal
+            if (item.hasExplicitId) {
+                // Ao encontrar outro contêiner mãe na sequência, desabilita skipping
+                skipLooseItemsMode = false;
+            } else if (skipLooseItemsMode) {
+                // Item solto (ex. "TUBO PROD") localizado debaixo da "EMBALAGEM CADASTRADA" 
+                continue; 
+            }
+
+            if (!seenIds.has(item.data.id!)) {
+                seenIds.add(item.data.id!);
+                const sec = getSectionFor(item.index);
+                items.push({
+                    ...item.data,
+                    origemCarga: sec.origem,
+                    destinoCarga: sec.destino,
+                    isBackload: !!(currentShipCode && sec.origem.includes(currentShipCode) && !sec.destino.includes(currentShipCode)) || BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
+                    tipoDetectado: detectCargoType(item.rawDesc),
+                    nomeEmbarcacao: header.nomeEmbarcacao, 
+                    numeroAtendimento: header.numeroAtendimento, 
+                    roteiroPrevisto: header.roteiroPrevisto
+                } as CargoItem);
+            }
+        }
     }
 
     return items;
