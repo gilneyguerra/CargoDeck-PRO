@@ -10,7 +10,7 @@ import type { User } from '@supabase/supabase-js';
 export function Header() {
   const {
     locations, manifestsLoaded, shipOperationCode, setShipOperationCode,
-    manifestShipName, manifestVoyage, manifestAtendimento, manifestRoteiro
+    manifestVoyage, manifestAtendimento, manifestRoteiro
   } = useCargoStore();
 
   const [user, setUser] = useState<User | null>(null);
@@ -135,91 +135,77 @@ export function Header() {
             />
           </div>
 
-          {/* Informações do manifesto carregado */}
-          {(manifestShipName || manifestAtendimento) && (
-            <div className="flex items-center flex-wrap gap-2 lg:gap-4 pl-3 lg:pl-6 border-l border-neutral-300 dark:border-neutral-800">
-              {manifestShipName && (
-                <div className="flex flex-col">
-                  <span className="text-[9px] text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-widest whitespace-nowrap">Embarcação</span>
-                  <span className="text-[11px] lg:text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{manifestShipName}</span>
-                </div>
-              )}
-              {manifestAtendimento && (
-                <div className="flex flex-col">
-                  <span className="text-[9px] text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-widest whitespace-nowrap">Atendimento</span>
-                  <span className="text-[11px] lg:text-xs font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">#{manifestAtendimento}</span>
-                </div>
-              )}
-              {manifestRoteiro && manifestRoteiro.length > 0 && (
-                <div className="flex flex-col max-w-[150px] lg:max-w-[250px]">
-                  <span className="text-[9px] text-neutral-500 dark:text-neutral-500 font-bold uppercase tracking-widest whitespace-nowrap">Roteiro</span>
-                  <span className="text-[11px] lg:text-xs font-mono text-neutral-600 dark:text-neutral-400 truncate" title={manifestRoteiro.join(' → ')}>
-                    {manifestRoteiro.slice(0, 4).join(' → ')}{manifestRoteiro.length > 4 ? ' …' : ''}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Right Section */}
-        <div className="ml-auto flex items-center flex-wrap gap-2 lg:gap-4 text-xs lg:text-sm text-neutral-500 dark:text-neutral-400 order-2 xl:order-3">
-          <div className="flex items-center gap-1 lg:gap-2">
-            <span className="hidden lg:inline whitespace-nowrap">Total Planejado:</span>
-            <span className="inline lg:hidden font-semibold">Total:</span>
-            <span className="text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-100 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded whitespace-nowrap">{currentTotalWeight.toFixed(1)} t</span>
+        <div className="ml-auto flex items-center gap-2 lg:gap-3 order-2">
+
+          {/* Total Planejado */}
+          <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5">
+            <span className="hidden sm:inline text-[10px] lg:text-xs text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider whitespace-nowrap">Total:</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-bold text-sm lg:text-base whitespace-nowrap">{currentTotalWeight.toFixed(1)} t</span>
           </div>
 
-          <div className="hidden lg:block h-4 w-px bg-neutral-400 dark:bg-neutral-700" />
+          {/* Divider */}
+          <div className="hidden sm:block h-5 w-px bg-neutral-300 dark:bg-neutral-700" />
 
-           <div className="flex items-center gap-1 lg:gap-3">
-             <button 
-               className="flex items-center gap-1 lg:gap-2 text-neutral-600 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
-               onClick={() => {
-                 if (window.confirm('Você está prestes a deletar todas as cargas do plano de carga, deseja prosseguir?')) {
-                   const { clearAllCargoes } = useCargoStore.getState();
-                   clearAllCargoes();
-                 }
-               }} 
-               title="Limpar Planejamento"
-             >
-               <Trash2 className="w-4 h-4" />
-             </button>
-            
-             <button 
-               onClick={handleExport}
-               disabled={!manifestsLoaded}
-               className="flex items-center gap-1 lg:gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-800 disabled:text-neutral-600 dark:disabled:text-neutral-500 text-white px-2 lg:px-3 py-1.5 rounded-md text-xs lg:text-sm font-medium transition-colors border border-indigo-500 dark:disabled:border-neutral-700 shadow-sm"
-               title="Gerar PDF"
-             >
-               <Download className="w-4 h-4" />
-               <span className="hidden lg:inline whitespace-nowrap">Gerar PDF</span>
-             </button>
+          {/* Action Buttons Group */}
+          <div className="flex items-center gap-1 lg:gap-1.5">
+            <button
+              className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              onClick={() => {
+                if (window.confirm('Você está prestes a deletar todas as cargas do plano de carga, deseja prosseguir?')) {
+                  const { clearAllCargoes } = useCargoStore.getState();
+                  clearAllCargoes();
+                }
+              }}
+              title="Limpar Planejamento"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
 
-              <button 
-                onClick={() => setIsDark(prev => !prev)}
-                className="flex items-center gap-1 lg:gap-2 text-neutral-600 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-200 transition-colors p-1"
-                title={isDark ? "Modo Claro" : "Modo Escuro"}
-              >
-                {isDark ? (<Sun className="w-4 h-4" />) : (<Moon className="w-4 h-4" />)}
-              </button>
+            <button
+              onClick={handleExport}
+              disabled={!manifestsLoaded}
+              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-2.5 lg:px-3 py-1.5 rounded-lg text-xs lg:text-sm font-semibold transition-all shadow-sm whitespace-nowrap"
+              title="Gerar PDF"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Gerar PDF</span>
+            </button>
 
-             <button 
-               onClick={handleSaveToCloud}
-               disabled={saving}
-               className="flex items-center gap-1 lg:gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-800 disabled:text-neutral-600 dark:disabled:text-neutral-500 text-white px-2 lg:px-3 py-1.5 rounded-md text-xs lg:text-sm font-medium transition-colors border border-emerald-500 dark:disabled:border-neutral-700 shadow-sm"
-               title="Salvar Cloud"
-             >
-               <CloudUpload className="w-4 h-4" />
-               <span className="hidden lg:inline whitespace-nowrap">{saving ? 'Salvando...' : 'Salvar Cloud'}</span>
-             </button>
+            <button
+              onClick={() => setIsDark(prev => !prev)}
+              className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+              title={isDark ? 'Modo Claro' : 'Modo Escuro'}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={handleSaveToCloud}
+              disabled={saving}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white px-2.5 lg:px-3 py-1.5 rounded-lg text-xs lg:text-sm font-semibold transition-all shadow-sm whitespace-nowrap"
+              title="Salvar Cloud"
+            >
+              <CloudUpload className="w-4 h-4" />
+              <span className="hidden sm:inline">{saving ? 'Salvando...' : 'Salvar Cloud'}</span>
+            </button>
 
             {user ? (
-              <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-1 lg:gap-2 text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white transition-colors ml-1" title="Sair da Conta">
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                title="Sair da Conta"
+              >
                 <UserCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </button>
             ) : (
-              <button onClick={() => setIsAuthOpen(true)} className="flex items-center gap-1 lg:gap-2 text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white transition-colors ml-1" title="Login">
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                title="Login"
+              >
                 <LogIn className="w-4 h-4" />
               </button>
             )}
