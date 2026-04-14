@@ -13,8 +13,7 @@ import type { User } from '@supabase/supabase-js';
 export function Header() {
   const {
     locations, manifestsLoaded,
-    manifestAtendimento, manifestRoteiro,
-    searchTerm, setSearchTerm
+    manifestAtendimento, manifestRoteiro
   } = useCargoStore();
 
   const [user, setUser] = useState<User | null>(null);
