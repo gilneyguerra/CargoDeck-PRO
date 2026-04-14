@@ -1,4 +1,5 @@
-import { UploadCloud, FileType, AlertCircle, Trash2, Plus } from 'lucide-react';
+import { UploadCloud, FileType, AlertCircle, Trash2, Plus, MoveRight } from 'lucide-react';
+import { BatchMoveModal } from './BatchMoveModal';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '@/hooks/usePDFUpload';
 import { useRef, useState } from 'react';
@@ -58,6 +59,7 @@ export function Sidebar() {
     const [pendingBackloads, setPendingBackloads] = useState<Cargo[]>([]);
     const [destinationFilter, setDestinationFilter] = useState<string>('TODOS');
     const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
+    const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
 
     // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
     const availableDestinations = Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga || 'S/D').filter(Boolean))).sort();
@@ -238,6 +240,17 @@ export function Sidebar() {
                             className="w-4 h-4 rounded border-neutral-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 mt-[-2px] mr-1"
                         />
                         
+                        {selectedCargoIds.size > 0 && (
+                          <button
+                            onClick={() => setIsBatchMoveOpen(true)}
+                            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors"
+                            title="Mover selecionadas para um local/baia"
+                          >
+                            <MoveRight className="w-3.5 h-3.5" />
+                            Mover {selectedCargoIds.size}
+                          </button>
+                        )}
+
                         <button
                           onClick={async () => {
                             if (selectedCargoIds.size > 0) {
@@ -319,6 +332,14 @@ export function Sidebar() {
         isOpen={isBackloadModalOpen}
         onClose={() => setIsBackloadModalOpen(false)}
         extractedBackloads={pendingBackloads}
+      />
+
+      <BatchMoveModal
+        isOpen={isBatchMoveOpen}
+        selectedCount={selectedCargoIds.size}
+        selectedCargoIds={Array.from(selectedCargoIds)}
+        onClose={() => setIsBatchMoveOpen(false)}
+        onSuccess={() => setSelectedCargoIds(new Set())}
       />
     </aside>
   );
