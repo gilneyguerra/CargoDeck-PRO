@@ -32,7 +32,6 @@ export class PdfGeneratorService {
    */
   static async generateBlob(
     locations: CargoLocation[],
-    voyage = '',
     atendimento?: string | null,
     roteiro?: string[] | null
   ): Promise<Blob> {
@@ -54,7 +53,7 @@ export class PdfGeneratorService {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
 
-    const atendimentoText = atendimento ? `Atendimento: ${atendimento}` : voyage ? `Voyage: ${voyage}` : '';
+    const atendimentoText = atendimento ? `Atendimento: ${atendimento}` : '';
     if (atendimentoText) {
       doc.text(atendimentoText, margin, 21);
     }
@@ -256,12 +255,11 @@ export class PdfGeneratorService {
    */
   static async executeExport(
     locations: CargoLocation[],
-    voyage = '',
     filename = 'Plano_de_Carga_Consolidado.pdf',
     atendimento?: string | null,
     roteiro?: string[] | null
   ): Promise<void> {
-    const blob = await this.generateBlob(locations, voyage, atendimento, roteiro);
+    const blob = await this.generateBlob(locations, atendimento, roteiro);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

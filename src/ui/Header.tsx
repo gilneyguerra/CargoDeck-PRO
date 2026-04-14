@@ -286,7 +286,6 @@ export function Header() {
               onClick={async () => {
                 const blob = await PdfGeneratorService.generateBlob(
                   locations,
-                  manifestVoyage || '',
                   manifestAtendimento,
                   manifestRoteiro
                 );
@@ -303,7 +302,6 @@ export function Header() {
                 } else {
                   PdfGeneratorService.executeExport(
                     locations,
-                    manifestVoyage || '',
                     exportFilename,
                     manifestAtendimento,
                     manifestRoteiro
