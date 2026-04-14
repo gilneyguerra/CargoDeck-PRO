@@ -138,7 +138,7 @@ function extractIdentifier(text: string): string | undefined {
 
 function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): CargoItem[] {
     const validCodes = new Set(header.roteiroPrevisto || []);
-    const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
+    const sectionHeaderRegex = /\b([A-Z0-9]{2,8})\s+([A-Z\sÀ-ÿ0-9.-]{3,45}?)\s+([A-Z0-9]{2,8})\s+([A-Z\sÀ-ÿ0-9.-]{3,45})/g;
     
     const sectionHeaders = [...text.matchAll(sectionHeaderRegex)]
         .filter(sh => {
@@ -257,7 +257,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     volume: item.data.length! * item.data.width! * (item.data.height || 1),
                     bay: pageNumber,
                     origemCarga: sec.origem,
-                    destinoCarga: sec.destino,
+                    destinoCarga: sec.destino || header.nomeEmbarcacao,
                     isBackload: BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
                     tipoDetectado: detectCargoType(item.rawDesc) || 'BASKET',
                     nomeEmbarcacao: header.nomeEmbarcacao, 
@@ -281,7 +281,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 items.push({
                     ...item.data,
                     origemCarga: sec.origem,
-                    destinoCarga: sec.destino,
+                    destinoCarga: sec.destino || header.nomeEmbarcacao,
                     isBackload: BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
                     tipoDetectado: detectCargoType(item.rawDesc),
                     nomeEmbarcacao: header.nomeEmbarcacao, 
