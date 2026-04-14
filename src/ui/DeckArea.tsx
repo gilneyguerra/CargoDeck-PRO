@@ -17,8 +17,6 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoL
      id: `tab-${loc.id}`
    });
 
-   const tabWeight = loc.bays.reduce((acc, bay) => acc + bay.currentWeightTonnes, 0);
-
     return (
       <div className="relative flex items-center gap-1">
         <button
@@ -90,18 +88,13 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
        ? deckConfig.bayLengthMeters 
        : (deckConfig.numberOfBays > 0 ? (deckConfig.lengthMeters / deckConfig.numberOfBays) : 0);
 
-    const maxArea = sideWidth * bayLength;
-    const currentOccupiedArea = cargoes.reduce((acc, c) => acc + (c.widthMeters * c.lengthMeters * c.quantity), 0);
-    const isOverArea = maxArea > 0 && currentOccupiedArea > maxArea;
-
      return (
         <div 
           ref={setNodeRef}
           className={cn(
             "flex-1 min-h-[80px] flex flex-col items-start p-2 relative transition-colors",
             !isLast && "border-r border-dashed border-neutral-400 dark:border-neutral-700/50",
-            isOver ? "bg-indigo-500/20" : "",
-            isOverArea && !isOver ? "bg-red-950/20" : ""
+            isOver ? "bg-indigo-500/20" : ""
           )}
           style={{ minWidth: metersToPixels(sideWidth) }}
         >
@@ -137,8 +130,6 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
 }
 
 function DroppableBay({ bay, activeLocation, searchTerm, onEdit }: { bay: Bay, activeLocation: CargoLocation, searchTerm: string, onEdit: (cargo: Cargo) => void }) {
-    const percentOccupied = bay.maxAreaSqMeters ? (bay.currentOccupiedArea / bay.maxAreaSqMeters) * 100 : 0;
-    const isOverArea = percentOccupied > 100;
 
 return (
   <div 
