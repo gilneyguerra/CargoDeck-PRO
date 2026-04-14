@@ -294,7 +294,41 @@ export class PDFExtractor {
         return { valid: true };
     }
 
-    static async extract(file: File, _onProgress?: (p: number) => void, _signal?: AbortSignal, currentShipCode?: string): Promise<ExtractionResult> {
+    /**
+     * Extrai texto de uma página usando canvas + Tesseract OCR.
+     * Chamado como fallback quando a extração de texto nativa retorna vazio.
+     */
+    private static async ocrPage(page: any, onProgress?: (p: number) => void): Promise<string> {
+        const { createWorker } = await import('tesseract.js');
+        
+        const scale = 2.0; // Renderiza em 2x para melhor precisão do OCR
+        const viewport = page.getViewport({ scale });
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d')!;
+        
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const imageDataUrl = canvas.toDataURL('image/png');
+        
+        const worker = await createWorker('por+eng', 1, {
+            logger: (m: any) => {
+                if (m.status === 'recognizing text' && onProgress) {
+                    onProgress(Math.round(m.progress * 100));
+                }
+            }
+        });
+        
+        try {
+            const { data: { text } } = await worker.recognize(imageDataUrl);
+            return text;
+        } finally {
+            await worker.terminate();
+        }
+    }
+
+    static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal, currentShipCode?: string): Promise<ExtractionResult> {
         try {
             const pdfjsLib = await import('pdfjs-dist');
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
@@ -307,6 +341,33 @@ export class PDFExtractor {
                 const content = await page.getTextContent();
                 fullText += '\n' + content.items.map((it: any) => it.str).join(' ');
             }
+
+            // ─── Detecção de PDF Escaneado (sem texto) ───────────────────────
+            // Se o texto extraído for muito pequeno (< 100 chars úteis), o PDF é
+            // provavelmente uma imagem escaneada. Ativamos o fallback de OCR.
+            const usefulChars = fullText.replace(/\s+/g, '').length;
+            if (usefulChars < 100) {
+                logger.info(`PDF "${file.name}" parece ser escaneado (apenas ${usefulChars} chars úteis). Ativando OCR...`);
+                
+                fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const pageText = await PDFExtractor.ocrPage(page, (pct) => {
+                        if (onProgress) {
+                            // Mapeia progresso da página na faixa global
+                            const globalPct = Math.round(((i - 1) / pdf.numPages + pct / 100 / pdf.numPages) * 100);
+                            onProgress(globalPct);
+                        }
+                    });
+                    fullText += '\n' + pageText;
+                    logger.info(`OCR página ${i}/${pdf.numPages} concluída.`);
+                }
+                
+                const header = parseHeaderInfo(fullText);
+                const items = parseManifesto(fullText, 1, header, currentShipCode);
+                return { success: true, data: { items, metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'ocr', fileName: file.name, fileSize: file.size } } };
+            }
+            // ─── Extração Normal (PDF com texto) ─────────────────────────────
 
             const header = parseHeaderInfo(fullText);
             const items = parseManifesto(fullText, 1, header, currentShipCode);
