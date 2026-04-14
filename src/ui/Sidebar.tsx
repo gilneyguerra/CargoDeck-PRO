@@ -57,6 +57,7 @@ export function Sidebar() {
     const [isBackloadModalOpen, setIsBackloadModalOpen] = useState(false);
     const [pendingBackloads, setPendingBackloads] = useState<Cargo[]>([]);
     const [destinationFilter, setDestinationFilter] = useState<string>('TODOS');
+    const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
 
     // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
     const availableDestinations = Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga || 'S/D').filter(Boolean))).sort();
@@ -199,32 +200,79 @@ export function Sidebar() {
 
       <div className="flex-1 overflow-auto p-4 flex flex-col gap-3 relative">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xs font-bold tracking-widest text-neutral-600 dark:text-neutral-400 uppercase">Não Alocadas</h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md font-medium">
+            <h2 className="text-xs font-bold tracking-widest text-neutral-600 dark:text-neutral-400 uppercase">Não Alocadas</h2>
+            <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded-md">
               {destinationFilter === 'TODOS' 
                 ? unallocatedCargoes.length 
                 : unallocatedCargoes.filter(c => (c.destinoCarga || 'S/D') === destinationFilter).length}
             </span>
-            <button
-              onClick={async () => {
-                if (window.confirm(`Tem certeza que deseja excluir ${unallocatedCargoes.length} carga(s) não alocada(s)?`)) {
-                  await clearUnallocatedCargoes();
-                }
-              }}
-              disabled={unallocatedCargoes.length === 0}
-              className="text-neutral-600 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              title="Excluir todas as cargas não alocadas"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setIsManualModalOpen(true)}
-              className="text-neutral-600 dark:text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-              title="Adicionar carga manual"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {(() => {
+                const visibleUnallocated = unallocatedCargoes.filter(cargo => {
+                    const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                         cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
+                    const cargoDestination = cargo.destinoCarga || 'S/D';
+                    const matchesCategory = destinationFilter === 'TODOS' || cargoDestination === destinationFilter;
+                    return matchesSearch && matchesCategory;
+                });
+                
+                const allVisibleSelected = visibleUnallocated.length > 0 && selectedCargoIds.size === visibleUnallocated.length;
+
+                return (
+                    <>
+                        <input 
+                            title="Selecionar Todas"
+                            type="checkbox" 
+                            checked={allVisibleSelected}
+                            disabled={visibleUnallocated.length === 0}
+                            onChange={() => {
+                                if (allVisibleSelected) {
+                                    setSelectedCargoIds(new Set());
+                                } else {
+                                    setSelectedCargoIds(new Set(visibleUnallocated.map(c => c.id)));
+                                }
+                            }}
+                            className="w-4 h-4 rounded border-neutral-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 mt-[-2px] mr-1"
+                        />
+                        
+                        <button
+                          onClick={async () => {
+                            if (selectedCargoIds.size > 0) {
+                                if (window.confirm(`Tem certeza que deseja deletar as ${selectedCargoIds.size} carga(s) selecionada(s)?`)) {
+                                    await useCargoStore.getState().deleteMultipleCargoes(Array.from(selectedCargoIds));
+                                    setSelectedCargoIds(new Set());
+                                }
+                            } else {
+                                if (window.confirm(`Tem certeza que deseja excluir TODAS as ${unallocatedCargoes.length} carga(s) não alocada(s)?`)) {
+                                    await clearUnallocatedCargoes();
+                                }
+                            }
+                          }}
+                          disabled={unallocatedCargoes.length === 0}
+                          className={cn(
+                              "transition-colors p-1 rounded",
+                              selectedCargoIds.size > 0 
+                                ? "text-white bg-red-600 hover:bg-red-500 shadow-sm" 
+                                : "text-neutral-500 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                          )}
+                          title={selectedCargoIds.size > 0 ? "Excluir selecionadas" : "Excluir todas as cargas"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setIsManualModalOpen(true)}
+                          className="text-neutral-500 dark:text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 p-1 rounded transition-colors"
+                          title="Adicionar carga manual"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+
+                    </>
+                );
+            })()}
           </div>
         </div>
 
@@ -234,24 +282,34 @@ export function Sidebar() {
             </div>
           )}
          
-{unallocatedCargoes
-  .filter(cargo => {
-    const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const cargoDestination = cargo.destinoCarga || 'S/D';
-    const matchesCategory = destinationFilter === 'TODOS' || cargoDestination === destinationFilter;
-    return matchesSearch && matchesCategory;
-  })
-  .map(cargo => (
-    <DraggableCargo 
-      key={cargo.id} 
-      cargo={cargo} 
-      isHighlight={searchTerm.length > 0 && 
-        (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-         cargo.description.toLowerCase().includes(searchTerm.toLowerCase()))}
-      onEdit={handleEditCargo}
-    />
-  ))}
+        {unallocatedCargoes
+          .filter(cargo => {
+            const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
+            const cargoDestination = cargo.destinoCarga || 'S/D';
+            const matchesCategory = destinationFilter === 'TODOS' || cargoDestination === destinationFilter;
+            return matchesSearch && matchesCategory;
+          })
+          .map(cargo => (
+            <DraggableCargo 
+              key={cargo.id} 
+              cargo={cargo} 
+              isHighlight={searchTerm.length > 0 && 
+                (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 cargo.description.toLowerCase().includes(searchTerm.toLowerCase()))}
+              selectable={true}
+              isSelected={selectedCargoIds.has(cargo.id)}
+              onToggleSelect={(id) => {
+                  setSelectedCargoIds(prev => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                  });
+              }}
+              onEdit={handleEditCargo}
+            />
+          ))}
       </div>
 
       <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />

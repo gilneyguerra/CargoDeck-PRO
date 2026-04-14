@@ -43,6 +43,7 @@ export interface CargoState {
     moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard', x?: number, y?: number, isRotated?: boolean) => void;
     updateCargoPosition: (cargoId: string, x: number, y: number, isRotated?: boolean) => void;
     deleteCargo: (cargoId: string) => Promise<void>;
+    deleteMultipleCargoes: (cargoIds: string[]) => Promise<void>;
     setSearchTerm: (term: string) => void;
     getAllCargo: () => Cargo[];
     editLocation: (id: string, updates: Partial<CargoLocation>) => void;
@@ -622,6 +623,45 @@ export const useCargoStore = create<CargoState>()(
                     throw handleApplicationError(error, { 
                         context: 'deleteCargo',
                         cargoId
+                    });
+                }
+            },
+
+            deleteMultipleCargoes: async (cargoIds) => {
+                if (cargoIds.length === 0) return;
+                try {
+                    const idSet = new Set(cargoIds);
+                    
+                    set((state) => {
+                        const newUnallocated = state.unallocatedCargoes.filter(c => !idSet.has(c.id));
+                        const newLocations = state.locations.map(loc => {
+                            const newBays = loc.bays.map(bay => {
+                                const filteredCargoes = bay.allocatedCargoes.filter(c => !idSet.has(c.id));
+                                return {
+                                    ...bay,
+                                    allocatedCargoes: filteredCargoes,
+                                    currentWeightTonnes: filteredCargoes.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0),
+                                    currentOccupiedArea: filteredCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
+                                };
+                            });
+                            return { ...loc, bays: newBays };
+                        });
+                        return { unallocatedCargoes: newUnallocated, locations: newLocations };
+                    });
+                    
+                    for (const id of cargoIds) {
+                        try {
+                            await DatabaseService.deleteCargo(id);
+                        } catch (e) {
+                            logger.warn(`Falha ao remover carga ${id} do DB (múltiplas):`, e);
+                        }
+                    }
+                    logger.info(`${cargoIds.length} cargas removidas em lote.`);
+                } catch (error) {
+                    logger.error(`Falha na remoção multipla:`, error);
+                    throw handleApplicationError(error, { 
+                        context: 'deleteMultipleCargoes',
+                        cargoIds
                     });
                 }
             },

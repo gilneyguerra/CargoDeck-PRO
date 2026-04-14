@@ -22,10 +22,7 @@ function isColorLight(hex: string): boolean {
     return luminance > 0.65;
   } catch (e) {
     return false;
-  }
-}
-
-function DraggableCargo({ cargo, isHighlight, isDimmed, onEdit }: { cargo: Cargo, isHighlight?: boolean, isDimmed?: boolean, onEdit: (cargo: Cargo) => void }) {
+function DraggableCargo({ cargo, isHighlight, isDimmed, selectable, isSelected, onToggleSelect, onEdit }: { cargo: Cargo, isHighlight?: boolean, isDimmed?: boolean, selectable?: boolean, isSelected?: boolean, onToggleSelect?: (id: string) => void, onEdit: (cargo: Cargo) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cargo.id,
   });
@@ -223,13 +220,26 @@ function DraggableCargo({ cargo, isHighlight, isDimmed, onEdit }: { cargo: Cargo
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 w-full">
+        <div 
+           className={cn("flex flex-col gap-2 w-full", selectable && "cursor-pointer")}
+           {...(selectable ? { onClick: (e) => { e.stopPropagation(); onToggleSelect?.(cargo.id); } } : {})}
+        >
           {/* Header do Card: ID e Botões */}
           <div className="flex items-start justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-1">
              <div className="flex flex-col overflow-hidden">
-                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
-                  {cargo.category || 'CARGA'}
-                </span>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  {selectable && (
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected}
+                      readOnly
+                      className="w-3.5 h-3.5 rounded border-neutral-400 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer pointer-events-none"
+                    />
+                  )}
+                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
+                    {cargo.category || 'CARGA'}
+                  </span>
+                </div>
                 <span className="font-black text-sm text-gray-900 dark:text-neutral-100 truncate" style={{ fontSize: `${fontSize}px` }}>
                   {cargo.identifier}
                 </span>
