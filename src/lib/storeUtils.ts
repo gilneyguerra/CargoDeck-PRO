@@ -10,11 +10,6 @@ export const useStoreValue = <T>(selector: (state: unknown) => T): T => {
 };
 
 /**
- * Utility function to get the current ship operation code
- */
-export const useShipOperationCode = () => useCargoStore(state => state.shipOperationCode);
-
-/**
  * Utility function to get the current unallocated cargoes
  */
 export const useUnallocatedCargoes = () => useCargoStore(state => state.unallocatedCargoes);

@@ -62,11 +62,13 @@ export function Sidebar() {
     const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
 
     // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
-    const availableDestinations = Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga || 'S/D').filter(Boolean))).sort();
+    const allDestinations = Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga).filter(Boolean))).sort() as string[];
+    const hasUnidentified = unallocatedCargoes.some(c => !c.destinoCarga);
     
     const filterButtons = [
         { key: 'TODOS', label: 'TODOS' },
-        ...availableDestinations.map(dest => ({ key: dest, label: dest }))
+        ...(hasUnidentified ? [{ key: 'S/D', label: 'S/D' }] : []),
+        ...allDestinations.map(dest => ({ key: dest, label: dest }))
     ];
 
     const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
@@ -181,17 +183,17 @@ export function Sidebar() {
         )}
       </div>
       
-      <div className="px-2 py-2 border-b border-neutral-300 dark:border-neutral-800 bg-neutral-200/30 dark:bg-neutral-900/20">
-        <div className="flex flex-wrap gap-1">
+      <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/20">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
           {filterButtons.map(btn => (
             <button
               key={btn.key}
               onClick={() => setDestinationFilter(btn.key)}
               className={cn(
-                "px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-full transition-all border",
+                "px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg transition-all border shrink-0 uppercase",
                 destinationFilter === btn.key 
-                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm" 
-                  : "bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-200 hover:bg-neutral-300 dark:hover:bg-neutral-700 border-transparent cursor-pointer"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-500/20" 
+                  : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-500 hover:text-gray-800 dark:hover:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 border-transparent cursor-pointer"
               )}
             >
               {btn.label}
@@ -205,19 +207,28 @@ export function Sidebar() {
           <div className="flex items-center gap-2">
             <h2 className="text-xs font-bold tracking-widest text-neutral-600 dark:text-neutral-400 uppercase">Não Alocadas</h2>
             <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded-md">
-              {destinationFilter === 'TODOS' 
-                ? unallocatedCargoes.length 
-                : unallocatedCargoes.filter(c => (c.destinoCarga || 'S/D') === destinationFilter).length}
+              {(() => {
+                const count = unallocatedCargoes.filter(c => {
+                  if (destinationFilter === 'TODOS') return true;
+                  if (destinationFilter === 'S/D') return !c.destinoCarga;
+                  return c.destinoCarga === destinationFilter;
+                }).length;
+                return count;
+              })()}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5">
             {(() => {
                 const visibleUnallocated = unallocatedCargoes.filter(cargo => {
-                    const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                         cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
-                    const cargoDestination = cargo.destinoCarga || 'S/D';
-                    const matchesCategory = destinationFilter === 'TODOS' || cargoDestination === destinationFilter;
+                    const matchesSearch = (cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                         (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+                    const cargoDestination = cargo.destinoCarga;
+                    let matchesCategory = false;
+                    if (destinationFilter === 'TODOS') matchesCategory = true;
+                    else if (destinationFilter === 'S/D') matchesCategory = !cargoDestination;
+                    else matchesCategory = cargoDestination === destinationFilter;
+                    
                     return matchesSearch && matchesCategory;
                 });
                 
@@ -297,10 +308,15 @@ export function Sidebar() {
          
         {unallocatedCargoes
           .filter(cargo => {
-            const matchesSearch = cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                 cargo.description.toLowerCase().includes(searchTerm.toLowerCase());
-            const cargoDestination = cargo.destinoCarga || 'S/D';
-            const matchesCategory = destinationFilter === 'TODOS' || cargoDestination === destinationFilter;
+            const matchesSearch = (cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const cargoDestination = cargo.destinoCarga;
+            let matchesCategory = false;
+            if (destinationFilter === 'TODOS') matchesCategory = true;
+            else if (destinationFilter === 'S/D') matchesCategory = !cargoDestination;
+            else matchesCategory = cargoDestination === destinationFilter;
+
             return matchesSearch && matchesCategory;
           })
           .map(cargo => (
@@ -308,8 +324,8 @@ export function Sidebar() {
               key={cargo.id} 
               cargo={cargo} 
               isHighlight={searchTerm.length > 0 && 
-                (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 cargo.description.toLowerCase().includes(searchTerm.toLowerCase()))}
+                ((cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase()))}
               selectable={true}
               isSelected={selectedCargoIds.has(cargo.id)}
               onToggleSelect={(id) => {

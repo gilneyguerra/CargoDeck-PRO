@@ -12,11 +12,9 @@ export const DatabaseService = {
     const payload = {
       unallocatedCargoes:  state.unallocatedCargoes,
       locations:           state.locations,
-      shipOperationCode:   state.shipOperationCode,
       manifestsLoaded:     state.manifestsLoaded,
       // Metadados do manifesto extraído
       manifestShipName:    state.manifestShipName,
-      manifestVoyage:      state.manifestVoyage,
       manifestAtendimento: state.manifestAtendimento,
       manifestRoteiro:     state.manifestRoteiro,
     };
