@@ -22,6 +22,9 @@ function isColorLight(hex: string): boolean {
     return luminance > 0.65;
   } catch (e) {
     return false;
+  }
+}
+
 function DraggableCargo({ cargo, isHighlight, isDimmed, selectable, isSelected, onToggleSelect, onEdit }: { cargo: Cargo, isHighlight?: boolean, isDimmed?: boolean, selectable?: boolean, isSelected?: boolean, onToggleSelect?: (id: string) => void, onEdit: (cargo: Cargo) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cargo.id,
