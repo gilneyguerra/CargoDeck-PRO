@@ -6,7 +6,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { PDFExtractor, CargoItem, ExtractionResult } from '../services/pdfExtractor';
 import { AppError, handleApplicationError } from '../services/errorHandler';
-import { useCargoStore } from '@/features/cargoStore';
 import { ErrorCodes } from '../lib/errorCodes';
 import { logger } from '../utils/logger';
 

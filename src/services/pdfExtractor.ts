@@ -340,7 +340,7 @@ export class PDFExtractor {
         }
     }
 
-    static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal, currentShipCode?: string): Promise<ExtractionResult> {
+    static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
         try {
             const pdfjsLib = await import('pdfjs-dist');
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
@@ -376,7 +376,7 @@ export class PDFExtractor {
                 }
                 
                 const header = parseHeaderInfo(fullText);
-                const items = parseManifesto(fullText, 1, header, currentShipCode);
+                const items = parseManifesto(fullText, 1, header);
                 return { success: true, data: { items, metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'ocr', fileName: file.name, fileSize: file.size } } };
             }
             // ─── Extração Normal (PDF com texto) ─────────────────────────────
