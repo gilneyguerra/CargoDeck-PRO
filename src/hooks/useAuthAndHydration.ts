@@ -10,7 +10,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 
 export const useAuthAndHydration = () => {
-    const { hydrateFromDb, shipOperationCode, setManifestDetails, setHydrationStatus } = useCargoStore();
+    const { hydrateFromDb, setManifestDetails, setHydrationStatus } = useCargoStore();
 
     const fetchUserData = useCallback(async () => {
         logger.info('Tentando buscar dados do usuario e sessao...');
@@ -25,21 +25,19 @@ export const useAuthAndHydration = () => {
                 logger.info('Usuario autenticado e sessao carregada.', { userId: session.user.id });
                 
                 // Load stowage plan
-                const stowageData = await DatabaseService.loadStowagePlan(shipOperationCode);
+                const stowageData = await DatabaseService.loadStowagePlan();
 
                 if (stowageData) {
                     hydrateFromDb(stowageData);
                     logger.info('Plano de estiba carregado do banco de dados.', {
-                        shipOperationCode,
-                        manifestShipName: stowageData.manifestShipName,
-                        manifestVoyage: stowageData.manifestVoyage
+                        manifestShipName: stowageData.manifestShipName
                     });
                     
                     if (stowageData?.manifestShipName) {
-                        setManifestDetails(stowageData.manifestShipName, stowageData.manifestVoyage || '');
+                        setManifestDetails(stowageData.manifestShipName, stowageData.manifestAtendimento || '', stowageData.manifestRoteiro || []);
                     }
                 } else {
-                    logger.warn('Nenhum plano de estiba encontrado para o codigo da operacao.', { shipOperationCode });
+                    logger.warn('Nenhum plano de estiba encontrado.');
                 }
             } else {
                 logger.info('Nenhum usuario autenticado.');
@@ -52,7 +50,7 @@ export const useAuthAndHydration = () => {
             // Ainda marcar como hidratado para evitar bloqueio de auto-save
             setHydrationStatus(true);
         }
-    }, [hydrateFromDb, setManifestDetails, shipOperationCode, setHydrationStatus]);
+    }, [hydrateFromDb, setManifestDetails, setHydrationStatus]);
 
     useEffect(() => {
         fetchUserData();
@@ -67,20 +65,19 @@ export const useAuthAndHydration = () => {
                 
                 const loadStowage = async () => {
                     try {
-                        const stowageData = await DatabaseService.loadStowagePlan(shipOperationCode);
+                        const stowageData = await DatabaseService.loadStowagePlan();
                         
                         if (stowageData) {
                             hydrateFromDb(stowageData);
                             logger.info('Plano de estiba carregado apos login.', {
-                                shipOperationCode: stowageData.shipOperationCode,
                                 manifestShipName: stowageData.manifestShipName
                             });
                             
                             if (stowageData?.manifestShipName) {
-                                setManifestDetails(stowageData.manifestShipName, stowageData.manifestVoyage || '');
+                                setManifestDetails(stowageData.manifestShipName, stowageData.manifestAtendimento || '', stowageData.manifestRoteiro || []);
                             }
                         } else {
-                            logger.warn('Nenhum plano de estiba encontrado apos login.', { shipOperationCode });
+                            logger.warn('Nenhum plano de estiba encontrado apos login.');
                         }
                     } catch (error) {
                         logger.error('Falha ao carregar plano de estiba apos login:', error);
@@ -93,7 +90,7 @@ export const useAuthAndHydration = () => {
                 loadStowage();
             } else if (event === 'SIGNED_OUT') {
                 logger.info('Usuario saiu da sessao.');
-                setManifestDetails(null, null);
+                setManifestDetails(null, null, []);
             }
         });
         
@@ -101,5 +98,5 @@ export const useAuthAndHydration = () => {
             subscription.unsubscribe();
             logger.debug('Unsubscribed from auth state changes.');
         };
-    }, [fetchUserData, hydrateFromDb, setManifestDetails, shipOperationCode, setHydrationStatus]);
+    }, [fetchUserData, hydrateFromDb, setManifestDetails, setHydrationStatus]);
 };

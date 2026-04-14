@@ -25,7 +25,7 @@ export const DatabaseService = {
       .from('stowage_plans')
       .upsert({
         user_id:      session.user.id,
-        ship_code:    state.shipOperationCode || 'DEFAULT',
+        ship_code:    'MAIN_PLAN',
         state_payload: payload,
         updated_at:   new Date().toISOString()
       }, { onConflict: 'user_id, ship_code' });
@@ -34,7 +34,7 @@ export const DatabaseService = {
     return data;
   },
 
-  async loadStowagePlan(shipCode: string) {
+  async loadStowagePlan(shipCode: string = 'MAIN_PLAN') {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Usuário não autenticado');
 
@@ -77,10 +77,8 @@ export const DatabaseService = {
     const payload = {
       unallocatedCargoes:  updatedUnallocated,
       locations:           updatedLocations,
-      shipOperationCode:   state.shipOperationCode,
       manifestsLoaded:     state.manifestsLoaded,
       manifestShipName:    state.manifestShipName,
-      manifestVoyage:      state.manifestVoyage,
       manifestAtendimento: state.manifestAtendimento,
       manifestRoteiro:     state.manifestRoteiro,
     };
@@ -89,7 +87,7 @@ export const DatabaseService = {
       .from('stowage_plans')
       .upsert({
         user_id:      session.user.id,
-        ship_code:    state.shipOperationCode || 'DEFAULT',
+        ship_code:    'MAIN_PLAN',
         state_payload: payload,
         updated_at:   new Date().toISOString()
       }, { onConflict: 'user_id, ship_code' });

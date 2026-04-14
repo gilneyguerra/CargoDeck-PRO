@@ -120,15 +120,23 @@ function detectCargoType(text: string): string | undefined {
 }
 
 function extractIdentifier(text: string): string | undefined {
-    const containerMatch = text.match(/\b([A-Z]{3,4}\s?\d{6,7}[-]?\d?)\b/);
-    if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').trim();
-    const numericMatch = text.match(/\b(\d{5,9}-\d{1,2})\b/) || text.match(/\b(\d{5,9})\b/);
+    // 1. Padrões comuns de prefixo + número (ex: U2 JF0158, T10 JF0049, KD123, SOS-12)
+    const containerMatch = text.match(/\b([A-Z0-9]{2,4}\s?[A-Z]{2}\s?\d{4,7})\b/i) || 
+                           text.match(/\b([A-Z]{2,4}[-]?\d{3,7})\b/i);
+    if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').toUpperCase().trim();
+
+    // 2. Padrões puramente alfanuméricos de 6-11 chars (evitando números de manifesto)
+    const alphanumeric = text.match(/\b([A-Z]{3,4}\s?\d{6,7}[-]?\d?)\b/);
+    if (alphanumeric) return alphanumeric[1].replace(/\s+/, ' ').trim();
+
+    // 3. Padrão numérico final (como o 12239030 do exemplo)
+    const numericMatch = text.match(/\b(\d{5,9}-\d{1,2})\b/) || text.match(/\b(\d{7,9})\b/);
     return numericMatch?.[1];
 }
 
 // ─── Parser Principal ────────────────────────────────────────────────────────
 
-function parseManifesto(text: string, pageNumber: number, header: ManifestHeader, currentShipCode?: string): CargoItem[] {
+function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): CargoItem[] {
     const validCodes = new Set(header.roteiroPrevisto || []);
     const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
     
@@ -192,6 +200,10 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
             const length = normalizeDimension(m[5]);
             const width = normalizeDimension(m[6]);
             const height = normalizeDimension(m[7]);
+            
+            // Ignorar itens de granel (Bulk) com dimensões zero
+            if (length === 0 || width === 0) continue;
+
             const rawWeight = normalizeNumber(m[8]);
             const isTon = unit.includes('TON') || unit === 'TN';
             const weightTonnes = isTon ? rawWeight : kgToTonnes(rawWeight);
@@ -246,7 +258,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     bay: pageNumber,
                     origemCarga: sec.origem,
                     destinoCarga: sec.destino,
-                    isBackload: !!(currentShipCode && sec.origem.includes(currentShipCode) && !sec.destino.includes(currentShipCode)) || BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
+                    isBackload: BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
                     tipoDetectado: detectCargoType(item.rawDesc) || 'BASKET',
                     nomeEmbarcacao: header.nomeEmbarcacao, 
                     numeroAtendimento: header.numeroAtendimento, 
@@ -270,7 +282,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     ...item.data,
                     origemCarga: sec.origem,
                     destinoCarga: sec.destino,
-                    isBackload: !!(currentShipCode && sec.origem.includes(currentShipCode) && !sec.destino.includes(currentShipCode)) || BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
+                    isBackload: BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
                     tipoDetectado: detectCargoType(item.rawDesc),
                     nomeEmbarcacao: header.nomeEmbarcacao, 
                     numeroAtendimento: header.numeroAtendimento, 
@@ -370,7 +382,7 @@ export class PDFExtractor {
             // ─── Extração Normal (PDF com texto) ─────────────────────────────
 
             const header = parseHeaderInfo(fullText);
-            const items = parseManifesto(fullText, 1, header, currentShipCode);
+            const items = parseManifesto(fullText, 1, header);
 
             return { success: true, data: { items, metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'text', fileName: file.name, fileSize: file.size } } };
         } catch (e) { return { success: false, error: handleApplicationError(e) }; }

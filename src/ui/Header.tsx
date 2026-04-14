@@ -1,4 +1,7 @@
-import { Ship, Download, Trash2, ListCollapse, Weight, CloudUpload, LogIn, UserCircle, Sun, Moon } from 'lucide-react';
+import { 
+  Trash2, Download, CloudUpload, UserCircle, LogIn,
+  Sun, Moon, ListCollapse, Weight, Search
+} from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
 import { useEffect, useState, useMemo } from 'react';
@@ -9,8 +12,9 @@ import type { User } from '@supabase/supabase-js';
 
 export function Header() {
   const {
-    locations, manifestsLoaded, shipOperationCode, setShipOperationCode,
-    manifestVoyage, manifestAtendimento, manifestRoteiro
+    locations, manifestsLoaded,
+    manifestVoyage, manifestAtendimento, manifestRoteiro,
+    searchTerm, setSearchTerm
   } = useCargoStore();
 
   const [user, setUser] = useState<User | null>(null);
@@ -117,28 +121,25 @@ export function Header() {
         {/* Left Section */}
         <div className="flex items-center flex-wrap gap-2 lg:gap-6 order-1">
           <div className="flex items-center gap-2 lg:gap-3">
-            <div className="bg-indigo-500/10 p-1.5 rounded-md">
-              <Ship className="h-5 w-5 text-indigo-400" />
-            </div>
             <h1 className="font-semibold text-base lg:text-lg tracking-tight text-gray-800 dark:text-neutral-100 whitespace-nowrap">CargoDeck Pro</h1>
           </div>
-
-          <div className="flex items-center gap-2 border-l border-neutral-300 dark:border-neutral-800 pl-3 lg:pl-6 hidden sm:flex">
-            <span className="text-[10px] lg:text-xs text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider whitespace-nowrap">Navio Atual:</span>
-            <input 
-              type="text" 
-              value={shipOperationCode}
-              onChange={(e) => setShipOperationCode(e.target.value)}
-              className="bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 text-sm rounded px-2 lg:px-3 py-1 w-20 lg:w-24 uppercase focus:border-indigo-500 outline-none"
-              placeholder="Sigla"
-              title="Sigla exata do navio como consta no manifesto"
-            />
-          </div>
-
         </div>
 
         {/* Right Section */}
         <div className="ml-auto flex items-center gap-2 lg:gap-3 order-2">
+
+          <div className="flex-1 max-w-sm hidden sm:block">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Buscar no manifesto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-neutral-500"
+              />
+            </div>
+          </div>
 
           {/* Total Planejado */}
           <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5">

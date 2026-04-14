@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 
 export const useAutoSave = () => {
-  const { locations, unallocatedCargoes, shipOperationCode, manifestsLoaded, isHydratedFromCloud } = useCargoStore();
+  const { locations, unallocatedCargoes, manifestsLoaded, isHydratedFromCloud } = useCargoStore();
 
   // Auto-Save de 3 segundos contra flooding
   useEffect(() => {
@@ -26,5 +26,5 @@ export const useAutoSave = () => {
     }, 3000);
 
     return () => clearTimeout(handler);
-  }, [locations, unallocatedCargoes, shipOperationCode, manifestsLoaded, isHydratedFromCloud]);
+  }, [locations, unallocatedCargoes, manifestsLoaded, isHydratedFromCloud]);
 };

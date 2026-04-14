@@ -68,7 +68,6 @@ export function usePDFUpload() {
             setState(prev => ({ ...prev, progress: 15 }));
 
             // 2. Extrair dados do PDF (com callback de progresso para OCR)
-            const currentShipCode = useCargoStore.getState().shipOperationCode;
             const extractionResult: ExtractionResult = await PDFExtractor.extract(
                 file, 
                 (ocrProgress) => {
@@ -80,8 +79,7 @@ export function usePDFUpload() {
                         isOCR: true 
                     }));
                 },
-                signal,
-                currentShipCode
+                signal
             );
 
             if (signal.aborted) {

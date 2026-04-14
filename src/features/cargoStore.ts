@@ -23,18 +23,15 @@ export interface CargoState {
     unallocatedCargoes: Cargo[];
     locations: CargoLocation[];
     activeLocationId: string | null;
-    shipOperationCode: string;
     manifestShipName: string | null;
-    manifestVoyage: string | null;
     manifestAtendimento: string | null;  // Número de atendimento extraído do manifesto
     manifestRoteiro: string[] | null;    // Roteiro previsto de portos
     searchTerm: string;
     editingCargo: Cargo | null;
     isHydratedFromCloud: boolean;
 
-    setShipOperationCode: (code: string) => void;
     setExtractedCargoes: (cargoes: Cargo[]) => void;
-    setManifestDetails: (shipName: string | null, voyage: string | null, atendimento?: string | null, roteiro?: string[] | null) => void;
+    setManifestDetails: (shipName: string | null, atendimento?: string | null, roteiro?: string[] | null) => void;
     addLocation: (name: string) => void;
     addManualCargo: (cargoData: Omit<Cargo, 'id' | 'status'>) => void;
     updateCargo: (id: string, updates: Partial<Cargo>) => void;
@@ -74,9 +71,7 @@ export const useCargoStore = create<CargoState>()(
         (set, get) => ({
             manifestsLoaded: false,
             unallocatedCargoes: [],
-            shipOperationCode: 'NS44',
             manifestShipName: null,
-            manifestVoyage: null,
             manifestAtendimento: null,
             manifestRoteiro: null,
             locations: [
@@ -106,13 +101,10 @@ export const useCargoStore = create<CargoState>()(
             setEditingCargo: (cargo) => set({ editingCargo: cargo }),
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
 
-            setShipOperationCode: (code) => set({ shipOperationCode: code.toUpperCase() }),
-
             setSearchTerm: (term) => set({ searchTerm: term }),
 
-            setManifestDetails: (shipName, voyage, atendimento, roteiro) => set({
+            setManifestDetails: (shipName, atendimento, roteiro) => set({
                 manifestShipName: shipName,
-                manifestVoyage: voyage,
                 manifestAtendimento: atendimento ?? null,
                 manifestRoteiro: roteiro ?? null,
             }),
@@ -739,9 +731,7 @@ export const useCargoStore = create<CargoState>()(
                     set((state) => ({
                         unallocatedCargoes: payload.unallocatedCargoes ?? state.unallocatedCargoes,
                         locations: payload.locations ?? state.locations,
-                        shipOperationCode: payload.shipOperationCode ?? state.shipOperationCode,
                         manifestShipName: payload.manifestShipName ?? state.manifestShipName,
-                        manifestVoyage: payload.manifestVoyage ?? state.manifestVoyage,
                         manifestAtendimento: payload.manifestAtendimento ?? state.manifestAtendimento,
                         manifestRoteiro: payload.manifestRoteiro ?? state.manifestRoteiro,
                         manifestsLoaded: payload.manifestsLoaded ?? state.manifestsLoaded,
@@ -769,9 +759,7 @@ export const useCargoStore = create<CargoState>()(
             partialize: (state) => ({
                 unallocatedCargoes: state.unallocatedCargoes,
                 locations: state.locations,
-                shipOperationCode: state.shipOperationCode,
                 manifestShipName: state.manifestShipName,
-                manifestVoyage: state.manifestVoyage,
                 manifestAtendimento: state.manifestAtendimento,
                 manifestRoteiro: state.manifestRoteiro,
                 manifestsLoaded: state.manifestsLoaded,
