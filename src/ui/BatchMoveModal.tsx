@@ -161,7 +161,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 >
                   {activeLoc.bays.map(bay => (
                     <option key={bay.id} value={bay.id}>
-                      Baia {String(bay.number).padStart(2, '0')} — {bay.currentWeightTonnes.toFixed(1)} t atuais
+                      Baia {String(bay.number).padStart(2, '0')} — {bay.allocatedCargoes.length} carga(s) atualmente
                     </option>
                   ))}
                 </select>

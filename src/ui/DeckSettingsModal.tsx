@@ -131,7 +131,7 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
               <input type="number" value={bayLength} onChange={e => setBayLength(e.target.value)} className="w-full bg-neutral-950 border border-neutral-700 text-white rounded p-2 outline-none focus:border-indigo-500" />
             </div>
           </div>
-          <p className="text-xs text-neutral-500 mt-1">A área das baias não deve ultrapassar a Área Total disponível do local.</p>
+          <p className="text-xs text-neutral-500 mt-1">A configuração das baias ajuda na organização visual das cargas no convés.</p>
         </div>
 
         <button onClick={handleSave} className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-colors">

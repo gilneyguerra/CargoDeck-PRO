@@ -31,15 +31,18 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoL
               : "border-transparent text-neutral-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200"
           )}
         >
-          <span>{loc.name}</span>
-          {tabWeight > 0 && (
-             <span className={cn(
-                "text-[10px] px-1.5 py-0.5 rounded-full font-bold tracking-wide",
-                isActive ? "bg-indigo-500/30 text-indigo-800 dark:text-indigo-200" : "bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-500"
-             )}>
-               {tabWeight.toFixed(1)} t
-             </span>
-          )}
+        <span>{loc.name}</span>
+        {(() => {
+          const totalCargoes = loc.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
+          return totalCargoes > 0 && (
+            <span className={cn(
+              "text-[10px] px-1.5 py-0.5 rounded-full font-bold tracking-wide",
+              isActive ? "bg-indigo-500/30 text-indigo-800 dark:text-indigo-200" : "bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-500"
+            )}>
+              {totalCargoes} {totalCargoes === 1 ? 'carga' : 'cargas'}
+            </span>
+          );
+        })()}
         </button>
         
         {/* Edit button */}
@@ -103,9 +106,11 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
           style={{ minWidth: metersToPixels(sideWidth) }}
         >
       <div className="w-full flex justify-between items-center mb-2 px-1 border-b border-neutral-300 dark:border-neutral-800/50 pb-1">
-         <span className="opacity-40 font-bold text-[9px] tracking-widest">{side === 'port' ? 'BOMBORDO' : side === 'center' ? 'CENTRO' : 'BORESTE'}</span>
-         <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded", isOverArea ? "bg-red-500/20 text-red-400" : "bg-black/30 dark:bg-black/30 text-neutral-600 dark:text-neutral-500")}>
-            {currentOccupiedArea.toFixed(1)} / {maxArea.toFixed(1)} m²
+         <span className="opacity-40 font-bold text-[9px] tracking-widest">
+           BAIA {side === 'port' ? 'BOMBORDO' : side === 'center' ? 'CENTRO' : 'BORESTE'}
+         </span>
+         <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-black/30 dark:bg-black/30 text-neutral-600 dark:text-neutral-500 uppercase">
+            {cargoes.length} {cargoes.length === 1 ? 'carga' : 'cargas'}
          </span>
      </div>
       
@@ -148,18 +153,9 @@ return (
         </span>
       </div>
 
-      <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-        <span className={cn(
-          "text-[10px] font-bold px-1.5 py-0.5 rounded",
-          bay.currentWeightTonnes > bay.maxWeightTonnes ? "bg-red-500/20 text-red-500" : "bg-neutral-300 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400"
-        )}>
-          {bay.currentWeightTonnes.toFixed(1)} / {bay.maxWeightTonnes}t
-        </span>
-        <span className={cn(
-          "text-[9px] font-bold px-1.5 py-0.5 rounded",
-          isOverArea ? "bg-red-500/20 text-red-500" : "bg-neutral-300/50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-500"
-        )}>
-          {bay.currentOccupiedArea.toFixed(1)} / {bay.maxAreaSqMeters.toFixed(1)} m²
+      <div className="absolute top-2 left-2 flex items-center gap-2">
+        <span className="bg-black/30 dark:bg-black/40 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-neutral-400 dark:border-neutral-800/50">
+          Baia {String(bay.number).padStart(2, '0')}
         </span>
       </div>
 
