@@ -1,6 +1,8 @@
 // src/services/pdfExtractor.ts
 /**
  * @file Serviço robusto para extração de dados de PDFs de manifestos de carga (CargoDeck-PRO).
+ * PERF: Páginas são extraídas em paralelo (Promise.all).
+ * PERF: Worker Tesseract é inicializado uma única vez e reutilizado por todas as páginas no modo OCR.
  */
 import { AppError, handleApplicationError } from './errorHandler';
 import { logger } from '../utils/logger';
@@ -307,12 +309,13 @@ export class PDFExtractor {
     }
 
     /**
-     * Extrai texto de uma página usando canvas + Tesseract OCR.
-     * Chamado como fallback quando a extração de texto nativa retorna vazio.
+     * Renderiza uma página do PDF em um canvas e executa o OCR usando um worker Tesseract
+     * previamente inicializado (compartilhado entre todas as páginas).
+     * 
+     * PERF: O worker é recebido como parâmetro para evitar o custo de criação/destruição
+     * a cada página — o custo de spawn de um Web Worker é muito alto.
      */
-    private static async ocrPage(page: any, onProgress?: (p: number) => void): Promise<string> {
-        const { createWorker } = await import('tesseract.js');
-        
+    private static async ocrPage(page: any, worker: any): Promise<string> {
         const scale = 2.0; // Renderiza em 2x para melhor precisão do OCR
         const viewport = page.getViewport({ scale });
         
@@ -324,20 +327,8 @@ export class PDFExtractor {
         await page.render({ canvasContext: ctx, viewport }).promise;
         const imageDataUrl = canvas.toDataURL('image/png');
         
-        const worker = await createWorker('por+eng', 1, {
-            logger: (m: any) => {
-                if (m.status === 'recognizing text' && onProgress) {
-                    onProgress(Math.round(m.progress * 100));
-                }
-            }
-        });
-        
-        try {
-            const { data: { text } } = await worker.recognize(imageDataUrl);
-            return text;
-        } finally {
-            await worker.terminate();
-        }
+        const { data: { text } } = await worker.recognize(imageDataUrl);
+        return text;
     }
 
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
@@ -346,45 +337,77 @@ export class PDFExtractor {
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            
-            let fullText = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
+
+            // ─── PERF: Extraia texto de todas as páginas em paralelo ──────────
+            // Promise.all dispara todas as requisições de página simultaneamente,
+            // em vez de aguardar página por página sequencialmente.
+            const pageTextPromises = Array.from({ length: pdf.numPages }, async (_, i) => {
+                const page = await pdf.getPage(i + 1);
                 const content = await page.getTextContent();
-                fullText += '\n' + content.items.map((it: any) => it.str).join(' ');
-            }
+                return content.items.map((it: any) => it.str).join(' ');
+            });
+
+            const pageTexts = await Promise.all(pageTextPromises);
+            const fullText = '\n' + pageTexts.join('\n');
+            // ─────────────────────────────────────────────────────────────────
 
             // ─── Detecção de PDF Escaneado (sem texto) ───────────────────────
-            // Se o texto extraído for muito pequeno (< 100 chars úteis), o PDF é
-            // provavelmente uma imagem escaneada. Ativamos o fallback de OCR.
             const usefulChars = fullText.replace(/\s+/g, '').length;
             if (usefulChars < 100) {
                 logger.info(`PDF "${file.name}" parece ser escaneado (apenas ${usefulChars} chars úteis). Ativando OCR...`);
-                
-                fullText = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const pageText = await PDFExtractor.ocrPage(page, (pct) => {
+
+                // PERF: Inicializa o worker Tesseract UMA ÚNICA VEZ para todas as páginas.
+                // Criar/destruir um Web Worker a cada página tem custo altíssimo de CPU/memória.
+                const { createWorker } = await import('tesseract.js');
+                const worker = await createWorker('por+eng', 1, {
+                    logger: (m: any) => {
+                        if (m.status === 'recognizing text' && onProgress) {
+                            onProgress(Math.round(m.progress * 100));
+                        }
+                    }
+                });
+
+                try {
+                    let ocrFullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        // Reutiliza o mesmo worker para todas as páginas
+                        const pageText = await PDFExtractor.ocrPage(page, worker);
+                        ocrFullText += '\n' + pageText;
+
                         if (onProgress) {
-                            // Mapeia progresso da página na faixa global
-                            const globalPct = Math.round(((i - 1) / pdf.numPages + pct / 100 / pdf.numPages) * 100);
+                            const globalPct = Math.round((i / pdf.numPages) * 100);
                             onProgress(globalPct);
                         }
-                    });
-                    fullText += '\n' + pageText;
-                    logger.info(`OCR página ${i}/${pdf.numPages} concluída.`);
+                        logger.info(`OCR página ${i}/${pdf.numPages} concluída.`);
+                    }
+
+                    const header = parseHeaderInfo(ocrFullText);
+                    const items = parseManifesto(ocrFullText, 1, header);
+                    return {
+                        success: true,
+                        data: {
+                            items,
+                            metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'ocr', fileName: file.name, fileSize: file.size }
+                        }
+                    };
+                } finally {
+                    // Garante que o worker é sempre terminado, mesmo em caso de erro
+                    await worker.terminate();
                 }
-                
-                const header = parseHeaderInfo(fullText);
-                const items = parseManifesto(fullText, 1, header);
-                return { success: true, data: { items, metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'ocr', fileName: file.name, fileSize: file.size } } };
             }
             // ─── Extração Normal (PDF com texto) ─────────────────────────────
 
             const header = parseHeaderInfo(fullText);
             const items = parseManifesto(fullText, 1, header);
 
-            return { success: true, data: { items, metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'text', fileName: file.name, fileSize: file.size } } };
+            return {
+                success: true,
+                data: {
+                    items,
+                    metadata: { pages: pdf.numPages, extractedAt: new Date(), method: 'text', fileName: file.name, fileSize: file.size }
+                }
+            };
         } catch (e) { return { success: false, error: handleApplicationError(e) }; }
     }
 }
