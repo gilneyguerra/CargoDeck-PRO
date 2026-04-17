@@ -45,6 +45,8 @@ interface ManifestHeader {
 
 function normalizeNumber(raw: string): number {
     let s = raw.trim().replace(/[lI|]/g, '1').replace(/[oO]/g, '0');
+    // Remove qualquer caractere que não seja dígito, vírgula ou ponto no final para evitar ruído OCR
+    s = s.replace(/[^0-9,.]/g, ''); 
     const commaIndex = s.lastIndexOf(',');
     const dotIndex = s.lastIndexOf('.');
     if (commaIndex > -1 && dotIndex > -1) {
@@ -190,47 +192,61 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
         } catch (e) { logger.warn('Erro parse embalagem', e); }
     }
 
-    // Padrão: Cargas Normais
-    const petrobrasPattern = /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi;
-    let m: RegExpExecArray | null;
-    while ((m = petrobrasPattern.exec(text)) !== null) {
-        try {
-            const unit = m[3].toUpperCase();
-            const rawDesc = m[4].trim();
-            if (rawDesc.match(/^(PETROBRAS|MANIFESTO|TRANSPORTE|DATA|HORA|PAG)/i)) continue;
+    // Padrão: Cargas Normais (Petrobras/TAGAZ e Genérico)
+    // O padrão Petrobras exige o ano NNNN/NNNN. O padrão genérico é mais flexível para CBO e outros.
+    const patterns = [
+        // 1. Padrão Petrobras Tradicional (mais rígido)
+        /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi,
+        // 2. Padrão Genérico/CBO (sem exigência de ano/atendimento no item)
+        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi
+    ];
 
-            const length = normalizeDimension(m[5]);
-            const width = normalizeDimension(m[6]);
-            const height = normalizeDimension(m[7]);
-            
-            // Ignorar itens de granel (Bulk) com dimensões zero
-            if (length === 0 || width === 0) continue;
+    for (const pattern of patterns) {
+        let m: RegExpExecArray | null;
+        while ((m = pattern.exec(text)) !== null) {
+            try {
+                // Se o pattern for o segundo, os índices mudam
+                const isGeneric = pattern.source.includes('[A-Z0-9-]{6,15}');
+                const unit = (isGeneric ? m[3] : m[3]).toUpperCase();
+                const rawDesc = (isGeneric ? m[4] : m[4]).trim();
+                
+                if (rawDesc.match(/^(PETROBRAS|MANIFESTO|TRANSPORTE|DATA|HORA|PAG)/i)) continue;
 
-            const rawWeight = normalizeNumber(m[8]);
-            const isTon = unit.includes('TON') || unit === 'TN';
-            const weightTonnes = isTon ? rawWeight : kgToTonnes(rawWeight);
+                const length = normalizeDimension(isGeneric ? m[5] : m[5]);
+                const width = normalizeDimension(isGeneric ? m[6] : m[6]);
+                const height = normalizeDimension(isGeneric ? m[7] : m[7]);
+                
+                // Ignorar itens de granel (Bulk) com dimensões zero
+                if (length === 0 || width === 0) continue;
 
-            const explicitId = extractIdentifier(rawDesc);
-            const hasExplicitId = !!explicitId;
-            const identifier = explicitId ?? m[2];
-            const id = `${identifier}-${m[1]}`;
+                const rawWeight = normalizeNumber(isGeneric ? m[8] : m[8]);
+                const isTon = unit.includes('TON') || unit === 'TN';
+                const weightTonnes = isTon ? rawWeight : kgToTonnes(rawWeight);
 
-            allParsedItems.push({
-                index: m.index,
-                isEmbalagem: false,
-                hasExplicitId,
-                rawDesc,
-                data: {
-                    id,
-                    identifier,
-                    description: rawDesc.substring(0, 120),
-                    weight: weightTonnes,
-                    weightKg: isTon ? weightTonnes * 1000 : rawWeight,
-                    volume: length * width * height,
-                    length, width, height, bay: pageNumber
-                }
-            });
-        } catch (e) { logger.warn('Erro item pat1', e); }
+                const explicitId = extractIdentifier(rawDesc);
+                const identifier = explicitId ?? (isGeneric ? m[2] : m[2]);
+                const id = `${identifier}-${m[1]}`;
+
+                // Evita duplicatas se múltiplos patterns pegarem o mesmo item
+                if (allParsedItems.some(item => item.data.id === id)) continue;
+
+                allParsedItems.push({
+                    index: m.index,
+                    isEmbalagem: false,
+                    hasExplicitId: !!explicitId,
+                    rawDesc,
+                    data: {
+                        id,
+                        identifier,
+                        description: rawDesc.substring(0, 120),
+                        weight: weightTonnes,
+                        weightKg: isTon ? weightTonnes * 1000 : rawWeight,
+                        volume: length * width * height,
+                        length, width, height, bay: pageNumber
+                    }
+                });
+            } catch (e) { logger.warn('Erro item pat', e); }
+        }
     }
 
     // Processar os items extraídos na ordem em que aparecem no PDF
@@ -315,16 +331,32 @@ export class PDFExtractor {
      * PERF: O worker é recebido como parâmetro para evitar o custo de criação/destruição
      * a cada página — o custo de spawn de um Web Worker é muito alto.
      */
-    private static async ocrPage(page: any, worker: any): Promise<string> {
+    private static async ocrPage(page: any, worker: any, rotate90 = false): Promise<string> {
         const scale = 2.0; // Renderiza em 2x para melhor precisão do OCR
         const viewport = page.getViewport({ scale });
         
+        let canvasWidth = viewport.width;
+        let canvasHeight = viewport.height;
+        
+        if (rotate90) {
+            canvasWidth = viewport.height;
+            canvasHeight = viewport.width;
+        }
+        
         const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
         const ctx = canvas.getContext('2d')!;
         
+        if (rotate90) {
+            // Rotate 90 degrees clockwise
+            ctx.translate(canvasWidth / 2, canvasHeight / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.translate(-viewport.width / 2, -viewport.height / 2);
+        }
+        
         await page.render({ canvasContext: ctx, viewport }).promise;
+        
         const imageDataUrl = canvas.toDataURL('image/png');
         
         const { data: { text } } = await worker.recognize(imageDataUrl);
@@ -369,10 +401,38 @@ export class PDFExtractor {
 
                 try {
                     let ocrFullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
+                    let rotate90 = false;
+                    
+                    if (pdf.numPages > 0) {
+                        // DETECÇÃO AUTOMÁTICA DE ORIENTAÇÃO
+                        // Documentos escaneados no modo retrato frequentemente são tabelas paisagem viradas.
+                        // Executa OCR na pág 1 para verificar se gerou texto válido.
+                        const page1 = await pdf.getPage(1);
+                        let testText = await PDFExtractor.ocrPage(page1, worker, false);
+                        
+                        // Palavras-chave comun na maioria dos manifestos:
+                        const hasKeywords = (t: string) => /MANIFESTO|TRANSPORTE|CARGA|ORIGEM|DESTINO|DESCRIÇÃO/i.test(t);
+                        
+                        if (!hasKeywords(testText) && page1.getViewport({ scale: 1 }).height > page1.getViewport({ scale: 1 }).width) {
+                            logger.info('Texto inicial com baixa correspondência com manifestos. Tentando rotacionar em 90 graus...');
+                            const rotatedText = await PDFExtractor.ocrPage(page1, worker, true);
+                            if (hasKeywords(rotatedText)) {
+                                logger.info('Rotação de 90 graus bem sucedida. O documento será lido rotacionado.');
+                                rotate90 = true;
+                                testText = rotatedText; // Usa o texto rotacionado para a página 1
+                            }
+                        }
+                        
+                        ocrFullText += '\n' + testText;
+                        if (onProgress) {
+                            onProgress(Math.round((1 / pdf.numPages) * 100));
+                        }
+                    }
+
+                    for (let i = 2; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         // Reutiliza o mesmo worker para todas as páginas
-                        const pageText = await PDFExtractor.ocrPage(page, worker);
+                        const pageText = await PDFExtractor.ocrPage(page, worker, rotate90);
                         ocrFullText += '\n' + pageText;
 
                         if (onProgress) {
@@ -381,6 +441,10 @@ export class PDFExtractor {
                         }
                         logger.info(`OCR página ${i}/${pdf.numPages} concluída.`);
                     }
+
+                    console.log('=== OCR FULL TEXT START ===');
+                    console.log(ocrFullText);
+                    console.log('=== OCR FULL TEXT END ===');
 
                     const header = parseHeaderInfo(ocrFullText);
                     const items = parseManifesto(ocrFullText, 1, header);
