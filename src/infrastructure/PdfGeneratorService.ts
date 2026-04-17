@@ -60,11 +60,6 @@ export class PdfGeneratorService {
 
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 21, { align: 'right' });
 
-    if (roteiro && roteiro.length > 0) {
-      doc.setFontSize(9);
-      doc.setTextColor(180, 200, 255);
-      doc.text(`Roteiro: ${roteiro.join(' ➔ ')}`, pageWidth / 2, 21, { align: 'center' });
-    }
 
     // ── Linha separadora ─────────────────────────────────────────────────────
     doc.setTextColor(0, 0, 0);
