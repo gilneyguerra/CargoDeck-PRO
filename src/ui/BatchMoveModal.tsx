@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
-import { ArrowRight, Ship, Layers, Shuffle } from 'lucide-react';
+import { ArrowRight, Ship, Layers, Shuffle, Plus, Minus, Divide } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BatchMoveModalProps {
@@ -15,12 +15,14 @@ type Side = 'port' | 'center' | 'starboard';
 type DistributionMode = 'single-bay' | 'distribute';
 
 export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClose, onSuccess }: BatchMoveModalProps) {
-  const { locations, batchMoveCargoes } = useCargoStore();
+  const { locations } = useCargoStore();
 
   const [targetLocationId, setTargetLocationId] = useState<string>('');
   const [targetBayId, setTargetBayId] = useState<string>('');
   const [targetSide, setTargetSide] = useState<Side>('center');
   const [distributionMode, setDistributionMode] = useState<DistributionMode>('single-bay');
+  const [isDistributingSides, setIsDistributingSides] = useState(false);
+  const [sideCounts, setSideCounts] = useState({ port: 0, center: selectedCount, starboard: 0 });
 
   // Set default location on open
   useEffect(() => {
@@ -30,8 +32,10 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
       setTargetBayId(firstLoc.bays[0]?.id ?? '');
       setDistributionMode('single-bay');
       setTargetSide('center');
+      setIsDistributingSides(false);
+      setSideCounts({ port: 0, center: selectedCount, starboard: 0 });
     }
-  }, [isOpen, locations]);
+  }, [isOpen, locations, selectedCount]);
 
   // Update default bay when location changes
   useEffect(() => {
@@ -45,12 +49,46 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
 
   const activeLoc = locations.find(l => l.id === targetLocationId);
 
+  const totalDistributed = sideCounts.port + sideCounts.center + sideCounts.starboard;
+  const isDistributionValid = !isDistributingSides || totalDistributed === selectedCount;
+
   const handleConfirm = () => {
-    if (!targetLocationId) return;
+    if (!targetLocationId || !isDistributionValid) return;
+    const { batchMoveCargoesToSides } = useCargoStore.getState();
     const effectiveBayId = distributionMode === 'distribute' ? 'distribute' : targetBayId;
-    batchMoveCargoes(selectedCargoIds, targetLocationId, effectiveBayId, targetSide);
+    
+    if (isDistributingSides) {
+      batchMoveCargoesToSides(selectedCargoIds, targetLocationId, effectiveBayId, sideCounts);
+    } else {
+      const counts = {
+        port: targetSide === 'port' ? selectedCount : 0,
+        center: targetSide === 'center' ? selectedCount : 0,
+        starboard: targetSide === 'starboard' ? selectedCount : 0,
+      };
+      batchMoveCargoesToSides(selectedCargoIds, targetLocationId, effectiveBayId, counts);
+    }
+    
     onSuccess();
     onClose();
+  };
+
+  const updateSideCount = (side: Side, delta: number) => {
+    setSideCounts(prev => {
+      const newVal = Math.max(0, prev[side] + delta);
+      // If we are increasing and it would exceed total, we don't allow (strict mode) or we don't care because validation catches it.
+      // Let's allow and let the user balance it.
+      return { ...prev, [side]: newVal };
+    });
+  };
+
+  const splitEvenly = () => {
+    const base = Math.floor(selectedCount / 3);
+    const remainder = selectedCount % 3;
+    setSideCounts({
+      port: base + (remainder > 0 ? 1 : 0),
+      center: base + (remainder > 1 ? 1 : 0),
+      starboard: base
+    });
   };
 
   const sideLabels: { key: Side; label: string; emoji: string; desc: string }[] = [
@@ -99,31 +137,108 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
             </select>
           </div>
 
-          {/* Step 2: Side */}
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest mb-2">
-              <Layers className="w-3.5 h-3.5" />
-              2. Lado da baia
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {sideLabels.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setTargetSide(s.key)}
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                <Layers className="w-3.5 h-3.5" />
+                2. Lado da baia
+              </label>
+              {selectedCount > 1 && (
+                <button 
+                  onClick={() => setIsDistributingSides(!isDistributingSides)}
                   className={cn(
-                    "flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all",
-                    targetSide === s.key
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 shadow-md scale-[1.03]"
-                      : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-indigo-300 dark:hover:border-indigo-700"
+                    "text-[10px] font-bold px-2 py-1 rounded-md transition-all border",
+                    isDistributingSides 
+                      ? "bg-indigo-600 border-indigo-600 text-white" 
+                      : "bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-indigo-500 hover:text-indigo-500"
                   )}
                 >
-                  <span className="text-xl">{s.emoji}</span>
-                  <span className="text-[11px] font-bold">{s.label}</span>
-                  <span className="text-[9px] opacity-60">{s.desc}</span>
+                  {isDistributingSides ? 'MODO INDIVIDUAL' : 'DISTRIBUIR BORDOS'}
                 </button>
-              ))}
+              )}
             </div>
-          </div>
+
+            {!isDistributingSides ? (
+              <div className="grid grid-cols-3 gap-2">
+                {sideLabels.map(s => (
+                  <button
+                    key={s.key}
+                    onClick={() => setTargetSide(s.key)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all",
+                      targetSide === s.key
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 shadow-md scale-[1.03]"
+                        : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-indigo-300 dark:hover:border-indigo-700"
+                    )}
+                  >
+                    <span className="text-xl">{s.emoji}</span>
+                    <span className="text-[11px] font-bold">{s.label}</span>
+                    <span className="text-[9px] opacity-60">{s.desc}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {sideLabels.map(s => (
+                    <div
+                      key={s.key}
+                      className={cn(
+                        "flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all bg-neutral-50 dark:bg-neutral-800/50",
+                        sideCounts[s.key] > 0 ? "border-indigo-300 dark:border-indigo-700" : "border-neutral-200 dark:border-neutral-800"
+                      )}
+                    >
+                      <span className="text-[10px] font-bold uppercase text-neutral-500">{s.label}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button 
+                          onClick={() => updateSideCount(s.key, -1)}
+                          className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input 
+                          type="number" 
+                          value={sideCounts[s.key]}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setSideCounts(prev => ({ ...prev, [s.key]: val }));
+                          }}
+                          className="w-10 text-center bg-transparent font-bold text-sm focus:outline-none"
+                        />
+                        <button 
+                          onClick={() => updateSideCount(s.key, 1)}
+                          className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      totalDistributed === selectedCount ? "bg-green-500 animate-pulse" : totalDistributed > selectedCount ? "bg-red-500" : "bg-amber-500"
+                    )} />
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider",
+                      totalDistributed === selectedCount ? "text-green-600 dark:text-green-400" : "text-neutral-500"
+                    )}>
+                      {totalDistributed} de {selectedCount} cargas alocadas
+                    </span>
+                  </div>
+                  
+                  <button 
+                    onClick={splitEvenly}
+                    className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    <Divide className="w-3 h-3" />
+                    DIVIDIR IGUAL
+                  </button>
+                </div>
+              </div>
+            )}
 
           {/* Step 3: Distribution */}
           <div>
@@ -201,7 +316,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!targetLocationId || (distributionMode === 'single-bay' && !targetBayId)}
+            disabled={!targetLocationId || (distributionMode === 'single-bay' && !targetBayId) || !isDistributionValid}
             className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold hover:opacity-90 transition-opacity shadow-lg disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <ArrowRight className="w-4 h-4" />

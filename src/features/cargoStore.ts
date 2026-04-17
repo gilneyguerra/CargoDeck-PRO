@@ -42,6 +42,7 @@ export interface CargoState {
     deleteCargo: (cargoId: string) => Promise<void>;
     deleteMultipleCargoes: (cargoIds: string[]) => Promise<void>;
     batchMoveCargoes: (cargoIds: string[], targetLocationId: string, targetBayId: string | 'distribute', targetSide: 'port' | 'center' | 'starboard') => void;
+    batchMoveCargoesToSides: (cargoIds: string[], targetLocationId: string, targetBayId: string | 'distribute', sideCounts: { port: number, center: number, starboard: number }) => void;
     setSearchTerm: (term: string) => void;
     getAllCargo: () => Cargo[];
     editLocation: (id: string, updates: Partial<CargoLocation>) => void;
@@ -660,6 +661,15 @@ export const useCargoStore = create<CargoState>()(
             },
 
             batchMoveCargoes: (cargoIds, targetLocationId, targetBayId, targetSide) => {
+                const sideCounts = {
+                    port: targetSide === 'port' ? cargoIds.length : 0,
+                    center: targetSide === 'center' ? cargoIds.length : 0,
+                    starboard: targetSide === 'starboard' ? cargoIds.length : 0,
+                };
+                get().batchMoveCargoesToSides(cargoIds, targetLocationId, targetBayId, sideCounts);
+            },
+
+            batchMoveCargoesToSides: (cargoIds, targetLocationId, targetBayId, sideCounts) => {
                 try {
                     const idSet = new Set(cargoIds);
                     set((state) => {
@@ -670,44 +680,67 @@ export const useCargoStore = create<CargoState>()(
                         const cargoesToMove = state.unallocatedCargoes.filter(c => idSet.has(c.id));
                         const newUnallocated = state.unallocatedCargoes.filter(c => !idSet.has(c.id));
 
-                        // Determine target bays — either one specific bay, or distribute round-robin
+                        // Sliced distributions
+                        let currentIndex = 0;
+                        const portGroup = cargoesToMove.slice(currentIndex, currentIndex + sideCounts.port);
+                        currentIndex += sideCounts.port;
+                        const centerGroup = cargoesToMove.slice(currentIndex, currentIndex + sideCounts.center);
+                        currentIndex += sideCounts.center;
+                        const starboardGroup = cargoesToMove.slice(currentIndex, currentIndex + sideCounts.starboard);
+
+                        const distributionMap = [
+                            { side: 'port' as const, cargoes: portGroup },
+                            { side: 'center' as const, cargoes: centerGroup },
+                            { side: 'starboard' as const, cargoes: starboardGroup }
+                        ].filter(group => group.cargoes.length > 0);
+
                         let newLocations = state.locations.map(loc => {
                             if (loc.id !== targetLocationId) return loc;
 
                             const newBays = [...loc.bays.map(b => ({ ...b, allocatedCargoes: [...b.allocatedCargoes] }))];
 
                             if (targetBayId === 'distribute') {
-                                // Round-robin: cargo 0 → bay 0, cargo 1 → bay 1, etc.
-                                cargoesToMove.forEach((cargo, idx) => {
-                                    const bayIdx = idx % newBays.length;
-                                    const bay = newBays[bayIdx];
-                                    const allocatedCargo = {
-                                        ...cargo,
-                                        status: 'ALLOCATED' as const,
-                                        bayId: bay.id,
-                                        positionInBay: targetSide,
-                                        x: undefined,
-                                        y: undefined,
-                                    };
-                                    bay.allocatedCargoes = [...bay.allocatedCargoes, allocatedCargo];
+                                // Round-robin across all target side groups
+                                let globalIdx = 0;
+                                distributionMap.forEach(({ side, cargoes }) => {
+                                    cargoes.forEach((cargo) => {
+                                        const bayIdx = globalIdx % newBays.length;
+                                        const bay = newBays[bayIdx];
+                                        const allocatedCargo = {
+                                            ...cargo,
+                                            status: 'ALLOCATED' as const,
+                                            bayId: bay.id,
+                                            positionInBay: side,
+                                            x: undefined,
+                                            y: undefined,
+                                        };
+                                        bay.allocatedCargoes = [...bay.allocatedCargoes, allocatedCargo];
+                                        globalIdx++;
+                                    });
+                                });
+                                // Update summary for all affected bays
+                                newBays.forEach(bay => {
                                     bay.currentWeightTonnes = bay.allocatedCargoes.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0);
                                     bay.currentOccupiedArea = bay.allocatedCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0);
                                 });
                             } else {
-                                // All in a single chosen bay
+                                // All in a single chosen bay, but different sides
                                 const bayIdx = newBays.findIndex(b => b.id === targetBayId);
                                 if (bayIdx === -1) return loc;
                                 const bay = newBays[bayIdx];
-                                cargoesToMove.forEach(cargo => {
-                                    const allocatedCargo = {
-                                        ...cargo,
-                                        status: 'ALLOCATED' as const,
-                                        bayId: bay.id,
-                                        positionInBay: targetSide,
-                                        x: undefined,
-                                        y: undefined,
-                                    };
-                                    bay.allocatedCargoes = [...bay.allocatedCargoes, allocatedCargo];
+                                
+                                distributionMap.forEach(({ side, cargoes }) => {
+                                    cargoes.forEach(cargo => {
+                                        const allocatedCargo = {
+                                            ...cargo,
+                                            status: 'ALLOCATED' as const,
+                                            bayId: bay.id,
+                                            positionInBay: side,
+                                            x: undefined,
+                                            y: undefined,
+                                        };
+                                        bay.allocatedCargoes = [...bay.allocatedCargoes, allocatedCargo];
+                                    });
                                 });
                                 bay.currentWeightTonnes = bay.allocatedCargoes.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0);
                                 bay.currentOccupiedArea = bay.allocatedCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0);
@@ -716,12 +749,12 @@ export const useCargoStore = create<CargoState>()(
                             return { ...loc, bays: newBays };
                         });
 
-                        logger.info(`Batch move: ${cargoIds.length} cargas → local "${targetLoc.name}", lado "${targetSide}", modo "${targetBayId}".`);
+                        logger.info(`Multi-side Batch move: ${cargoIds.length} cargas → local "${targetLoc.name}", dist: P:${sideCounts.port} C:${sideCounts.center} B:${sideCounts.starboard}, modo "${targetBayId}".`);
                         return { unallocatedCargoes: newUnallocated, locations: newLocations };
                     });
                 } catch (error) {
-                    logger.error('Falha no batch move:', error);
-                    throw handleApplicationError(error, { context: 'batchMoveCargoes', cargoIds, targetLocationId });
+                    logger.error('Falha no multi-side batch move:', error);
+                    throw handleApplicationError(error, { context: 'batchMoveCargoesToSides', cargoIds, targetLocationId });
                 }
             },
 
