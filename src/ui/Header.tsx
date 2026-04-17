@@ -8,12 +8,14 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { AuthModal } from './AuthModal';
+import { cn } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 
 export function Header() {
   const {
     locations, manifestsLoaded,
-    manifestAtendimento, manifestRoteiro
+    manifestAtendimento,
+    manifestShipName, setShipName
   } = useCargoStore();
 
   const [user, setUser] = useState<User | null>(null);
@@ -23,6 +25,13 @@ export function Header() {
   const [exportFilename, setExportFilename] = useState('Plano_de_Carga_Consolidado.pdf');
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
+  const [isEditingShip, setIsEditingShip] = useState(false);
+  const [tempShipName, setTempShipName] = useState(manifestShipName || '');
+
+  // Update temp name when store changes (e.g. from PDF OCR)
+  useEffect(() => {
+    setTempShipName(manifestShipName || '');
+  }, [manifestShipName]);
 
   useEffect(() => {
     // Set dark mode from localStorage or system preference
@@ -123,6 +132,52 @@ export function Header() {
             <Ship className="w-6 h-6 text-white" />
           </div>
           <h1 className="font-bold text-lg lg:text-xl tracking-tight text-gray-800 dark:text-neutral-100 whitespace-nowrap">CargoDeck Pro</h1>
+          
+          <div className="h-6 w-px bg-neutral-300 dark:bg-neutral-700 mx-1 hidden sm:block" />
+          
+          {/* Editable Ship Name */}
+          <div className="flex items-center gap-2 group">
+            {isEditingShip ? (
+              <input
+                autoFocus
+                type="text"
+                value={tempShipName}
+                onChange={(e) => setTempShipName(e.target.value)}
+                onBlur={() => {
+                  setShipName(tempShipName);
+                  setIsEditingShip(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShipName(tempShipName);
+                    setIsEditingShip(false);
+                  }
+                  if (e.key === 'Escape') {
+                    setTempShipName(manifestShipName || '');
+                    setIsEditingShip(false);
+                  }
+                }}
+                className="bg-white dark:bg-neutral-800 border border-indigo-500 rounded-lg px-3 py-1 text-sm font-bold text-indigo-600 dark:text-indigo-400 outline-none w-48 shadow-sm"
+                placeholder="Nome do Navio..."
+              />
+            ) : (
+              <button
+                onClick={() => setIsEditingShip(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 group/btn"
+              >
+                <Ship className="w-3.5 h-3.5 text-neutral-400 group-hover/btn:text-indigo-500 transition-colors" />
+                <span className={cn(
+                  "text-sm font-bold tracking-wide transition-colors",
+                  manifestShipName 
+                    ? "text-neutral-700 dark:text-neutral-300" 
+                    : "text-neutral-400 dark:text-neutral-600 italic"
+                )}>
+                  {manifestShipName || 'Definir Navio...'}
+                </span>
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Right Section: Actions & Extreme Right Icons */}
@@ -276,8 +331,8 @@ export function Header() {
               onClick={async () => {
                 const blob = await PdfGeneratorService.generateBlob(
                   locations,
-                  manifestAtendimento,
-                  manifestRoteiro
+                  manifestShipName,
+                  manifestAtendimento
                 );
                 if (dirHandle) {
                   try {
@@ -293,8 +348,8 @@ export function Header() {
                   PdfGeneratorService.executeExport(
                     locations,
                     exportFilename,
-                    manifestAtendimento,
-                    manifestRoteiro
+                    manifestShipName,
+                    manifestAtendimento
                   );
                 }
                 setExportModalOpen(false);

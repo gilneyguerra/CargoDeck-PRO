@@ -32,6 +32,7 @@ export interface CargoState {
     isHydratedFromCloud: boolean;
 
     setExtractedCargoes: (cargoes: Cargo[]) => void;
+    setShipName: (name: string | null) => void;
     setManifestDetails: (shipName: string | null, atendimento?: string | null, roteiro?: string[] | null) => void;
     addLocation: (name: string) => void;
     addManualCargo: (cargoData: Omit<Cargo, 'id' | 'status'>) => void;
@@ -104,6 +105,8 @@ export const useCargoStore = create<CargoState>()(
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
 
             setSearchTerm: (term) => set({ searchTerm: term }),
+
+            setShipName: (name) => set({ manifestShipName: name }),
 
             setManifestDetails: (shipName, atendimento, roteiro) => set({
                 manifestShipName: shipName,

@@ -26,14 +26,12 @@ export class PdfGeneratorService {
    * Gera Blob do PDF.
    * @param locations Lista de localidades com baias e cargas
    * @param shipName Nome da embarcação (do manifesto ou operacional)
-   * @param voyage Atendimento/viagem
    * @param atendimento Número de atendimento completo (ex: "509442339")
-   * @param roteiro Roteiro de portos (ex: ["PBG", "NS63", "NS44"])
    */
   static async generateBlob(
     locations: CargoLocation[],
-    atendimento?: string | null,
-    roteiro?: string[] | null
+    shipName?: string | null,
+    atendimento?: string | null
   ): Promise<Blob> {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = 297;
@@ -58,6 +56,14 @@ export class PdfGeneratorService {
       doc.text(atendimentoText, margin, 21);
     }
 
+    if (shipName) {
+      doc.setFontSize(11);
+      doc.setTextColor(180, 200, 255);
+      doc.text(`NAVIO: ${shipName.toUpperCase()}`, pageWidth / 2, 21, { align: 'center' });
+    }
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 21, { align: 'right' });
 
 
@@ -251,10 +257,10 @@ export class PdfGeneratorService {
   static async executeExport(
     locations: CargoLocation[],
     filename = 'Plano_de_Carga_Consolidado.pdf',
-    atendimento?: string | null,
-    roteiro?: string[] | null
+    shipName?: string | null,
+    atendimento?: string | null
   ): Promise<void> {
-    const blob = await this.generateBlob(locations, atendimento, roteiro);
+    const blob = await this.generateBlob(locations, shipName, atendimento);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
