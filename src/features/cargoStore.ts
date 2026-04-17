@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { logger } from '../utils/logger';
 import { handleApplicationError } from '../services/errorHandler';
+import { useNotificationStore } from './notificationStore';
 
 /**
  * Define a estrutura do estado do store de cargas.
@@ -502,6 +503,27 @@ export const useCargoStore = create<CargoState>()(
                             return state;
                         }
 
+                        // Duplicate Check Onboard
+                        if (cargoToMove.identifier) {
+                            for (const loc of state.locations) {
+                                for (const bay of loc.bays) {
+                                    // Ignore if moving within the same boat (id check)
+                                    // but we check by identifier for duplicates
+                                    const duplicate = bay.allocatedCargoes.find(c => c.identifier === cargoToMove!.identifier && c.id !== cargoId);
+                                    if (duplicate) {
+                                        const sideMapping = { port: 'Bombordo', center: 'Centro', starboard: 'Boreste' };
+                                        const sideName = sideMapping[duplicate.positionInBay || 'center'];
+                                        const message = `Atenção, a carga "${cargoToMove.identifier}" já encontra-se à bordo na aba do "${loc.name}" Lado "${sideName}".`;
+                                        
+                                        // Trigger notification (must be done outside of set() if possible, but for simplicity we call it here)
+                                        setTimeout(() => useNotificationStore.getState().notify(message, 'warning', 8000), 0);
+                                        
+                                        return state; // Block the move
+                                    }
+                                }
+                            }
+                        }
+
                         let newUnallocated = state.unallocatedCargoes;
                         let newLocations = state.locations;
 
@@ -678,7 +700,35 @@ export const useCargoStore = create<CargoState>()(
 
                         // Collect all cargoes to move (from unallocated only for now)
                         const cargoesToMove = state.unallocatedCargoes.filter(c => idSet.has(c.id));
-                        const newUnallocated = state.unallocatedCargoes.filter(c => !idSet.has(c.id));
+                        
+                        // Duplicate Check for batch
+                        const duplicatesFound: string[] = [];
+                        const validCargoesToMove = cargoesToMove.filter(cargo => {
+                            if (!cargo.identifier) return true;
+                            for (const loc of state.locations) {
+                                for (const bay of loc.bays) {
+                                    const duplicate = bay.allocatedCargoes.find(c => c.identifier === cargo.identifier && !idSet.has(c.id));
+                                    if (duplicate) {
+                                        const sideMapping = { port: 'Bombordo', center: 'Centro', starboard: 'Boreste' };
+                                        const sideName = sideMapping[duplicate.positionInBay || 'center'];
+                                        duplicatesFound.push(`Atenção, a carga "${cargo.identifier}" já encontra-se à bordo na aba do "${loc.name}" Lado "${sideName}".`);
+                                        return false;
+                                    }
+                                }
+                            }
+                            return true;
+                        });
+
+                        if (duplicatesFound.length > 0) {
+                            setTimeout(() => {
+                                duplicatesFound.forEach(msg => useNotificationStore.getState().notify(msg, 'warning', 8000));
+                            }, 0);
+                        }
+
+                        if (validCargoesToMove.length === 0) return state;
+
+                        const finalUnallocated = state.unallocatedCargoes.filter(c => !validCargoesToMove.find(vc => vc.id === c.id));
+
 
                         // Sliced distributions
                         let currentIndex = 0;
@@ -749,8 +799,8 @@ export const useCargoStore = create<CargoState>()(
                             return { ...loc, bays: newBays };
                         });
 
-                        logger.info(`Multi-side Batch move: ${cargoIds.length} cargas → local "${targetLoc.name}", dist: P:${sideCounts.port} C:${sideCounts.center} B:${sideCounts.starboard}, modo "${targetBayId}".`);
-                        return { unallocatedCargoes: newUnallocated, locations: newLocations };
+                        logger.info(`Multi-side Batch move: ${validCargoesToMove.length} de ${cargoIds.length} cargas → local "${targetLoc.name}", dist: P:${sideCounts.port} C:${sideCounts.center} B:${sideCounts.starboard}, modo "${targetBayId}".`);
+                        return { unallocatedCargoes: finalUnallocated, locations: newLocations };
                     });
                 } catch (error) {
                     logger.error('Falha no multi-side batch move:', error);

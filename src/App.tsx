@@ -12,6 +12,7 @@ import { Edit, Trash2 } from 'lucide-react';
 import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastContainer } from './ui/ToastContainer';
 
 function AppWithProviders() {
   const { 
@@ -144,6 +145,7 @@ function AppWithProviders() {
           </div>
         ) : null}
       </DragOverlay>
+      <ToastContainer />
     </DndContext>
   )
 }
