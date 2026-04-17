@@ -125,16 +125,18 @@ function detectCargoType(text: string): string | undefined {
 
 function extractIdentifier(text: string): string | undefined {
     // 1. Padrões comuns de prefixo + número (ex: U2 JF0158, T10 JF0049, KD123, SOS-12)
+    // Atualizado: agora suporta múltiplos hifens para códigos como RT-CX-14026
     const containerMatch = text.match(/\b([A-Z0-9]{2,4}\s?[A-Z]{2}\s?\d{4,7})\b/i) || 
-                           text.match(/\b([A-Z]{2,4}[-]?\d{3,7})\b/i);
+                           text.match(/\b([A-Z0-9]{2,4}(?:[-][A-Z0-9]{1,4}){1,3}[-]?\d{2,7})\b/i) ||
+                           text.match(/\b([A-Z]{2,4}[-]?\d{2,7})\b/i);
     if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').toUpperCase().trim();
 
-    // 2. Padrões puramente alfanuméricos de 6-11 chars (evitando números de manifesto)
-    const alphanumeric = text.match(/\b([A-Z]{3,4}\s?\d{6,7}[-]?\d?)\b/);
+    // 2. Padrões puramente alfanuméricos de 6-11 chars
+    const alphanumeric = text.match(/\b([A-Z]{2,4}\s?\d{5,7}[-]?\d?)\b/); // Relaxado para 2-4 letras e 5-7 números
     if (alphanumeric) return alphanumeric[1].replace(/\s+/, ' ').trim();
 
-    // 3. Padrão numérico final (como o 12239030 do exemplo)
-    const numericMatch = text.match(/\b(\d{5,9}-\d{1,2})\b/) || text.match(/\b(\d{7,9})\b/);
+    // 3. Padrão numérico final
+    const numericMatch = text.match(/\b(\d{5,9}-\d{1,2})\b/) || text.match(/\b(\d{5,9})\b/); // Relaxado para 5 dígitos
     return numericMatch?.[1];
 }
 
@@ -195,10 +197,10 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     // Padrão: Cargas Normais (Petrobras/TAGAZ e Genérico)
     // O padrão Petrobras exige o ano NNNN/NNNN. O padrão genérico é mais flexível para CBO e outros.
     const patterns = [
-        // 1. Padrão Petrobras Tradicional (mais rígido)
-        /\b(\d{3,4})\s+(\d{6,12})\s+\d{4}\/\d{4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi,
-        // 2. Padrão Genérico/CBO (sem exigência de ano/atendimento no item)
-        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi
+        // 1. Padrão Petrobras Tradicional (ajustado para \d{1,4}/\d{1,4} e quantidades flexíveis)
+        /\b(\d{3,4})\s+(\d{6,12})\s+\d{1,4}\/\d{1,4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi,
+        // 2. Padrão Genérico/CBO (ajustado para suportar opcionalmente as colunas extras de Petrobras)
+        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(?:\d{1,4}\/\d{1,4}\s+[\d,.]+\s+)?(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi
     ];
 
     for (const pattern of patterns) {
@@ -245,6 +247,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                         length, width, height, bay: pageNumber
                     }
                 });
+                logger.debug(`Item detectado (${explicitId ? 'ID forte' : 'ID fraco'}): ${identifier} - ${rawDesc.substring(0, 30)}...`);
             } catch (e) { logger.warn('Erro item pat', e); }
         }
     }
@@ -306,6 +309,8 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     numeroAtendimento: header.numeroAtendimento, 
                     roteiroPrevisto: header.roteiroPrevisto
                 } as CargoItem);
+            } else {
+                logger.debug(`Item ignorado (Duplicidade): ${item.data.id}`);
             }
         }
     }
