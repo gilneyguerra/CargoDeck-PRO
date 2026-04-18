@@ -7,7 +7,7 @@ import { getCargoFontSize } from '@/lib/scaling';
 import { CargoPreview } from './CargoPreview';
 import { Edit, Trash2, LogOut, MapPin } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 
 /**
  * Determina se uma cor hexadecimal é "clara" para ajuste de contraste de texto.
@@ -25,7 +25,7 @@ function isColorLight(hex: string): boolean {
   }
 }
 
-function DraggableCargo({ cargo, isHighlight, isDimmed, selectable, isSelected, onToggleSelect, onEdit }: { cargo: Cargo, isHighlight?: boolean, isDimmed?: boolean, selectable?: boolean, isSelected?: boolean, onToggleSelect?: (id: string) => void, onEdit: (cargo: Cargo) => void }) {
+const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimmed, selectable, isSelected, onToggleSelect, onEdit }: { cargo: Cargo, isHighlight?: boolean, isDimmed?: boolean, selectable?: boolean, isSelected?: boolean, onToggleSelect?: (id: string) => void, onEdit: (cargo: Cargo) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cargo.id,
   });
@@ -305,6 +305,6 @@ function DraggableCargo({ cargo, isHighlight, isDimmed, selectable, isSelected, 
       )}
     </div>
   );
-}
+});
 
 export default DraggableCargo;

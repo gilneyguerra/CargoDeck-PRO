@@ -2,7 +2,8 @@ import { UploadCloud, FileType, AlertCircle, Trash2, Plus, MoveRight } from 'luc
 import { BatchMoveModal } from './BatchMoveModal';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '@/hooks/usePDFUpload';
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
+
 import { cn } from '@/lib/utils';
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
 import type { CargoItem } from '@/services/pdfExtractor';
@@ -62,16 +63,40 @@ export function Sidebar() {
     const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
 
     // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
-    const allDestinations = Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga).filter(Boolean))).sort() as string[];
-    const hasUnidentified = unallocatedCargoes.some(c => !c.destinoCarga);
+    const memoDestinations = useMemo(() => {
+        return Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga).filter(Boolean))).sort() as string[];
+    }, [unallocatedCargoes]);
+
+    const hasUnidentified = useMemo(() => unallocatedCargoes.some(c => !c.destinoCarga), [unallocatedCargoes]);
     
-    const filterButtons = [
+    const filterButtons = useMemo(() => [
         { key: 'TODOS', label: 'TODOS' },
         ...(hasUnidentified ? [{ key: 'S/D', label: 'S/D' }] : []),
-        ...allDestinations.map(dest => ({ key: dest, label: dest }))
-    ];
+        ...memoDestinations.map(dest => ({ key: dest, label: dest }))
+    ], [hasUnidentified, memoDestinations]);
+
+
+    const visibleUnallocated = useMemo(() => {
+        return unallocatedCargoes.filter(cargo => {
+            const matchesSearch = !searchTerm || 
+                                 (cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const cargoDestination = cargo.destinoCarga;
+            let matchesFilter = false;
+            if (destinationFilter === 'TODOS') matchesFilter = true;
+            else if (destinationFilter === 'S/D') matchesFilter = !cargoDestination;
+            else matchesFilter = cargoDestination === destinationFilter;
+            
+            return matchesSearch && matchesFilter;
+        });
+    }, [unallocatedCargoes, searchTerm, destinationFilter]);
+
+    const unallocatedCount = visibleUnallocated.length;
+    const allVisibleSelected = unallocatedCount > 0 && selectedCargoIds.size === unallocatedCount;
 
     const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
+
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -220,20 +245,6 @@ export function Sidebar() {
 
           <div className="flex items-center gap-1.5">
             {(() => {
-                const visibleUnallocated = unallocatedCargoes.filter(cargo => {
-                    const matchesSearch = (cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                         (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-                    const cargoDestination = cargo.destinoCarga;
-                    let matchesCategory = false;
-                    if (destinationFilter === 'TODOS') matchesCategory = true;
-                    else if (destinationFilter === 'S/D') matchesCategory = !cargoDestination;
-                    else matchesCategory = cargoDestination === destinationFilter;
-                    
-                    return matchesSearch && matchesCategory;
-                });
-                
-                const allVisibleSelected = visibleUnallocated.length > 0 && selectedCargoIds.size === visibleUnallocated.length;
-
                 return (
                     <>
                         <input 

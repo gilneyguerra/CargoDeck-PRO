@@ -15,6 +15,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
 import { handleApplicationError } from '../services/errorHandler';
 import { useNotificationStore } from './notificationStore';
+import { SecurityService } from '../services/securityService';
+import { findDuplicateOnboard, calculateBayStats } from '../utils/cargoUtils';
+
+
 
 /**
  * Define a estrutura do estado do store de cargas.
@@ -125,11 +129,14 @@ export const useCargoStore = create<CargoState>()(
                         manifestRoteiro:     firstCargo.roteiroPrevisto    ?? null,
                     } : {};
 
+                    const sanitizedCargoes = cargoes.map(c => SecurityService.sanitizeObject(c));
+
                     set((state) => ({
-                        unallocatedCargoes: [...state.unallocatedCargoes, ...cargoes],
+                        unallocatedCargoes: [...state.unallocatedCargoes, ...sanitizedCargoes],
                         manifestsLoaded: true,
                         ...manifestMeta,
                     }));
+
 
                     logger.info(`Adicionadas ${cargoes.length} cargas extraídas do PDF.`, {
                         cargoCount: cargoes.length,
@@ -147,16 +154,18 @@ export const useCargoStore = create<CargoState>()(
 
             addManualCargo: (cargoData) => {
                 try {
+                    const sanitizedData = SecurityService.sanitizeObject(cargoData);
                     set((state) => ({
                         unallocatedCargoes: [...state.unallocatedCargoes, {
-                            ...cargoData,
+                            ...sanitizedData,
                             id: uuidv4(),
                             status: 'UNALLOCATED',
-                            isRemovable: cargoData.isRemovable ?? false,
-                            format: cargoData.format ?? 'Retangular',
-                            color: cargoData.color ?? '#3b82f6'
+                            isRemovable: sanitizedData.isRemovable ?? false,
+                            format: sanitizedData.format ?? 'Retangular',
+                            color: sanitizedData.color ?? '#3b82f6'
                         }]
                     }));
+
                     logger.info('Carga manual adicionada.', { 
                         cargoData: { ...cargoData, id: '<generated>' },
                         totalUnallocated: get().unallocatedCargoes.length
@@ -172,15 +181,16 @@ export const useCargoStore = create<CargoState>()(
 
             updateCargo: (id, updates) => {
                 try {
+                    const sanitizedUpdates = SecurityService.sanitizeObject(updates);
                     set((state) => {
                         const newUnallocated = state.unallocatedCargoes.map(c => 
-                            c.id === id ? { ...c, ...updates } : c
+                            c.id === id ? { ...c, ...sanitizedUpdates } : c
                         );
                         const newLocations = state.locations.map(loc => ({
                              ...loc,
                              bays: loc.bays.map(bay => {
                                  const updatedCargoes = bay.allocatedCargoes.map(c =>
-                                     c.id === id ? { ...c, ...updates } : c
+                                     c.id === id ? { ...c, ...sanitizedUpdates } : c
                                  );
                                  return {
                                      ...bay,
@@ -198,6 +208,7 @@ export const useCargoStore = create<CargoState>()(
                             locations: newLocations
                         };
                     });
+
                     logger.info(`Carga ${id} atualizada.`, { id, updates });
                 } catch (error) {
                     logger.error(`Falha ao atualizar carga ${id}:`, error);
@@ -508,26 +519,15 @@ export const useCargoStore = create<CargoState>()(
                             return state;
                         }
 
-                        // Duplicate Check Onboard
                         if (cargoToMove.identifier) {
-                            for (const loc of state.locations) {
-                                for (const bay of loc.bays) {
-                                    // Ignore if moving within the same boat (id check)
-                                    // but we check by identifier for duplicates
-                                    const duplicate = bay.allocatedCargoes.find(c => c.identifier === cargoToMove!.identifier && c.id !== cargoId);
-                                    if (duplicate) {
-                                        const sideMapping = { port: 'Bombordo', center: 'Centro', starboard: 'Boreste' };
-                                        const sideName = sideMapping[duplicate.positionInBay || 'center'];
-                                        const message = `Atenção, a carga "${cargoToMove.identifier}" já encontra-se à bordo na aba do "${loc.name}" Lado "${sideName}".`;
-                                        
-                                        // Trigger notification (must be done outside of set() if possible, but for simplicity we call it here)
-                                        setTimeout(() => useNotificationStore.getState().notify(message, 'warning', 8000), 0);
-                                        
-                                        return state; // Block the move
-                                    }
-                                }
+                            const duplicate = findDuplicateOnboard(cargoToMove.identifier, cargoId, state.locations);
+                            if (duplicate) {
+                                const message = `Atenção, a carga "${cargoToMove.identifier}" já encontra-se à bordo na aba do "${duplicate.locationName}" Lado "${duplicate.sideName}".`;
+                                setTimeout(() => useNotificationStore.getState().notify(message, 'warning', 8000), 0);
+                                return state; 
                             }
                         }
+
 
                         let newUnallocated = state.unallocatedCargoes;
                         let newLocations = state.locations;
@@ -562,20 +562,22 @@ export const useCargoStore = create<CargoState>()(
                                 ...loc,
                                 bays: loc.bays.map(bay => {
                                     if (bay.id === bayId) {
-                                        return {
-                                            ...bay,
-                                            allocatedCargoes: [...bay.allocatedCargoes, {
+                                         const updatedCargoes: Cargo[] = [...bay.allocatedCargoes, {
                                                 ...cargoToMove,
                                                 bayId: bay.id,
-                                                status: 'ALLOCATED',
+                                                status: 'ALLOCATED' as const,
                                                 positionInBay: positionInBay ?? 'center',
                                                 x: x,
                                                 y: y,
                                                 isRotated: isRotated ?? false
-                                            }],
-                                            currentWeightTonnes: bay.allocatedCargoes.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0) + (cargoToMove.weightTonnes * cargoToMove.quantity),
-                                            currentOccupiedArea: bay.allocatedCargoes.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0) + (cargoToMove.lengthMeters * cargoToMove.widthMeters * cargoToMove.quantity)
+                                            }];
+
+                                        return {
+                                            ...bay,
+                                            allocatedCargoes: updatedCargoes,
+                                            ...calculateBayStats(updatedCargoes)
                                         };
+
                                     }
                                     return bay;
                                 })
@@ -705,30 +707,25 @@ export const useCargoStore = create<CargoState>()(
 
                         // Collect all cargoes to move (from unallocated only for now)
                         const cargoesToMove = state.unallocatedCargoes.filter(c => idSet.has(c.id));
-                        
-                        // Duplicate Check for batch
                         const duplicatesFound: string[] = [];
+                        
                         const validCargoesToMove = cargoesToMove.filter(cargo => {
                             if (!cargo.identifier) return true;
-                            for (const loc of state.locations) {
-                                for (const bay of loc.bays) {
-                                    const duplicate = bay.allocatedCargoes.find(c => c.identifier === cargo.identifier && !idSet.has(c.id));
-                                    if (duplicate) {
-                                        const sideMapping = { port: 'Bombordo', center: 'Centro', starboard: 'Boreste' };
-                                        const sideName = sideMapping[duplicate.positionInBay || 'center'];
-                                        duplicatesFound.push(`Atenção, a carga "${cargo.identifier}" já encontra-se à bordo na aba do "${loc.name}" Lado "${sideName}".`);
-                                        return false;
-                                    }
-                                }
+                            const duplicate = findDuplicateOnboard(cargo.identifier, cargo.id, state.locations);
+                            if (duplicate && !idSet.has(cargo.id)) {
+                                duplicatesFound.push(`Atenção, a carga "${cargo.identifier}" já encontra-se à bordo na aba do "${duplicate.locationName}" Lado "${duplicate.sideName}".`);
+                                return false;
                             }
                             return true;
                         });
 
                         if (duplicatesFound.length > 0) {
                             setTimeout(() => {
-                                duplicatesFound.forEach(msg => useNotificationStore.getState().notify(msg, 'warning', 8000));
+                                // Group similar notifications or just show first one if too many
+                                useNotificationStore.getState().notify(duplicatesFound[0], 'warning', 8000);
                             }, 0);
                         }
+
 
                         if (validCargoesToMove.length === 0) return state;
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { Settings, Plus, Search, Trash2, Edit } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
@@ -70,7 +70,10 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoL
     );
  }
 
-function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }: { bay: Bay, side: 'port'|'center'|'starboard', isLast: boolean, deckConfig: DeckConfig, searchTerm: string, onEdit: (cargo: Cargo) => void }) {
+/**
+ * DroppableBaySide - Um dos lados de uma baia (bombordo, centro ou boreste).
+ */
+const DroppableBaySide = memo(function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }: { bay: Bay, side: 'port'|'center'|'starboard', isLast: boolean, deckConfig: DeckConfig, searchTerm: string, onEdit: (cargo: Cargo) => void }) {
     const { isOver, setNodeRef } = useDroppable({
       id: `${bay.id}-${side}`,
     });
@@ -123,10 +126,12 @@ function DroppableBaySide({ bay, side, isLast, deckConfig, searchTerm, onEdit }:
             </div>
     </div>
   );
-}
+});
 
-function DroppableBay({ bay, activeLocation, searchTerm, onEdit }: { bay: Bay, activeLocation: CargoLocation, searchTerm: string, onEdit: (cargo: Cargo) => void }) {
-
+/**
+ * DroppableBay - Uma baia completa contendo os três lados.
+ */
+const DroppableBay = memo(function DroppableBay({ bay, activeLocation, searchTerm, onEdit }: { bay: Bay, activeLocation: CargoLocation, searchTerm: string, onEdit: (cargo: Cargo) => void }) {
 return (
   <div 
     className={cn(
@@ -147,7 +152,7 @@ return (
         </div>
       </div>
     );
- }
+});
 
 export function DeckArea() {
      const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, unallocatedCargoes, getAllCargo, setEditingCargo, editLocation, deleteLocation } = useCargoStore();
