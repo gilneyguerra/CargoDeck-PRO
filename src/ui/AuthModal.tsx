@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, LogIn } from 'lucide-react';
 
-const SUPABASE_CONFIGURED = !!(import.meta as ImportMeta & { env: Record<string, string> }).env.VITE_SUPABASE_URL && 
-                           (import.meta as ImportMeta & { env: Record<string, string> }).env.VITE_SUPABASE_URL !== 'https://example.supabase.co';
+const SUPABASE_CONFIGURED = !!(import.meta.env?.VITE_SUPABASE_URL || 'https://vdjrfoxnibufxqntwrkr.supabase.co');
+
 
 export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const [email, setEmail] = useState('');

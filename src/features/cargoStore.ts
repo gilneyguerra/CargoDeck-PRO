@@ -119,7 +119,8 @@ export const useCargoStore = create<CargoState>()(
                     // Extrai metadados do manifesto do primeiro item (todos devem ter o mesmo cabeçalho)
                     const firstCargo = cargoes[0];
                     const manifestMeta = firstCargo ? {
-                        manifestShipName:    firstCargo.nomeEmbarcacao    ?? null,
+                        // O nome do navio (manifestShipName) deve ser definido apenas pelo usuário
+                        // e não extraído automaticamente do manifesto.
                         manifestAtendimento: firstCargo.numeroAtendimento  ?? null,
                         manifestRoteiro:     firstCargo.roteiroPrevisto    ?? null,
                     } : {};
@@ -129,6 +130,7 @@ export const useCargoStore = create<CargoState>()(
                         manifestsLoaded: true,
                         ...manifestMeta,
                     }));
+
                     logger.info(`Adicionadas ${cargoes.length} cargas extraídas do PDF.`, {
                         cargoCount: cargoes.length,
                         totalUnallocated: get().unallocatedCargoes.length,
