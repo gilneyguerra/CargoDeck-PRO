@@ -42,7 +42,8 @@ class Logger {
 
     private redact(data: any): any {
         if (!data) return data;
-        const SENSITIVE_KEYS = ['email', 'password', 'token', 'key', 'nomeEmbarcacao', 'identifier'];
+        const SENSITIVE_KEYS = ['email', 'password', 'token', 'apiKey', 'secret'];
+
         
         if (Array.isArray(data)) {
             return data.map(item => this.redact(item));
