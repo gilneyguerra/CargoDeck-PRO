@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* CSS Variables for Light and Dark Themes */
+:root {
+  --bg-color: #ffffff;
+  --text-color: #111827;
+  --muted-text-color: #6b7280;
+  --sidebar-bg: #f3f4f6;
+  --sidebar-border: #e5e7eb;
+  --header-bg: #ffffff;
+  --card-bg: #f9fafb;
+  --card-border: #e5e7eb;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --border-color: #e5e7eb;
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --input-focus-border: #3b82f6;
+  --input-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+/* Dark Theme Overrides */
+.dark {
+  --bg-color: #111827;
+  --text-color: #f9fafb;
+  --muted-text-color: #9ca3af;
+  --sidebar-bg: #1f2937;
+  --sidebar-border: #374151;
+  --header-bg: #1f2937;
+  --card-bg: #111827;
+  --card-border: #374151;
+  --accent-color: #60a5fa;
+  --accent-hover: #3b82f6;
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  --error-color: #f87171;
+  --border-color: #374151;
+  --input-bg: #1f2937;
+  --input-border: #4b5563;
+  --input-focus-border: #60a5fa;
+  --input-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+/* Apply Variables to Base Elements */
+html, body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Utility classes for consistent theming */
+.bg-bg { background-color: var(--bg-color); }
+.bg-sidebar { background-color: var(--sidebar-bg); }
+.bg-header { background-color: var(--header-bg); }
+.bg-card { background-color: var(--card-bg); }
+
+.text-text { color: var(--text-color); }
+.text-muted { color: var(--muted-text-color); }
+
+.border-sidebar { border-color: var(--sidebar-border); }
+.border-card { border-color: var(--card-border); }
+.border-accent { border-color: var(--accent-color); }
+
+/* Ensure transitions for other properties */
+* {
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+}

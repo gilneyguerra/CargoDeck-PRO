@@ -1,0 +1,36 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, master, feat/* ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-id: 24
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Static Analysis (ESLint Security)
+        run: npm run lint
+
+      - name: Dependency Check (npm audit)
+        run: npm audit --audit-level=high
+
+      - name: Run Secret Scanner (TruffleHog or similar)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
