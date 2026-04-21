@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
+import { CsvGeneratorService } from '@/infrastructure/CsvGeneratorService';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
@@ -22,6 +23,7 @@ export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf');
   const [exportFilename, setExportFilename] = useState('Plano_de_Carga_Consolidado.pdf');
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
@@ -67,7 +69,15 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleExport = () => {
+  const handleExportPdf = () => {
+    setExportFormat('pdf');
+    setExportFilename('Plano_de_Carga_Consolidado.pdf');
+    setExportModalOpen(true);
+  };
+
+  const handleExportCsv = () => {
+    setExportFormat('csv');
+    setExportFilename('Plano_de_Carga_Consolidado.csv');
     setExportModalOpen(true);
   };
 
@@ -206,7 +216,17 @@ export function Header() {
             </button>
 
             <button
-              onClick={handleExport}
+              onClick={handleExportCsv}
+              disabled={!manifestsLoaded}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all shadow-md shadow-blue-600/10 whitespace-nowrap"
+              title="Gerar Excel (CSV)"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel</span>
+            </button>
+
+            <button
+              onClick={handleExportPdf}
               disabled={!manifestsLoaded}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all shadow-md shadow-indigo-600/10 whitespace-nowrap"
               title="Gerar PDF"
@@ -298,13 +318,13 @@ export function Header() {
     {exportModalOpen && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-neutral-100 dark:bg-neutral-800 p-6 rounded-lg w-96 max-w-[90vw]">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-4">Exportar PDF</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-4">Exportar {exportFormat === 'pdf' ? 'PDF' : 'CSV'}</h3>
           <input
             type="text"
             value={exportFilename}
             onChange={(e) => setExportFilename(e.target.value)}
             className="w-full px-3 py-2 bg-white dark:bg-neutral-700 text-gray-800 dark:text-neutral-100 rounded mb-4 border border-neutral-400 dark:border-neutral-600 focus:border-indigo-500 outline-none"
-            placeholder="Nome do arquivo (com .pdf)"
+            placeholder={`Nome do arquivo (com .${exportFormat})`}
           />
           <div className="flex gap-2 mb-4">
               <button 
@@ -329,28 +349,47 @@ export function Header() {
             </button>
             <button 
               onClick={async () => {
-                const blob = await PdfGeneratorService.generateBlob(
-                  locations,
-                  manifestShipName,
-                  manifestAtendimento
-                );
+                let blob: Blob;
+                if (exportFormat === 'pdf') {
+                  blob = await PdfGeneratorService.generateBlob(
+                    locations,
+                    manifestShipName,
+                    manifestAtendimento
+                  );
+                } else {
+                  blob = CsvGeneratorService.generateCsv(
+                    locations,
+                    manifestShipName,
+                    manifestAtendimento
+                  );
+                }
+
                 if (dirHandle) {
                   try {
                     const fileHandle = await dirHandle.getFileHandle(exportFilename, { create: true });
                     const writable = await fileHandle.createWritable();
                     await writable.write(blob);
                     await writable.close();
-                    alert('PDF salvo com sucesso na pasta selecionada!');
+                    alert(`${exportFormat.toUpperCase()} salvo com sucesso na pasta selecionada!`);
                   } catch (e) {
                     alert('Erro ao salvar: ' + (e as Error).message);
                   }
                 } else {
-                  PdfGeneratorService.executeExport(
-                    locations,
-                    exportFilename,
-                    manifestShipName,
-                    manifestAtendimento
-                  );
+                  if (exportFormat === 'pdf') {
+                    PdfGeneratorService.executeExport(
+                      locations,
+                      exportFilename,
+                      manifestShipName,
+                      manifestAtendimento
+                    );
+                  } else {
+                    CsvGeneratorService.executeExport(
+                      locations,
+                      exportFilename,
+                      manifestShipName,
+                      manifestAtendimento
+                    );
+                  }
                 }
                 setExportModalOpen(false);
                 setDirHandle(null);

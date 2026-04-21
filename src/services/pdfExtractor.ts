@@ -59,7 +59,14 @@ function normalizeNumber(raw: string): number {
 function kgToTonnes(kg: number): number { return kg / 1000; }
 
 function normalizeDimension(raw: string): number {
-    const s = raw.trim().replace(/[lI|]/g, '1').replace(/[oO]/g, '0');
+    let s = raw.trim()
+        .replace(/[lI|L]/g, '1')
+        .replace(/[oO]/g, '0')
+        .replace(/[£EZ]/g, '2')
+        .replace(/[S]/g, '5')
+        .replace(/[B]/g, '8');
+    // Remove any remaining characters that are not digits, comma or dot
+    s = s.replace(/[^0-9,.]/g, '');
     return parseFloat(s.replace(',', '.')) || 0;
 }
 
@@ -198,9 +205,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     // O padrão Petrobras exige o ano NNNN/NNNN. O padrão genérico é mais flexível para CBO e outros.
     const patterns = [
         // 1. Padrão Petrobras Tradicional (ajustado para \d{1,4}/\d{1,4} e quantidades flexíveis)
-        /\b(\d{3,4})\s+(\d{6,12})\s+\d{1,4}\/\d{1,4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi,
+        /\b(\d{3,4})\s+(\d{6,12})\s+\d{1,4}\/\d{1,4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s+([a-zA-Z£$€.,|\d]+)/gi,
         // 2. Padrão Genérico/CBO (ajustado para suportar opcionalmente as colunas extras de Petrobras)
-        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(?:\d{1,4}\/\d{1,4}\s+[\d,.]+\s+)?(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s*[xX×]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)/gi
+        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(?:\d{1,4}\/\d{1,4}\s+[\d,.]+\s+)?(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s+([a-zA-Z£$€.,|\d]+)/gi
     ];
 
     for (const pattern of patterns) {
