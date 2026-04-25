@@ -3,11 +3,8 @@ import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle 
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
 
-// pdfjs worker setup
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
+// pdfjs worker setup - Using stable non-ESM worker link
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
 
 interface FileProgress {
   name: string;
@@ -56,8 +53,8 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
 
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done', result: text, progress: 100 } : f));
         } catch (err: any) {
-            console.error('OCR Error:', err);
-            const errorMessage = err?.message || String(err) || 'Erro desconhecido na extração';
+            console.error('OCR Error Detail:', err);
+            const errorMessage = err?.message || (typeof err === 'string' ? err : JSON.stringify(err)) || 'Falha na detecção OCR';
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: errorMessage } : f));
         }
     }
