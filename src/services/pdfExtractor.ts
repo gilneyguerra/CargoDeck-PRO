@@ -441,8 +441,8 @@ export class PDFExtractor {
             const pdfjsLib = await import('pdfjs-dist').then(m => m.default || m);
             const version = pdfjsLib.version || '5.5.207';
             
-            // Configura o worker usando link estável do CDNJS
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
+            // Configura o worker usando ESM.sh - Using ESM.sh for reliable module resolution
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@5.5.207/build/pdf.worker.min.mjs';
             
             logger.info(`Motor PDF.js ${version} inicializado com worker local.`);
 
