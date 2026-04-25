@@ -436,14 +436,12 @@ export class PDFExtractor {
 
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
         try {
-            // PERF: Carregamento sob demanda do motor PDF
-            // Ajustado para compatibilidade ESM/CJS em ambiente Vite
-            const pdfjsLib = await import('pdfjs-dist').then(m => m.default || m);
+            // PERF: Carregamento sob demanda do motor PDF (Legacy build por ser mais estável em Vite)
+            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf').then(m => m.default || m);
             const version = pdfjsLib.version || '5.5.207';
             
-            // Configura o worker via CDN como primário para máxima confiabilidade
-            // Versões 5+ do PDF.js são extremamente dependentes de um worker idêntico
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+            // Força o uso do worker local presente na pasta public
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
             
             logger.info(`Motor PDF.js ${version} inicializado via CDN.`);
 
