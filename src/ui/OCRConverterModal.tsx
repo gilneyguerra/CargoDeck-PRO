@@ -52,8 +52,11 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
         } catch (err: any) {
             console.error('OCR Processing Detail:', err);
             // Captura propriedades não-enumeráveis como 'message' e 'stack'
-            const errorInfo = typeof err === 'object' ? JSON.stringify(err, Object.getOwnPropertyNames(err)) : String(err);
-            const errorMessage = err?.message || errorInfo || 'Falha na detecção OCR';
+            const errorInfo = typeof err === 'object' && err !== null 
+              ? JSON.stringify(err, Object.getOwnPropertyNames(err)) 
+              : String(err);
+            
+            const errorMessage = err?.message || (errorInfo !== '{}' ? errorInfo : 'Erro desconhecido no processamento OCR');
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: errorMessage } : f));
         }
     }
@@ -69,28 +72,37 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
-    const worker = await createWorker('por', 1, {
+    // API Tesseract.js v5+ (compatível com v7)
+    const worker = await createWorker({
         logger: m => {
             if (m.status === 'recognizing text') onProgress(m.progress);
         }
     });
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+    try {
+        // Inicialização obrigatória na API moderna
+        await worker.loadLanguage('por');
+        await worker.initialize('por');
 
-        if (context) {
-            await page.render({ canvasContext: context, viewport, canvas }).promise;
-            const { data: { text } } = await worker.recognize(canvas);
-            fullText += text + '\n';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            if (context) {
+                await page.render({ canvasContext: context, viewport, canvas }).promise;
+                const { data: { text } } = await worker.recognize(canvas);
+                fullText += text + '\n';
+            }
         }
+    } finally {
+        // Garante que o worker seja encerrado mesmo em caso de erro
+        await worker.terminate();
     }
 
-    await worker.terminate();
     return fullText;
   };
 
