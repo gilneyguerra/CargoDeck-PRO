@@ -120,14 +120,14 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     }
 
     // 4. Local de Origem / Destino (Padrão sugerido na Seção 7)
-    const origemRegex = /(?:Origem):\s([A-Z0-9]{3,4}\s-\s[^\n\r]+)/i;
-    const destinoRegex = /(?:Destino):\s([A-Z0-9]{3,4}\s-\s[^\n\r]+)/i;
+    const origemRegex = /(?:Origem|ORIGEM):\s*([A-Z0-9]{2,6})(?:\s*-\s*([^\n\r]+))?/i;
+    const destinoRegex = /(?:Destino|DESTINO):\s*([A-Z0-9]{2,6})(?:\s*-\s*([^\n\r]+))?/i;
     
     const oMatch = fullText.match(origemRegex);
     const dMatch = fullText.match(destinoRegex);
     
-    if (oMatch) header.origemCarga = oMatch[1].trim();
-    if (dMatch) header.destinoCarga = dMatch[1].trim();
+    if (oMatch) header.origemCarga = oMatch[1].trim().toUpperCase();
+    if (dMatch) header.destinoCarga = dMatch[1].trim().toUpperCase();
 
     // Fallback: Busca via seção (acrônimos) se os padrões explícitos falharem
     if (!header.origemCarga || !header.destinoCarga) {
@@ -139,8 +139,8 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
             if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) continue;
             if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) continue;
 
-            if (!header.origemCarga) header.origemCarga = `${origemAcronym} - ${secMatch[2].trim()}`;
-            if (!header.destinoCarga) header.destinoCarga = `${destinoAcronym} - ${secMatch[4].trim()}`;
+            if (!header.origemCarga) header.origemCarga = origemAcronym;
+            if (!header.destinoCarga) header.destinoCarga = destinoAcronym;
             break;
         }
     }
@@ -320,7 +320,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     volume: item.data.length! * item.data.width! * (item.data.height || 1),
                     bay: pageNumber,
                     origemCarga: sec.origem,
-                    destinoCarga: sec.destino || header.nomeEmbarcacao,
+                    destinoCarga: sec.destino || header.destinoCarga || header.nomeEmbarcacao,
                     isBackload: BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
                     tipoDetectado: detectCargoType(item.rawDesc) || 'BASKET',
                     nomeEmbarcacao: header.nomeEmbarcacao, 
@@ -356,7 +356,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 items.push({
                     ...item.data,
                     origemCarga: sec.origem,
-                    destinoCarga: sec.destino || header.nomeEmbarcacao,
+                    destinoCarga: sec.destino || header.destinoCarga || header.nomeEmbarcacao,
                     isBackload: BACKLOAD_KEYWORDS.some(kw => item.rawDesc.toLowerCase().includes(kw)),
                     tipoDetectado: detectCargoType(item.rawDesc),
                     nomeEmbarcacao: header.nomeEmbarcacao, 

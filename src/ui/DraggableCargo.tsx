@@ -188,13 +188,13 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             {cargo.quantity > 1 ? `${cargo.quantity}x ` : ''}{cargo.identifier}
           </span>
 
-          {cargo.destinoCarga && cargo.widthMeters > 1.2 && cargo.lengthMeters > 1.2 && (
+          {cargo.destinoCarga && (cargo.widthMeters > 0.8 && cargo.lengthMeters > 0.8) && (
             <div 
               className={cn(
-                "absolute bottom-0 right-0 px-1 py-0 rounded-tl-sm font-black tracking-tighter shadow-sm z-20 pointer-events-none border-l border-t border-black/10",
-                isLightBackground ? "bg-black/20 text-black/80" : "bg-white/30 text-white"
+                "absolute bottom-0 right-0 px-1.5 py-0.5 rounded-tl-md font-black tracking-tighter shadow-sm z-20 pointer-events-none border-l border-t border-black/20",
+                isLightBackground ? "bg-black/10 text-black/90" : "bg-white/40 text-black"
               )}
-              style={{ fontSize: `${Math.max(6, fontSize * 0.65)}px` }}
+              style={{ fontSize: `${Math.max(6, fontSize * 0.7)}px` }}
             >
               {cargo.destinoCarga}
             </div>
