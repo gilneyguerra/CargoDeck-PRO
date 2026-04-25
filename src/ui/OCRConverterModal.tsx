@@ -80,7 +80,7 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
         canvas.width = viewport.width;
 
         if (context) {
-            await page.render({ canvasContext: context, viewport }).promise;
+            await page.render({ canvasContext: context, viewport, canvas }).promise;
             const { data: { text } } = await worker.recognize(canvas);
             fullText += text + '\n';
         }
