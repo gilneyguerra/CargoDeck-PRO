@@ -10,34 +10,21 @@ interface FileProgress {
   error?: string;
 }
 
-const PDFJS_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
-const PDFJS_WORKER_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+const PDFJS_URL = '/pdf.min.js';
+const PDFJS_WORKER_URL = '/pdf.worker.min.js';
 
 async function loadPdfJs() {
   if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = PDFJS_URL;
-    script.crossOrigin = 'anonymous';
+    script.src = window.location.origin + PDFJS_URL;
     script.onload = () => {
       const pdfjsLib = (window as any).pdfjsLib;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + PDFJS_WORKER_URL;
       resolve(pdfjsLib);
     };
-    script.onerror = () => {
-      // Fallback para UNPKG se o jsdelivr falhar
-      const fallbackScript = document.createElement('script');
-      fallbackScript.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js';
-      fallbackScript.crossOrigin = 'anonymous';
-      fallbackScript.onload = () => {
-        const pdfjsLib = (window as any).pdfjsLib;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-        resolve(pdfjsLib);
-      };
-      fallbackScript.onerror = () => reject(new Error('Falha ao carregar motor PDF de múltiplos CDNs (CORS/Network block)'));
-      document.head.appendChild(fallbackScript);
-    };
+    script.onerror = () => reject(new Error('Falha ao carregar motor PDF local (Verifique se /public/pdf.min.js existe)'));
     document.head.appendChild(script);
   });
 }
