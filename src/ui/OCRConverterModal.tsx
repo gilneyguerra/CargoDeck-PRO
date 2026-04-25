@@ -4,7 +4,7 @@ import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
 
 // pdfjs worker setup
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.5.207/build/pdf.worker.min.mjs`;
 
 interface FileProgress {
   name: string;
