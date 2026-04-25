@@ -180,31 +180,29 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
             <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
           </div>
-          <span className={cn(
-            "absolute inset-0 flex items-center justify-center font-bold text-center leading-tight pointer-events-none px-2 overflow-hidden break-words",
+        <div className="absolute inset-0 flex flex-col p-1.5 pointer-events-none">
+          {/* Identificador (Topo/Meio) */}
+          <div className={cn(
+            "flex-1 flex items-center justify-center font-bold text-center leading-tight overflow-hidden break-words",
             textColorClass,
-            !isLightBackground && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-          )} style={{ 
-            fontSize: `${Math.max(6, fontSize * 0.85)}px`, 
-            display: (cargo.widthMeters < 0.6 || cargo.lengthMeters < 0.6) ? 'none' : 'flex',
-            maxWidth: '100%',
-            maxHeight: '100%',
-            padding: '4px'
-          }}>
+            !isLightBackground && "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+          )} style={{ fontSize: `${Math.max(6, fontSize * 0.9)}px`, display: (cargo.widthMeters < 0.6 || cargo.lengthMeters < 0.6) ? 'none' : 'flex' }}>
             {cargo.identifier}
-          </span>
+          </div>
 
+          {/* Unidade de Destino (Badge no rodapé) */}
           {cargo.destinoCarga && (cargo.widthMeters > 0.8 && cargo.lengthMeters > 0.8) && (
             <div 
               className={cn(
-                "absolute bottom-0 right-0 px-1.5 py-0.5 rounded-tl-md font-black tracking-tighter shadow-sm z-20 pointer-events-none border-l border-t border-black/20",
-                isLightBackground ? "bg-black/10 text-black/90" : "bg-white/40 text-black"
+                "mt-auto px-1.5 py-0.5 rounded-md font-black tracking-tighter shadow-sm text-center border border-black/10",
+                isLightBackground ? "bg-black/10 text-black/90" : "bg-white/30 text-black"
               )}
-              style={{ fontSize: `${Math.max(6, fontSize * 0.7)}px` }}
+              style={{ fontSize: `${Math.max(6, fontSize * 0.75)}px` }}
             >
               {cargo.destinoCarga}
             </div>
           )}
+        </div>
 
           <div className="absolute -top-3 -right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
             {cargo.isBackload && (
