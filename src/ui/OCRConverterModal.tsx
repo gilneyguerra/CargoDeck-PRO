@@ -3,8 +3,19 @@ import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle 
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
 
-// pdfjs worker setup - Using local worker from public folder
-pdfjs.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
+// pdfjs worker setup - High resilience Blob bridge approach
+(function setupWorker() {
+    try {
+        const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
+        const blobCode = `importScripts("${workerUrl}");`;
+        const blob = new Blob([blobCode], { type: 'application/javascript' });
+        pdfjs.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    } catch (e) {
+        console.error('Failed to setup worker bridge:', e);
+        // Fallback to direct link if blob fails
+        pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
+    }
+})();
 
 interface FileProgress {
   name: string;

@@ -441,8 +441,11 @@ export class PDFExtractor {
             const pdfjsLib = await import('pdfjs-dist').then(m => m.default || m);
             const version = pdfjsLib.version || '5.5.207';
             
-            // pdfjs worker setup - Using local worker from public folder
-            pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
+            // pdfjs worker setup - High resilience Blob bridge approach
+            const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
+            const blobCode = `importScripts("${workerUrl}");`;
+            const blob = new Blob([blobCode], { type: 'application/javascript' });
+            pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
             
             logger.info(`Motor PDF.js ${version} inicializado com worker local.`);
 
