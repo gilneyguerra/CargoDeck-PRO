@@ -3,8 +3,8 @@ import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle 
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
 
-// pdfjs worker setup - Using CDNJS with .mjs for ESM compatibility
-pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.mjs';
+// pdfjs worker setup - Using local worker from public folder
+pdfjs.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
 
 interface FileProgress {
   name: string;
