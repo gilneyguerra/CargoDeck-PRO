@@ -131,7 +131,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
           ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-xl border border-black/10 dark:border-white/5 shadow-black/40"
-          : "border border-subtle rounded-2xl p-4 gap-2 bg-card min-w-[44px] min-h-[44px] w-full overflow-visible shadow-sm hover:shadow-md",
+          : "border border-subtle rounded-2xl p-3.5 gap-2 bg-card w-full overflow-hidden shadow-sm hover:shadow-md",
         !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-brand-primary/50" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-status-warning/40 bg-status-warning/5" : "",
         isHighlight ? "ring-4 ring-status-warning shadow-[0_0_25px_rgba(251,191,36,0.6)] z-50 transform scale-[1.03]" : "",
@@ -221,8 +221,8 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
            {...(selectable ? { onClick: (e) => { e.stopPropagation(); onToggleSelect?.(cargo.id); } } : {})}
         >
           {/* Header do Card */}
-          <div className="flex items-start justify-between gap-2 border-b border-subtle pb-3">
-             <div className="flex flex-col overflow-hidden">
+          <div className="flex items-start justify-between gap-2 border-b border-subtle pb-3 overflow-hidden">
+             <div className="flex flex-col overflow-hidden min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   {selectable && (
                     <input 
@@ -232,11 +232,11 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
                       className="w-4 h-4 rounded-md border-strong text-brand-primary focus:ring-brand-primary cursor-pointer pointer-events-none"
                     />
                   )}
-                  <span className="text-[9px] font-black text-brand-primary uppercase tracking-[0.1em]">
+                  <span className="text-[9px] font-black text-brand-primary uppercase tracking-[0.1em] truncate">
                     {cargo.category || 'FREIGHT'}
                   </span>
                 </div>
-                  <span className="font-black text-sm text-primary truncate">
+                  <span className="font-black text-sm text-primary truncate block" title={cargo.identifier}>
                     {cargo.identifier}
                   </span>
              </div>
@@ -257,42 +257,61 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           </div>
 
           {/* Corpo do Card */}
-          <div className="flex gap-5 items-center min-h-[70px]">
-             <div className="shrink-0 bg-main p-2 rounded-2xl border border-subtle shadow-inner">
-                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#4f46e5'} quantity={cargo.quantity} cargo={cargo} dynamicScale={true} />
+          {/* Corpo do Card: Preview + Descrição */}
+          <div className="flex gap-4 items-start">
+             <div className="shrink-0 bg-main p-2 rounded-xl border border-subtle shadow-inner">
+                <CargoPreview 
+                  format={cargo.format || 'Retangular'} 
+                  length={cargo.lengthMeters} 
+                  width={cargo.widthMeters} 
+                  height={cargo.heightMeters || 1} 
+                  color={cargo.color || '#4f46e5'} 
+                  quantity={cargo.quantity} 
+                  cargo={cargo} 
+                  dynamicScale={true} 
+                />
              </div>
-             <div className="flex-1 min-w-0 overflow-hidden">
-                <p className="text-[11px] text-secondary font-medium leading-relaxed line-clamp-3 italic opacity-80 overflow-hidden">
+             <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-secondary font-medium leading-relaxed italic opacity-80 break-words line-clamp-3" title={cargo.description}>
                    {cargo.description || 'Sem descrição detalhada.'}
                 </p>
              </div>
           </div>
 
-          {/* Rodapé do Card */}
-          <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-subtle">
+          {/* Grade de Dados Estruturados (Estilo Tooltip) */}
+          <div className="grid grid-cols-2 gap-2 mt-1 bg-main/50 p-2.5 rounded-xl border border-subtle/50">
+             <div className="flex flex-col">
+                <span className="text-muted text-[8px] font-black uppercase tracking-widest mb-0.5">Dimensões</span>
+                <span className="font-mono text-[10px] font-bold text-primary">
+                   {cargo.lengthMeters}x{cargo.widthMeters}{cargo.heightMeters ? `x${cargo.heightMeters}` : ''}m
+                </span>
+             </div>
+             <div className="flex flex-col">
+                <span className="text-muted text-[8px] font-black uppercase tracking-widest mb-0.5">Peso Métrica</span>
+                <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                   {cargo.weightTonnes.toFixed(2)} t
+                </span>
+             </div>
+          </div>
+
+          {/* Rodapé: Logística e Badges */}
+          <div className="flex flex-col gap-2 mt-1">
              {(cargo.origemCarga || cargo.destinoCarga) && (
-               <div className="flex items-center gap-2 text-[10px]">
-                  <span className="text-muted font-bold uppercase tracking-tighter">{cargo.origemCarga || 'ORIGEM'}</span>
+               <div className="flex items-center gap-2 text-[9px] opacity-80">
+                  <span className="text-muted font-bold uppercase tracking-tighter truncate max-w-[80px]">{cargo.origemCarga || 'ORIGEM'}</span>
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent via-subtle to-transparent" />
-                  <div className="flex items-center gap-1.5 bg-brand-primary/10 text-brand-primary px-2.5 py-1 rounded-full font-black border border-brand-primary/20">
-                     <MapPin size={10} />
-                     <span>{cargo.destinoCarga || '--'}</span>
+                  <div className="flex items-center gap-1 bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full font-black border border-brand-primary/20 shrink-0">
+                     <MapPin size={8} />
+                     <span className="truncate max-w-[100px] uppercase tracking-tighter">{cargo.destinoCarga || '--'}</span>
                   </div>
                </div>
              )}
-             <div className="flex flex-wrap gap-2">
-                <span className="bg-main px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-primary border border-subtle tabular-nums">
-                   {cargo.weightTonnes.toFixed(2)} t
-                </span>
-                <span className="bg-main px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-primary border border-subtle tabular-nums">
-                   {cargo.lengthMeters}x{cargo.widthMeters}m
-                </span>
-                {cargo.isBackload && (
-                   <span className="bg-status-warning/10 text-status-warning px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-status-warning/20 flex items-center gap-1.5">
-                      <LogOut size={10} /> BACKLOAD
-                   </span>
-                )}
-             </div>
+             
+             {cargo.isBackload && (
+                <div className="bg-status-warning/10 text-status-warning px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-status-warning/20 flex items-center justify-center gap-1.5 w-full">
+                   <LogOut size={10} /> BACKLOAD / DESEMBARQUE
+                </div>
+             )}
           </div>
         </div>
       )}

@@ -49,9 +49,11 @@ export function CargoPreview({ format, length, width, height, color, quantity = 
         }
     }
 
-    // Determine visual size based on props
-    const displayWidth = dynamicScale ? Math.min(totalWidth, 60) : totalWidth;
-    const displayHeight = dynamicScale ? (totalHeight * (displayWidth / totalWidth)) : totalHeight;
+    // Determine visual size based on props with safety guards
+    const safeTotalWidth = Math.max(0.1, totalWidth);
+    const displayWidth = dynamicScale ? Math.min(safeTotalWidth, 60) : safeTotalWidth;
+    const scaleFactor = displayWidth / safeTotalWidth;
+    const displayHeight = Math.max(0.1, totalHeight * scaleFactor);
 
     return (
         <svg 
