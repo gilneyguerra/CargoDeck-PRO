@@ -43,32 +43,32 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCodes.U
     if (error instanceof AppError) {
         return error;
     }
+
+    let message = 'Erro desconhecido.';
     
-    let message = 'Erro inesperado na aplicação.';
-    let contextError = error;
-
-    if (error instanceof Error) {
-        message = error.message || message;
-        // Tenta mapear erros conhecidos para AppError
-        if (message.includes('Network Error')) {
-            return new AppError(ErrorCodes.NETWORK_ERROR, message, 'error', error);
+    try {
+        if (error instanceof Error) {
+            message = error.message;
+        } else if (typeof error === 'string') {
+            message = error;
+        } else {
+            message = JSON.stringify(error);
         }
-        if (message.includes('PDFJS') || message.includes('Worker')) {
-            return new AppError(ErrorCodes.PDF_CORRUPTED, `Falha no motor PDF: ${message}`, 'error', error);
-        }
-    }
-    if (error && typeof error === 'object') {
-        const errObj = error as any;
-        message = errObj.message || errObj.msg || message;
-        if (message === 'Erro inesperado na aplicação.') {
-            // Se ainda for a mensagem padrão, tenta injetar detalhes do objeto
-            message = `Erro inesperado: ${errObj.name || 'Object'} - ${JSON.stringify(error).substring(0, 100)}`;
-        }
-    } else if (error !== undefined && error !== null) {
-        message = `Erro: ${String(error)}`;
+    } catch (e) {
+        message = String(error);
     }
 
-    return new AppError(defaultCode, message, 'error', contextError);
+    // Se a mensagem for vazia ou "undefined" ou "[object Object]", usa o fallback do código
+    if (!message || message === 'undefined' || message === '[object Object]' || message === '{}') {
+        message = ErrorMessages[defaultCode] || 'Erro inesperado na operação.';
+    }
+
+    // Melhora mensagens de erro conhecidas
+    if (message.includes('PDFJS') || message.includes('Worker')) {
+        return new AppError(ErrorCodes.PDF_CORRUPTED, `Falha no motor PDF: ${message}`, 'error', error);
+    }
+
+    return new AppError(defaultCode, message, 'error', error);
 }
 
 /**

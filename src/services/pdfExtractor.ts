@@ -437,19 +437,15 @@ export class PDFExtractor {
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
         try {
             // PERF: Carregamento sob demanda do motor PDF
-            const pdfjsLib = await import('pdfjs-dist');
+            // Ajustado para compatibilidade ESM/CJS em ambiente Vite
+            const pdfjsLib = await import('pdfjs-dist').then(m => m.default || m);
             const version = pdfjsLib.version || '5.5.207';
             
-            // Configura o worker (Prioridade: Local -> CDN Versão Exata)
-            try {
-                // Tenta carregar o worker local primeiro
-                pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
-                logger.debug(`PDF.js version: ${version}. Usando worker: ${pdfjsLib.GlobalWorkerOptions.workerSrc}`);
-            } catch (err) {
-                // Fallback para CDN oficial se falhar ao configurar local
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
-                logger.warn(`Falha ao configurar worker local. Usando CDN: ${pdfjsLib.GlobalWorkerOptions.workerSrc}`);
-            }
+            // Configura o worker via CDN como primário para máxima confiabilidade
+            // Versões 5+ do PDF.js são extremamente dependentes de um worker idêntico
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+            
+            logger.info(`Motor PDF.js ${version} inicializado via CDN.`);
 
             const arrayBuffer = await file.arrayBuffer();
             
@@ -459,10 +455,12 @@ export class PDFExtractor {
                     data: arrayBuffer,
                     useWorkerFetch: true,
                     isEvalSupported: false,
-                    canvasMaxAreaInBytes: 16777216 * 4 // Aumenta limite para PDFs grandes
+                    stopAtErrors: false, // Tenta continuar mesmo com erros leves
+                    canvasMaxAreaInBytes: 16777216 * 4
                 });
             } catch (err) {
-                throw new AppError(ErrorCodes.PDF_READ_FAILED, `Falha ao inicializar documento PDF: ${err instanceof Error ? err.message : String(err)}`, 'error', err);
+                logger.error('Falha crítica ao carregar documento PDF', err instanceof Error ? err : undefined);
+                throw new AppError(ErrorCodes.PDF_READ_FAILED, `Erro ao abrir PDF: ${err instanceof Error ? err.message : 'Falha na inicialização'}`, 'error', err);
             }
             
             const pdf = await loadingTask.promise;
