@@ -127,17 +127,18 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
       className={cn(
         "group relative flex flex-col transition-all duration-300 select-none",
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
+        isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
-          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-lg border border-black/10 dark:border-white/5 shadow-black/20"
-          : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 min-w-[44px] min-h-[44px] w-full overflow-visible",
-        !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-indigo-500/50" : "",
-        cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-amber-500/60 bg-amber-500/5 dark:bg-amber-900/10" : "",
-        isHighlight ? "ring-2 ring-offset-1 ring-yellow-400 dark:ring-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.8)] z-50 transform scale-[1.03]" : "",
-        requiresWeightFix ? "border-red-500 dark:border-red-500 bg-red-100 dark:bg-red-900/30" : ""
+          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-xl border border-black/10 dark:border-white/5 shadow-black/40"
+          : "border border-subtle rounded-2xl p-4 gap-2 bg-card min-w-[44px] min-h-[44px] w-full overflow-visible shadow-sm hover:shadow-md",
+        !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-brand-primary/50" : "",
+        cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-status-warning/40 bg-status-warning/5" : "",
+        isHighlight ? "ring-4 ring-status-warning shadow-[0_0_25px_rgba(251,191,36,0.6)] z-50 transform scale-[1.03]" : "",
+        requiresWeightFix ? "border-status-error bg-status-error/10" : ""
       )}
     >
-      {/* Tooltip Global (Hover) - Renderizado via Portal no body para evitar cortes por overflow/transform */}
+      {/* Tooltip Global (Hover) */}
       {isHovered && createPortal(
         <div 
           style={{ 
@@ -147,28 +148,23 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             transform: `translate(${tooltipAlign === 'center' ? '-50%' : tooltipAlign === 'right' ? '-100%' : '0'}, ${tooltipPlacement === 'top' ? '-100%' : '0'})`,
             zIndex: 9999
           }}
-          className="w-64 p-3 bg-gray-900/95 dark:bg-neutral-900/95 backdrop-blur-sm text-white dark:text-neutral-100 text-xs font-sans rounded-lg shadow-2xl shadow-black/80 pointer-events-none flex flex-col gap-1 border border-neutral-700/50"
+          className="w-64 p-4 bg-slate-950/95 backdrop-blur-md text-white text-xs rounded-2xl shadow-2xl pointer-events-none flex flex-col gap-2 border border-white/10 animate-in fade-in zoom-in-95 duration-200"
         >
-          <div className="font-bold border-b border-neutral-700/50 pb-1 mb-1 truncate text-center text-indigo-400">{cargo.identifier}</div>
-          <div className="text-[10px] break-words line-clamp-2 text-neutral-300">{cargo.description}</div>
-          <div className="grid grid-cols-2 gap-2 mt-1 bg-black/30 p-1.5 rounded">
+          <div className="font-black border-b border-white/10 pb-2 mb-1 truncate text-brand-primary uppercase tracking-widest">{cargo.identifier}</div>
+          <div className="text-[10px] font-medium text-slate-300 leading-relaxed">{cargo.description}</div>
+          <div className="grid grid-cols-2 gap-3 mt-1 bg-white/5 p-2 rounded-xl border border-white/5">
             <div>
-              <span className="text-neutral-500 block text-[9px]">Dimensões</span>
-              <span className="font-mono">{cargo.lengthMeters}x{cargo.widthMeters}{cargo.heightMeters ? `x${cargo.heightMeters}` : ''}m</span>
+              <span className="text-slate-500 block text-[9px] font-black uppercase tracking-tighter">Dimensões</span>
+              <span className="font-mono font-bold">{cargo.lengthMeters}x{cargo.widthMeters}{cargo.heightMeters ? `x${cargo.heightMeters}` : ''}m</span>
             </div>
             <div>
-              <span className="text-neutral-500 block text-[9px]">Peso</span>
+              <span className="text-slate-500 block text-[9px] font-black uppercase tracking-tighter">Peso Métrica</span>
               <span className="font-mono text-emerald-400 font-bold">{cargo.weightTonnes.toFixed(2)} t</span>
             </div>
           </div>
           {cargo.isBackload && (
-            <div className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 font-bold text-[9px] uppercase tracking-wider">
-              <LogOut size={10} /> DESEMBARQUE / BACKLOAD
-            </div>
-          )}
-          {(cargo.origemCarga || cargo.destinoCarga) && (
-            <div className="text-[10px] text-neutral-400 mt-1">
-              <span className="text-neutral-500">Rota:</span> {cargo.origemCarga ?? '?'} → {cargo.destinoCarga ?? '?'}
+            <div className="mt-1 flex items-center justify-center gap-2 px-2 py-1.5 bg-status-warning/20 text-status-warning rounded-xl border border-status-warning/30 font-black text-[9px] uppercase tracking-[0.1em]">
+              <LogOut size={10} /> BACKLOAD / DESEMBARQUE
             </div>
           )}
         </div>,
@@ -178,49 +174,42 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
       {cargo.status === 'ALLOCATED' ? (
         <div className="relative w-full h-full flex flex-col items-center justify-center group overflow-visible">
           <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
-            <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
+            <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#4f46e5'} quantity={cargo.quantity} cargo={cargo} />
           </div>
         <div className="absolute inset-0 flex flex-col p-1.5 pointer-events-none overflow-hidden">
           {/* Identificador (Topo/Meio) */}
           <div className={cn(
-            "flex-1 flex items-center justify-center font-bold text-center leading-tight overflow-hidden break-words",
+            "flex-1 flex items-center justify-center font-black text-center leading-tight overflow-hidden break-words",
             textColorClass,
-            !isLightBackground && "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+            !isLightBackground && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
           )} style={{ fontSize: `${Math.max(6, fontSize * 0.9)}px`, display: (cargo.widthMeters < 0.6 || cargo.lengthMeters < 0.6) ? 'none' : 'flex' }}>
             {cargo.identifier}
           </div>
 
-          {/* Unidade de Destino (Badge no rodapé) */}
+          {/* Unidade de Destino (Badge) */}
           {cargo.destinoCarga && (cargo.widthMeters > 0.8 && cargo.lengthMeters > 0.8) && (
             <div 
               className={cn(
-                "mt-auto px-1.5 py-0.5 rounded-md font-black tracking-tighter shadow-sm text-center border border-black/10 truncate",
+                "mt-auto px-1.5 py-1 rounded-md font-black tracking-tighter shadow-md text-center truncate",
                 isLightBackground ? "bg-black/10 text-black/90" : "bg-white/30 text-black"
               )}
-              style={{ fontSize: `${Math.max(6, fontSize * 0.75)}px` }}
+              style={{ fontSize: `${Math.max(6, fontSize * 0.8)}px` }}
             >
               {cargo.destinoCarga}
             </div>
           )}
         </div>
 
-          <div className="absolute -top-2 -right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-[1100]">
-            {cargo.isBackload && (
-              <div className="bg-amber-500 text-white p-1 rounded-full shadow-md ring-1 ring-black/20">
-                <LogOut size={10} />
-              </div>
-            )}
+          <div className="absolute -top-3 -right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0 z-[1100]">
             <button
                onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-               className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-500 shadow-lg ring-1 ring-white/50 transition-transform hover:scale-110 active:scale-95"
-               title="Editar Carga"
+               className="bg-brand-primary text-white rounded-xl w-7 h-7 flex items-center justify-center hover:brightness-110 shadow-xl ring-2 ring-white/50 transition-all active:scale-90"
             >
-              <Edit size={12} />
+              <Edit size={14} />
             </button>
             <button
                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-               className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-[11px] hover:bg-red-500 shadow-lg ring-1 ring-white/50 transition-transform hover:scale-110 active:scale-95 font-bold"
-               title="Remover Definitivamente"
+               className="bg-status-error text-white rounded-xl w-7 h-7 flex items-center justify-center text-xs hover:brightness-110 shadow-xl ring-2 ring-white/50 transition-all active:scale-90 font-black"
             >
                ✕
             </button>
@@ -228,78 +217,78 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
         </div>
       ) : (
         <div 
-           className={cn("flex flex-col gap-2 w-full", selectable && "cursor-pointer")}
+           className={cn("flex flex-col gap-3 w-full", selectable && "cursor-pointer")}
            {...(selectable ? { onClick: (e) => { e.stopPropagation(); onToggleSelect?.(cargo.id); } } : {})}
         >
-          {/* Header do Card: ID e Botões */}
-          <div className="flex items-start justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-1">
+          {/* Header do Card */}
+          <div className="flex items-start justify-between gap-2 border-b border-subtle pb-3">
              <div className="flex flex-col overflow-hidden">
-                <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="flex items-center gap-2 mb-1">
                   {selectable && (
                     <input 
                       type="checkbox" 
                       checked={isSelected}
                       readOnly
-                      className="w-3.5 h-3.5 rounded border-neutral-400 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer pointer-events-none"
+                      className="w-4 h-4 rounded-md border-strong text-brand-primary focus:ring-brand-primary cursor-pointer pointer-events-none"
                     />
                   )}
-                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
-                    {cargo.category || 'CARGA'}
+                  <span className="text-[9px] font-black text-brand-primary uppercase tracking-[0.1em]">
+                    {cargo.category || 'FREIGHT'}
                   </span>
                 </div>
-                <span className="font-black text-sm text-gray-900 dark:text-neutral-100 truncate" style={{ fontSize: `${fontSize}px` }}>
+                <span className="font-black text-sm text-primary truncate" style={{ fontSize: `${fontSize}px` }}>
                   {cargo.identifier}
                 </span>
              </div>
              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-                  className="p-1.5 text-neutral-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
+                  className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
                 >
                   <Edit size={16} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-                  className="p-1.5 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                  className="p-2 text-muted hover:text-status-error hover:bg-status-error/10 rounded-xl transition-all"
                 >
                   <Trash2 size={16} />
                 </button>
              </div>
           </div>
 
-          {/* Corpo do Card: Visual e Descrição */}
-          <div className="flex gap-3 items-center min-h-[50px]">
-             <div className="shrink-0 bg-neutral-200 dark:bg-neutral-800 p-1 rounded-sm border border-neutral-300 dark:border-neutral-700 shadow-inner">
-                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
+          {/* Corpo do Card */}
+          <div className="flex gap-4 items-center min-h-[60px]">
+             <div className="shrink-0 bg-main p-1.5 rounded-xl border border-subtle shadow-inner">
+                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#4f46e5'} quantity={cargo.quantity} cargo={cargo} />
              </div>
              <div className="flex-1 min-w-0">
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-snug line-clamp-2 italic italic-font italic-weight" style={{ fontSize: `${fontSize * 0.9}px` }}>
-                   {cargo.description}
+                <p className="text-xs text-secondary font-medium leading-relaxed line-clamp-3 italic opacity-80" style={{ fontSize: `${fontSize * 0.9}px` }}>
+                   {cargo.description || 'Sem descrição detalhada.'}
                 </p>
              </div>
           </div>
 
-          {/* Rodapé do Card: Rota e Chips */}
-          <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-neutral-200 dark:border-neutral-800">
+          {/* Rodapé do Card */}
+          <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-subtle">
              {(cargo.origemCarga || cargo.destinoCarga) && (
-               <div className="flex items-center gap-1.5 text-[10px]">
-                  <span className="text-neutral-400 font-bold">{cargo.origemCarga || '???'}</span>
-                  <span className="text-neutral-300">→</span>
-                  <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-black border border-indigo-500/20">
+               <div className="flex items-center gap-2 text-[10px]">
+                  <span className="text-muted font-bold uppercase tracking-tighter">{cargo.origemCarga || 'ORIGEM'}</span>
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-subtle to-transparent" />
+                  <div className="flex items-center gap-1.5 bg-brand-primary/10 text-brand-primary px-2.5 py-1 rounded-full font-black border border-brand-primary/20">
                      <MapPin size={10} />
                      <span>{cargo.destinoCarga || '--'}</span>
                   </div>
                </div>
              )}
-             <div className="flex flex-wrap gap-1.5">
-                <span className="bg-neutral-200 dark:bg-neutral-800/80 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700">
+             <div className="flex flex-wrap gap-2">
+                <span className="bg-main px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-primary border border-subtle tabular-nums">
                    {cargo.weightTonnes.toFixed(2)} t
                 </span>
-                <span className="bg-neutral-200 dark:bg-neutral-800/80 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700">
+                <span className="bg-main px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-primary border border-subtle tabular-nums">
                    {cargo.lengthMeters}x{cargo.widthMeters}m
                 </span>
                 {cargo.isBackload && (
-                   <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border border-amber-200 dark:border-amber-700/50 flex items-center gap-1">
+                   <span className="bg-status-warning/10 text-status-warning px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-status-warning/20 flex items-center gap-1.5">
                       <LogOut size={10} /> BACKLOAD
                    </span>
                 )}

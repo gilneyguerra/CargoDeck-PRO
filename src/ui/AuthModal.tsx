@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { X, LogIn } from 'lucide-react';
+import { X, LogIn, AlertCircle } from 'lucide-react';
 
 const SUPABASE_CONFIGURED = !!(import.meta.env?.VITE_SUPABASE_URL || 'https://vdjrfoxnibufxqntwrkr.supabase.co');
 
@@ -48,35 +48,75 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-400 dark:border-neutral-800 rounded-xl p-8 w-full max-w-sm relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-neutral-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-white"><X size={20}/></button>
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{isLogin ? 'Entrar' : 'Criar Conta'}</h2>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">Acesse seus relatórios e Planos de Carga salvos na nuvem.</p>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+      <div className="bg-header border border-subtle rounded-[2.5rem] p-10 w-full max-w-md relative shadow-2xl animate-in zoom-in-95 duration-200">
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 text-muted hover:text-primary hover:bg-sidebar rounded-full transition-all">
+          <X size={24}/>
+        </button>
+        
+        <div className="text-center mb-10">
+          <div className="inline-flex p-4 bg-brand-primary/10 rounded-3xl mb-6">
+            <LogIn size={32} className="text-brand-primary" />
+          </div>
+          <h2 className="text-3xl font-black text-primary mb-3">
+            {isLogin ? 'Bem-vindo' : 'Criar Conta'}
+          </h2>
+          <p className="text-sm text-muted font-medium px-4">
+            {isLogin 
+              ? 'Acesse seus relatórios e planos de carga sincronizados na nuvem.' 
+              : 'Comece a planejar sua logística marítima com mais eficiência.'}
+          </p>
         </div>
 
-        {error && <div className="bg-red-500/10 border border-red-500 text-red-500 text-sm p-3 rounded mb-4">{error}</div>}
+        {error && (
+          <div className="bg-status-error/10 border border-status-error/20 text-status-error text-xs font-bold p-4 rounded-2xl mb-8 flex items-center gap-3 animate-in shake-1">
+             <AlertCircle className="w-5 h-5 shrink-0" />
+             <span>{error}</span>
+          </div>
+        )}
 
-        <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">E-mail</label>
-            <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-800 rounded px-3 py-2 text-gray-800 dark:text-white outline-none focus:border-indigo-500" placeholder="seu@email.com"/>
+        <form onSubmit={handleEmailAuth} className="space-y-6 mb-10">
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">E-mail Corporativo</label>
+            <input 
+              type="email" 
+              required 
+              value={email} 
+              onChange={e=>setEmail(e.target.value)} 
+              className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-4 text-primary outline-none focus:border-brand-primary transition-all font-bold placeholder:text-muted/50" 
+              placeholder="seu@email.com"
+            />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">Senha</label>
-            <input type="password" required value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-800 rounded px-3 py-2 text-gray-800 dark:text-white outline-none focus:border-indigo-500" placeholder="••••••••"/>
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Senha de Acesso</label>
+            <input 
+              type="password" 
+              required 
+              value={password} 
+              onChange={e=>setPassword(e.target.value)} 
+              className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-4 text-primary outline-none focus:border-brand-primary transition-all font-bold placeholder:text-muted/50" 
+              placeholder="••••••••"
+            />
           </div>
-          <button disabled={loading} type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-medium py-2 rounded transition-colors flex justify-center items-center gap-2">
-            {loading ? 'Aguarde...' : isLogin ? <><LogIn size={16}/> Entrar</> : 'Registrar-se agora'}
+          <button 
+            disabled={loading} 
+            type="submit" 
+            className="w-full bg-brand-primary hover:brightness-110 disabled:opacity-50 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-brand-primary/20 flex justify-center items-center gap-3 active:scale-[0.98]"
+          >
+            {loading ? 'PROCESSANDO...' : isLogin ? 'ENTRAR NO SISTEMA' : 'CADASTRAR AGORA'}
           </button>
         </form>
 
-        <div className="text-center text-xs text-neutral-500">
-          {isLogin ? "Não tem uma conta? " : "Já tem conta? "}
-          <button onClick={() => setIsLogin(!isLogin)} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium">
-            {isLogin ? 'Cadastre-se' : 'Faça login'}
-          </button>
+        <div className="text-center">
+          <p className="text-xs text-muted font-bold">
+            {isLogin ? "Não possui uma credencial? " : "Já possui registro? "}
+            <button 
+              onClick={() => setIsLogin(!isLogin)} 
+              className="text-brand-primary hover:underline font-black outline-none"
+            >
+              {isLogin ? 'SOLICITAR ACESSO' : 'EFETUAR LOGIN'}
+            </button>
+          </p>
         </div>
       </div>
     </div>

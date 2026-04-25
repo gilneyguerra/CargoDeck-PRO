@@ -68,121 +68,119 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-      <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-400 dark:border-neutral-800 rounded-xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white">
-          <X className="w-5 h-5" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+      <div className="bg-header border border-subtle rounded-[2.5rem] p-10 w-full max-w-lg shadow-2xl relative max-h-[95vh] overflow-auto animate-in zoom-in-95 duration-200">
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 text-muted hover:text-primary hover:bg-sidebar rounded-full transition-all">
+          <X className="w-6 h-6" />
         </button>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Adicionar Carga Manual</h2>
+        
+        <div className="mb-8">
+            <h2 className="text-2xl font-black text-primary tracking-tight">Adicionar Carga</h2>
+            <p className="text-xs text-muted font-bold uppercase tracking-widest mt-1">Manual Inventory Input</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Descrição *</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Descrição Comercial</label>
             <input
               type="text"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-              placeholder="Ex: Container 20ft com máquinas"
+              className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-bold"
+              placeholder="Ex: Bomba centrífuga secundária"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Identificador *</label>
-            <input
-              type="text"
-              value={identifier}
-              onChange={e => setIdentifier(e.target.value)}
-              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-              placeholder="Ex: CONT001"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Peso (tonnes) *</label>
-              <input
-                type="number"
-                step="0.1"
-                value={weightTonnes}
-                onChange={e => setWeightTonnes(e.target.value)}
-                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-                placeholder="10.5"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Quantidade *</label>
-              <input
-                type="number"
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
-                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-                placeholder="1"
-                min="1"
-                required
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">ID / Tag</label>
+                <input
+                  type="text"
+                  value={identifier}
+                  onChange={e => setIdentifier(e.target.value)}
+                  className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-bold"
+                  placeholder="Ex: TAG-990"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Quantidade</label>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={e => setQuantity(e.target.value)}
+                  className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-bold"
+                  min="1"
+                  required
+                />
+              </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Comprimento (m) *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={lengthMeters}
-                onChange={e => setLengthMeters(e.target.value)}
-                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-                placeholder="6.10"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Largura (m) *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={widthMeters}
-                onChange={e => setWidthMeters(e.target.value)}
-                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-                placeholder="2.44"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Altura (m) *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={heightMeters}
-                onChange={e => setHeightMeters(e.target.value)}
-                className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-                placeholder="2.59"
-                required
-              />
-            </div>
+             <div className="space-y-2">
+               <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Peso (t)</label>
+               <input
+                 type="number"
+                 step="0.001"
+                 value={weightTonnes}
+                 onChange={e => setWeightTonnes(e.target.value)}
+                 className="w-full bg-main border-2 border-subtle rounded-2xl px-4 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-mono font-bold"
+                 required
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">C (m)</label>
+               <input
+                 type="number"
+                 step="0.01"
+                 value={lengthMeters}
+                 onChange={e => setLengthMeters(e.target.value)}
+                 className="w-full bg-main border-2 border-subtle rounded-2xl px-4 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-mono font-bold"
+                 required
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">L (m)</label>
+               <input
+                 type="number"
+                 step="0.01"
+                 value={widthMeters}
+                 onChange={e => setWidthMeters(e.target.value)}
+                 className="w-full bg-main border-2 border-subtle rounded-2xl px-4 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-mono font-bold"
+                 required
+               />
+             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Formato *</label>
-            <select
-              value={format}
-              onChange={e => setFormat(e.target.value as typeof format)}
-              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-              required
-            >
-              <option value="Retangular">Retangular</option>
-              <option value="Quadrado">Quadrado</option>
-              <option value="Tubular">Tubular</option>
-            </select>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Geometria</label>
+                <select
+                  value={format}
+                  onChange={e => setFormat(e.target.value as typeof format)}
+                  className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-bold appearance-none cursor-pointer"
+                >
+                  <option value="Retangular">Retangular</option>
+                  <option value="Quadrado">Quadrado</option>
+                  <option value="Tubular">Tubular</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Altura (m)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={heightMeters}
+                  onChange={e => setHeightMeters(e.target.value)}
+                  className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary outline-none focus:border-brand-primary transition-all font-mono font-bold"
+                  required
+                />
+              </div>
           </div>
 
-           <div className="mt-4 p-4 bg-neutral-200 dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 rounded">
-             <p className="text-sm text-neutral-700 dark:text-neutral-400 mb-2">Preview:</p>
-             {/* Create temporary cargo object for consistent scaling */}
+           <div className="p-6 bg-main border-2 border-subtle rounded-3xl shadow-inner flex flex-col items-center">
+             <span className="text-[10px] font-black text-muted uppercase tracking-widest mb-4">Visual Logic Preview</span>
              <CargoPreview 
                format={format} 
                length={Number(lengthMeters) || 1} 
@@ -201,65 +199,56 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
              />
            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Cor</label>
-            <select
-              value={color}
-              onChange={e => setColor(e.target.value)}
-              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-              required
-            >
-              <option value="#000000">Preto</option>
-              <option value="#FFFFFF">Branco</option>
-              <option value="#FF0000">Vermelho</option>
-              <option value="#00FF00">Verde</option>
-              <option value="#0000FF">Azul</option>
-              <option value="#FFFF00">Amarelo</option>
-              <option value="#00FFFF">Ciano</option>
-              <option value="#FF00FF">Magenta</option>
-              <option value="#FFA500">Laranja</option>
-              <option value="#800080">Roxo</option>
-              <option value="#FFC0CB">Rosa</option>
-              <option value="#A52A2A">Marrom</option>
-              <option value="#808080">Cinza</option>
-              <option value="#000080">Azul Escuro</option>
-              <option value="#008000">Verde Escuro</option>
-              <option value="#800000">Vermelho Escuro</option>
-              <option value="#FFFF80">Amarelo Claro</option>
-              <option value="#80FFFF">Ciano Claro</option>
-              <option value="#FF80FF">Magenta Claro</option>
-              <option value="#C0C0C0">Cinza Claro</option>
-            </select>
+          <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Cor Primária</label>
+                <select
+                  value={color}
+                  onChange={e => setColor(e.target.value)}
+                  className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary font-bold appearance-none cursor-pointer"
+                >
+                  <option value="#4f46e5">Indigo (Default)</option>
+                  <option value="#ef4444">Vermelho</option>
+                  <option value="#10b981">Verde</option>
+                  <option value="#f59e0b">Amarelo</option>
+                  <option value="#3b82f6">Azul</option>
+                  <option value="#000000">Preto</option>
+                  <option value="#ffffff">Branco</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-muted uppercase tracking-widest ml-1">Observações</label>
+                <input
+                  type="text"
+                  value={observations}
+                  onChange={e => setObservations(e.target.value)}
+                  className="w-full bg-main border-2 border-subtle rounded-2xl px-5 py-3.5 text-primary font-medium"
+                  placeholder="Ex: Requer estropo longo"
+                />
+              </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">Observações</label>
-            <input
-              type="text"
-              value={observations}
-              onChange={e => setObservations(e.target.value)}
-              className="w-full bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-gray-800 dark:text-white rounded p-2 outline-none focus:border-indigo-500"
-              placeholder="Ex: Carga perigosa"
-            />
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isRemovable}
-                onChange={e => setIsRemovable(e.target.checked)}
-                className="w-4 h-4 bg-white dark:bg-neutral-950 border border-neutral-400 dark:border-neutral-700 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500"
-              />
-              <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Carga removível durante operação</span>
+          <div className="flex items-center gap-3 p-2">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={isRemovable}
+                  onChange={e => setIsRemovable(e.target.checked)}
+                  className="peer hidden"
+                />
+                <div className="w-10 h-6 bg-subtle rounded-full border border-strong peer-checked:bg-brand-primary transition-all" />
+                <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 shadow-sm" />
+              </div>
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest group-hover:text-primary transition-colors">Removível na operação</span>
             </label>
           </div>
 
           <button
             type="submit"
-            className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-colors"
+            className="w-full bg-brand-primary hover:brightness-110 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-brand-primary/20 transition-all active:scale-[0.98] uppercase tracking-widest text-xs"
           >
-            Adicionar Carga
+            CONFIRMAR ENTRADA NO SISTEMA
           </button>
         </form>
       </div>

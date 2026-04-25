@@ -1,6 +1,6 @@
 import { 
   Trash2, Download, CloudUpload, UserCircle, LogIn,
-  Sun, Moon, ListCollapse, Weight, Ship
+  Sun, Moon, Weight, Ship
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
@@ -36,14 +36,12 @@ export function Header() {
   }, [manifestShipName]);
 
   useEffect(() => {
-    // Set dark mode from localStorage or system preference
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme) {
       const isDark = storedTheme === 'dark';
       document.documentElement.classList.toggle('dark', isDark);
       setIsDark(isDark);
     } else {
-      // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       document.documentElement.classList.toggle('dark', prefersDark);
       setIsDark(prefersDark);
@@ -55,13 +53,11 @@ export function Header() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Listen for auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
@@ -89,9 +85,9 @@ export function Header() {
      setSaving(true);
      try {
        await DatabaseService.saveStowagePlan();
-       alert('Manifesto Salvo! Os dados atuais foram gravados no banco de dados com segurança.');
+       alert('Manifesto Salvo!');
       } catch(err: unknown) {
-        alert('Erro ao salvar no banco: ' + String(err));
+        alert('Erro ao salvar: ' + String(err));
       } finally {
        setSaving(false);
      }
@@ -109,10 +105,8 @@ export function Header() {
         bay.allocatedCargoes.forEach(c => {
           const cargoWeight = c.weightTonnes * c.quantity;
           weight += cargoWeight;
-          
           if (c.positionInBay === 'port') port += cargoWeight;
           else if (c.positionInBay === 'starboard') starboard += cargoWeight;
-
           const cargoHeight = c.heightMeters || 2.5; 
           const centerOfGravityZ = elev + (cargoHeight / 2);
           topHeavy += (cargoWeight * centerOfGravityZ);
@@ -130,22 +124,26 @@ export function Header() {
 
   const listDiff = Math.abs(totalPort - totalStarboard);
   const isListing = listDiff > 50; 
-  const isTopHeavy = totalTopHeavyMoment > 100000; // Adjusted limit for new mathematical scale
+  const isTopHeavy = totalTopHeavyMoment > 100000;
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between min-h-[3.5rem] py-2 px-3 lg:px-6 border-b border-border bg-bg shrink-0 gap-y-3 gap-x-2 lg:gap-x-4">
+      <header className="flex flex-wrap items-center justify-between min-h-[4.5rem] px-4 lg:px-8 border-b border-subtle bg-header shrink-0 gap-4 shadow-sm z-30">
         
-        {/* Left Section: Logo & Title */}
-        <div className="flex items-center gap-3 lg:gap-4 order-1">
-          <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-600/20">
-            <Ship className="w-6 h-6 text-white" />
+        {/* Left Section: Logo & Navio */}
+        <div className="flex items-center gap-6 order-1">
+          <div className="flex items-center gap-3">
+            <div className="brand-bg p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+              <Ship className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex flex-col">
+               <h1 className="font-bold text-lg leading-tight text-primary tracking-tight">CargoDeck Pro</h1>
+               <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Maritime Logistics</span>
+            </div>
           </div>
-          <h1 className="font-bold text-lg lg:text-xl tracking-tight text-gray-800 dark:text-neutral-100 whitespace-nowrap">CargoDeck Pro</h1>
           
-          <div className="h-6 w-px bg-neutral-300 dark:bg-neutral-700 mx-1 hidden sm:block" />
+          <div className="h-8 w-px bg-border-subtle hidden sm:block" />
           
-          {/* Editable Ship Name */}
           <div className="flex items-center gap-2 group">
             {isEditingShip ? (
               <input
@@ -157,122 +155,24 @@ export function Header() {
                   setShipName(tempShipName);
                   setIsEditingShip(false);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShipName(tempShipName);
-                    setIsEditingShip(false);
-                  }
-                  if (e.key === 'Escape') {
-                    setTempShipName(manifestShipName || '');
-                    setIsEditingShip(false);
-                  }
-                }}
-                className="bg-white dark:bg-neutral-800 border border-indigo-500 rounded-lg px-3 py-1 text-sm font-bold text-indigo-600 dark:text-indigo-400 outline-none w-48 shadow-sm"
-                placeholder="Nome do Navio..."
+                className="bg-main border-2 border-brand-primary rounded-lg px-4 py-2 text-sm font-bold text-primary outline-none w-56 shadow-lg shadow-brand-primary/10"
+                placeholder="Identificar Navio..."
               />
             ) : (
               <button
                 onClick={() => setIsEditingShip(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 group/btn"
+                className="flex items-center gap-3 px-4 py-2 rounded-xl bg-sidebar hover:bg-main transition-all border border-subtle group/btn shadow-sm"
               >
-                <Ship className="w-3.5 h-3.5 text-neutral-400 group-hover/btn:text-indigo-500 transition-colors" />
-                <span className={cn(
-                  "text-sm font-bold tracking-wide transition-colors",
-                  manifestShipName 
-                    ? "text-neutral-700 dark:text-neutral-300" 
-                    : "text-neutral-400 dark:text-neutral-600 italic"
-                )}>
-                  {manifestShipName || 'Definir Navio...'}
-                </span>
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Right Section: Actions & Extreme Right Icons */}
-        <div className="flex items-center gap-2 lg:gap-4 order-3 ml-auto">
-          {/* Total Weight Badge */}
-          <div className="hidden lg:flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2 shadow-sm">
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-widest whitespace-nowrap">Peso Plano:</span>
-            <span className="text-indigo-600 dark:text-indigo-400 font-black text-sm lg:text-lg whitespace-nowrap">{currentTotalWeight.toFixed(1)} t</span>
-          </div>
-
-          <div className="h-6 w-px bg-neutral-300 dark:bg-neutral-700 hidden lg:block mx-1" />
-
-          {/* Action Buttons Group */}
-          <div className="flex items-center gap-1.5">
-            <button
-              className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-              onClick={() => {
-                if (window.confirm('Você está prestes a deletar todas as cargas do plano de carga, deseja prosseguir?')) {
-                  const { clearAllCargoes } = useCargoStore.getState();
-                  clearAllCargoes();
-                }
-              }}
-              title="Limpar Planejamento"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={handleExportCsv}
-              disabled={!manifestsLoaded}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all shadow-md shadow-blue-600/10 whitespace-nowrap"
-              title="Gerar Excel (CSV)"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Excel</span>
-            </button>
-
-            <button
-              onClick={handleExportPdf}
-              disabled={!manifestsLoaded}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all shadow-md shadow-indigo-600/10 whitespace-nowrap"
-              title="Gerar PDF"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </button>
-
-            <button
-              onClick={handleSaveToCloud}
-              disabled={saving}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all shadow-md shadow-emerald-600/10 whitespace-nowrap"
-              title="Salvar Cloud"
-            >
-              <CloudUpload className="w-4 h-4" />
-              <span className="hidden sm:inline">{saving ? '...' : 'Salvar'}</span>
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-neutral-300 dark:bg-neutral-700 mx-1" />
-
-          {/* Theme & Profile Group (Extreme Right) */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setIsDark(prev => !prev)}
-              className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-xl transition-colors"
-              title={isDark ? 'Modo Claro' : 'Modo Escuro'}
-            >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            {user ? (
-              <button
-                onClick={() => supabase.auth.signOut()}
-                className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-xl transition-colors border border-transparent hover:border-neutral-300 dark:hover:border-neutral-600"
-                title="Sair da Conta"
-              >
-                <UserCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-              </button>
-            ) : (
-              <button
-                onClick={() => setIsAuthOpen(true)}
-                className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-xl transition-colors border border-transparent hover:border-neutral-300 dark:hover:border-neutral-600"
-                title="Login"
-              >
-                <LogIn className="w-5 h-5" />
+                <div className="flex flex-col items-start translate-y-0.5">
+                   <span className="text-[9px] font-black text-muted uppercase tracking-tighter leading-none mb-0.5">Vessel Name</span>
+                   <span className={cn(
+                     "text-sm font-bold transition-colors leading-tight",
+                     manifestShipName ? "text-primary" : "text-muted italic"
+                   )}>
+                     {manifestShipName || 'IDENTIFICAR...'}
+                   </span>
+                </div>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
               </button>
             )}
           </div>
@@ -280,134 +180,187 @@ export function Header() {
 
         {/* Center Section: Stability Info */}
         {(totalPort > 0 || totalStarboard > 0) && (
-            <div className="flex flex-1 xl:flex-none w-full xl:w-auto justify-center items-center gap-4 lg:gap-6 px-2 lg:px-4 border-t xl:border-t-0 xl:border-x border-neutral-300 dark:border-neutral-800/50 xl:mx-4 order-2 pt-3 xl:pt-0 pb-1 xl:pb-0 min-w-fit">
-              <div className="flex flex-col items-center gap-1 w-full max-w-[250px] lg:max-w-none lg:w-auto">
-                <span className="text-[9px] text-neutral-500 dark:text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1 whitespace-nowrap">
-                  <ListCollapse size={10} /> BANDA (TRANSVERSAL)
-                </span>
-                <div className="flex items-center gap-2 text-[10px] lg:text-xs font-mono w-full justify-center">
-                  <span className={totalPort > totalStarboard + 50 ? "text-red-500 dark:text-red-400" : "text-neutral-600 dark:text-neutral-400"}>BB: {totalPort.toFixed(1)}t</span>
-                  <div className="flex-1 max-w-[120px] h-1.5 bg-neutral-300 dark:bg-black border border-neutral-400 dark:border-neutral-600 rounded-full relative overflow-hidden flex">
-                    <div className="flex-1 border-r border-neutral-400 dark:border-neutral-600 relative">
-                       <div className={`absolute top-0 bottom-0 right-0 transition-all ${isListing && totalPort > totalStarboard ? "bg-red-500" : "bg-indigo-500"}`}
-                           style={{ width: `${Math.min(100, (listDiff / (totalPort+totalStarboard+1)) * 100)}%`, opacity: totalPort > totalStarboard ? 1 : 0 }}></div>
+            <div className="flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/40 backdrop-blur-md border border-subtle rounded-2xl py-2.5 order-2">
+              <div className="flex flex-col items-center gap-2 flex-1 max-w-[320px]">
+                <div className="flex justify-between w-full text-[10px] font-black text-muted tracking-wide uppercase opacity-70">
+                   <span className={totalPort > totalStarboard + 50 ? "text-status-error" : ""}>BOMBORDO</span>
+                   <span className={totalStarboard > totalPort + 50 ? "text-status-error" : ""}>BORESTE</span>
+                </div>
+                <div className="flex items-center gap-4 w-full">
+                  <span className="text-xs font-mono font-black text-secondary tabular-nums">{totalPort.toFixed(1)}t</span>
+                  <div className="flex-1 h-3 bg-main border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5">
+                    <div className="flex-1 flex justify-end">
+                       <div className={`h-full transition-all duration-700 rounded-l-sm ${isListing && totalPort > totalStarboard ? "bg-status-error" : "bg-brand-primary"}`}
+                           style={{ width: `${Math.min(100, (totalPort / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }}></div>
                     </div>
-                    <div className="flex-1 relative">
-                      <div className={`absolute top-0 bottom-0 left-0 transition-all ${isListing && totalStarboard > totalPort ? "bg-red-500" : "bg-indigo-500"}`}
-                          style={{ width: `${Math.min(100, (listDiff / (totalPort+totalStarboard+1)) * 100)}%`, opacity: totalStarboard > totalPort ? 1 : 0 }} />
+                    <div className="w-0.5 bg-border-strong mx-0.5" />
+                    <div className="flex-1">
+                      <div className={`h-full transition-all duration-700 rounded-r-sm ${isListing && totalStarboard > totalPort ? "bg-status-error" : "bg-brand-primary"}`}
+                          style={{ width: `${Math.min(100, (totalStarboard / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }} />
                     </div>
                   </div>
-                  <span className={totalStarboard > totalPort + 50 ? "text-red-500 dark:text-red-400" : "text-neutral-600 dark:text-neutral-400"}>BE: {totalStarboard.toFixed(1)}t</span>
+                  <span className="text-xs font-mono font-black text-secondary tabular-nums">{totalStarboard.toFixed(1)}t</span>
                 </div>
               </div>
 
-              {totalTopHeavyMoment > 0 && (
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[9px] text-neutral-500 dark:text-[#6c6c8c] font-bold tracking-widest flex items-center gap-1 whitespace-nowrap"><Weight size={10} /> CENTRO GAL (VCG)</span>
-                  <span className={`text-[10px] lg:text-xs font-mono font-bold whitespace-nowrap ${isTopHeavy ? "text-red-600 dark:text-red-500" : "text-emerald-600 dark:text-emerald-500"}`}>
-                    M: {totalTopHeavyMoment.toFixed(0)} <span className="opacity-50">tm</span> {isTopHeavy && '(⚠️)'}
-                  </span>
+              <div className="h-10 w-px bg-border-subtle" />
+
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] text-muted font-bold tracking-widest uppercase mb-1">Stability VCG</span>
+                <div className="flex items-center gap-2">
+                   <Weight size={18} className={isTopHeavy ? "text-status-error" : "text-status-success"} />
+                   <span className={`text-base font-black tracking-tight tabular-nums ${isTopHeavy ? "text-status-error" : "text-primary"}`}>
+                     {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-muted font-bold text-xs uppercase ml-0.5">tm</span>
+                   </span>
                 </div>
-              )}
+              </div>
             </div>
         )}
-      </header>
 
-    <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+        {/* Right Section: Badges & Actions */}
+        <div className="flex items-center gap-4 order-3 ml-auto">
+          {/* Peso Plano */}
+          <div className="hidden xl:flex flex-col items-end px-5 py-2 bg-brand-primary/5 border border-brand-primary/10 rounded-2xl">
+            <span className="text-[9px] text-brand-primary font-black uppercase tracking-widest mb-0.5">Carga Total</span>
+            <span className="text-primary font-black text-lg tabular-nums leading-none">{currentTotalWeight.toFixed(1)} <sub className="text-[10px] font-bold bottom-0 uppercase ml-1 opacity-60">Ton</sub></span>
+          </div>
 
-    {exportModalOpen && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-neutral-100 dark:bg-neutral-800 p-6 rounded-lg w-96 max-w-[90vw]">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-4">Exportar {exportFormat === 'pdf' ? 'PDF' : 'CSV'}</h3>
-          <input
-            type="text"
-            value={exportFilename}
-            onChange={(e) => setExportFilename(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-neutral-700 text-gray-800 dark:text-neutral-100 rounded mb-4 border border-neutral-400 dark:border-neutral-600 focus:border-indigo-500 outline-none"
-            placeholder={`Nome do arquivo (com .${exportFormat})`}
-          />
-          <div className="flex gap-2 mb-4">
-              <button 
-                onClick={async () => {
-                  if ('showDirectoryPicker' in window) {
-                    try {
-                      const showDirectoryPicker = (window as Window & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker;
-                      if (showDirectoryPicker) {
-                        const handle = await showDirectoryPicker();
-                        setDirHandle(handle);
-                      }
-                    } catch {
-                      // User cancelled
-                    }
-                  } else {
-                    alert('Seu navegador não suporta seleção de pasta. O arquivo será baixado na pasta padrão de downloads.');
-                  }
-                }} 
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm transition-colors"
-              >
-              Escolher Pasta
-            </button>
-            <button 
-              onClick={async () => {
-                let blob: Blob;
-                if (exportFormat === 'pdf') {
-                  blob = await PdfGeneratorService.generateBlob(
-                    locations,
-                    manifestShipName,
-                    manifestAtendimento
-                  );
-                } else {
-                  blob = CsvGeneratorService.generateCsv(
-                    locations,
-                    manifestShipName,
-                    manifestAtendimento
-                  );
-                }
+          <div className="h-10 w-px bg-border-subtle hidden lg:block" />
 
-                if (dirHandle) {
-                  try {
-                    const fileHandle = await dirHandle.getFileHandle(exportFilename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    alert(`${exportFormat.toUpperCase()} salvo com sucesso na pasta selecionada!`);
-                  } catch (e) {
-                    alert('Erro ao salvar: ' + (e as Error).message);
-                  }
-                } else {
-                  if (exportFormat === 'pdf') {
-                    PdfGeneratorService.executeExport(
-                      locations,
-                      exportFilename,
-                      manifestShipName,
-                      manifestAtendimento
-                    );
-                  } else {
-                    CsvGeneratorService.executeExport(
-                      locations,
-                      exportFilename,
-                      manifestShipName,
-                      manifestAtendimento
-                    );
-                  }
-                }
-                setExportModalOpen(false);
-                setDirHandle(null);
-              }} 
-              className="flex-1 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-sm transition-colors"
+          {/* Action Group */}
+          <div className="flex items-center gap-2">
+            <button
+              className="p-3 text-secondary hover:text-status-error hover:bg-status-error/10 rounded-2xl transition-all active:scale-90"
+              onClick={() => {
+                if (window.confirm('Limpar manifestos?')) useCargoStore.getState().clearAllCargoes();
+              }}
+              title="Limpar Tudo"
             >
-              Salvar
+              <Trash2 size={20} />
+            </button>
+
+            <div className="flex items-center gap-2 p-1.5 bg-sidebar/50 border border-subtle rounded-2xl">
+               <button onClick={handleExportCsv} disabled={!manifestsLoaded} className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all">
+                 <Download size={14} /> CSV
+               </button>
+               <button onClick={handleExportPdf} disabled={!manifestsLoaded} className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all">
+                 <Download size={14} /> PDF
+               </button>
+            </div>
+
+            <button
+              onClick={handleSaveToCloud}
+              disabled={saving}
+              className="flex items-center gap-3 bg-status-success text-white hover:brightness-110 disabled:opacity-40 px-6 py-3 rounded-2xl text-xs font-black shadow-xl shadow-status-success/20 active:scale-95 transition-all"
+            >
+              <CloudUpload size={18} /> 
+              <span>{saving ? 'SALVANDO...' : 'SALVAR'}</span>
             </button>
           </div>
-          <button 
-            onClick={() => { setExportModalOpen(false); setDirHandle(null); }} 
-            className="w-full text-neutral-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            Cancelar
-          </button>
+
+          <div className="h-10 w-px bg-border-subtle mx-1" />
+
+          {/* User Section */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsDark(prev => !prev)} className="p-3 text-secondary hover:bg-sidebar rounded-2xl border border-transparent hover:border-subtle transition-all">
+              {isDark ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            {user ? (
+               <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-3 p-1.5 pr-4 bg-status-success/10 border border-status-success/20 rounded-full hover:bg-status-success/20 transition-all">
+                 <UserCircle className="w-9 h-9 text-status-success" />
+                 <div className="flex flex-col items-start leading-none gap-1">
+                    <span className="text-[10px] font-black text-status-success uppercase tracking-widest">Active</span>
+                    <span className="text-xs font-bold text-primary truncate max-w-[80px]">{user.email?.split('@')[0]}</span>
+                 </div>
+               </button>
+            ) : (
+               <button onClick={() => setIsAuthOpen(true)} className="p-3 text-secondary hover:text-brand-primary hover:bg-brand-primary/10 rounded-2xl transition-all">
+                 <LogIn size={20} />
+               </button>
+            )}
+          </div>
         </div>
-      </div>
-    )}
+      </header>
+
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+
+      {exportModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-header border border-subtle p-8 rounded-[2rem] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-8">
+              <div className="p-4 bg-brand-primary/10 rounded-3xl mb-4">
+                <Download className="w-8 h-8 text-brand-primary" />
+              </div>
+              <h3 className="text-xl font-black text-primary">Exportar Manifesto</h3>
+              <p className="text-sm text-muted mt-1 font-medium">Configure o nome do arquivo para salvamento.</p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Nome do Arquivo</label>
+                <input
+                  type="text"
+                  value={exportFilename}
+                  onChange={(e) => setExportFilename(e.target.value)}
+                  className="w-full px-5 py-4 bg-main border-2 border-subtle text-primary rounded-2xl focus:border-brand-primary outline-none transition-all font-bold"
+                  placeholder={`ex: Plano_Consolidado.${exportFormat}`}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={async () => {
+                    const showDirectoryPicker = (window as any).showDirectoryPicker;
+                    if (showDirectoryPicker) {
+                      try { setDirHandle(await showDirectoryPicker()); } catch {}
+                    } else {
+                      alert('Browser não suporta seleção de pasta local.');
+                    }
+                  } } 
+                  className="px-6 py-4 bg-sidebar border border-subtle text-primary rounded-2xl text-xs font-black hover:bg-main transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus size={14} /> PASTA
+                </button>
+                <button 
+                  onClick={async () => {
+                    let blob: Blob;
+                    if (exportFormat === 'pdf') {
+                      blob = await PdfGeneratorService.generateBlob(locations, manifestShipName, manifestAtendimento);
+                    } else {
+                      blob = CsvGeneratorService.generateCsv(locations, manifestShipName, manifestAtendimento);
+                    }
+
+                    if (dirHandle) {
+                      try {
+                        const fileHandle = await dirHandle.getFileHandle(exportFilename, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        alert('Salvo com sucesso!');
+                      } catch (e) { alert('Erro: ' + (e as Error).message); }
+                    } else {
+                      if (exportFormat === 'pdf') PdfGeneratorService.executeExport(locations, exportFilename, manifestShipName, manifestAtendimento);
+                      else CsvGeneratorService.executeExport(locations, exportFilename, manifestShipName, manifestAtendimento);
+                    }
+                    setExportModalOpen(false); setDirHandle(null);
+                  } } 
+                  className="px-6 py-4 bg-brand-primary text-white rounded-2xl text-xs font-black shadow-xl shadow-brand-primary/20 hover:brightness-110 active:scale-95 transition-all"
+                >
+                  EXPORTAR
+                </button>
+              </div>
+
+              <button 
+                onClick={() => { setExportModalOpen(false); setDirHandle(null); } } 
+                className="w-full py-4 text-xs font-bold text-muted hover:text-primary transition-colors text-center"
+              >
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

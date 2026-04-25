@@ -171,158 +171,149 @@ export function Sidebar() {
     };
 
     return (
-    <aside className="w-80 border-r border-neutral-300 dark:border-neutral-800 bg-neutral-100 dark:bg-[#16161a] flex flex-col shrink-0 h-full">
-        <div className="p-4 border-b border-neutral-300 dark:border-neutral-800 bg-neutral-200/50 dark:bg-neutral-900/40">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-neutral-200 mb-3 tracking-wide">MANIFESTO</h2>
-        
-        <input type="file" accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-        
-         <button 
-           onClick={() => fileInputRef.current?.click()}
-           disabled={isProcessing}
-            className={isProcessing 
-              ? "w-full border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2 transition-colors border-neutral-400 dark:border-neutral-700 bg-neutral-300 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-500 cursor-not-allowed"
-              : "w-full border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2 transition-colors border-neutral-400 dark:border-neutral-700 hover:border-indigo-500/50 hover:bg-indigo-500/5 text-neutral-700 dark:text-neutral-400"
-            }
-         >
-           {isProcessing ? (
-             <div className="flex flex-col items-center justify-center gap-3 w-full animate-pulse transition-all px-2">
-               <FileType className="h-6 w-6 text-indigo-400" />
-                <div className="w-full bg-neutral-300 dark:bg-neutral-950 rounded-full h-2 border border-neutral-400 dark:border-neutral-700/50 overflow-hidden relative">
-                  <div className="bg-indigo-500 h-2 transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
-                </div>
-                <div className="flex justify-between w-full text-[8px] font-mono text-neutral-600 dark:text-neutral-400">
-                  <span className="text-indigo-600 dark:text-indigo-300">
-                    {isOCR ? 'Processando OCR...' : progressPercent < 30 ? 'Lendo PDF...' : progressPercent < 95 ? 'Extraindo texto...' : 'Finalizando...'}
-                  </span>
-                  <span>{progressPercent || 0}%</span>
-                </div>
-                <div className="flex gap-1 mt-1">
-                  <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 10 ? 'bg-green-800/30 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>✓ PDF</span>
-                  <span className={`text-[7px] px-1.5 py-0.5 rounded ${isOCR && progressPercent >= 30 ? 'bg-amber-800/30 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : progressPercent >= 30 && !isOCR ? 'bg-green-800/30 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>
-                    {isOCR && progressPercent >= 30 ? '✓ OCR' : progressPercent >= 30 && !isOCR ? '✓ Texto' : 'OCR'}
-                  </span>
-                  <span className={`text-[7px] px-1.5 py-0.5 rounded ${progressPercent >= 95 ? 'bg-blue-800/30 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-neutral-300 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-600'}`}>Parse</span>
-                </div>
-             </div>
-           ) : (
-             <div className="flex flex-col items-center justify-center gap-3 w-full">
-               <UploadCloud className="h-6 w-6" />
-               <span className="text-sm font-medium">Importar PDF</span>
-             </div>
-           )}
-         </button>
-
-        {error && (
-          <div className="mt-3 text-xs text-red-400 flex items-center gap-1.5 bg-red-400/10 p-2 rounded">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error.message}</span>
-          </div>
-        )}
-      </div>
-      
-      <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/20">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
-          {filterButtons.map(btn => (
-            <button
-              key={btn.key}
-              onClick={() => setDestinationFilter(btn.key)}
-              className={cn(
-                "px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg transition-all border shrink-0 uppercase",
-                destinationFilter === btn.key 
-                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-500/20" 
-                  : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-500 hover:text-gray-800 dark:hover:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 border-transparent cursor-pointer"
-              )}
+    <aside className="w-80 border-r border-subtle bg-sidebar flex flex-col shrink-0 h-full shadow-lg z-20">
+        {/* Manifest Import Section */}
+        <div className="p-6 border-b border-subtle bg-header/30">
+            <h2 className="text-[10px] font-black text-muted mb-4 tracking-[0.15em] uppercase">Manifest Management</h2>
+            
+            <input type="file" accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+            
+            <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+                className={cn(
+                    "w-full border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300",
+                    isProcessing 
+                        ? "border-subtle bg-main/50 cursor-not-allowed"
+                        : "border-strong/50 hover:border-brand-primary/50 hover:bg-brand-primary/5 text-secondary hover:text-brand-primary"
+                )}
             >
-              {btn.label}
+                {isProcessing ? (
+                    <div className="flex flex-col items-center gap-3 w-full animate-in fade-in duration-500">
+                        <FileType className="h-7 w-7 text-brand-primary animate-pulse" />
+                        <div className="w-full bg-main rounded-full h-1.5 overflow-hidden shadow-inner">
+                            <div className="bg-brand-primary h-full transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
+                        </div>
+                        <div className="flex justify-between w-full text-[9px] font-bold text-muted uppercase tracking-widest">
+                            <span>{isOCR ? 'RUNNING OCR' : 'EXTRACTING'}</span>
+                            <span className="text-brand-primary">{progressPercent || 0}%</span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="p-3 bg-brand-primary/10 rounded-2xl mb-1">
+                            <UploadCloud className="h-6 w-6 text-brand-primary" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest">Importar Manifesto</span>
+                        <span className="text-[10px] font-medium text-muted">Apenas arquivos .PDF</span>
+                    </div>
+                )}
             </button>
-          ))}
+
+            {error && (
+                <div className="mt-4 text-[10px] font-bold text-status-error flex items-center gap-2 bg-status-error/10 p-3 rounded-xl border border-status-error/20 animate-in slide-in-from-top-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{error.message}</span>
+                </div>
+            )}
         </div>
-      </div>
-
-      <div className="flex-1 overflow-auto p-4 flex flex-col gap-3 relative">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xs font-bold tracking-widest text-neutral-600 dark:text-neutral-400 uppercase">Não Alocadas</h2>
-            <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded-md">
-              {(() => {
-                const count = unallocatedCargoes.filter(c => {
-                  if (destinationFilter === 'TODOS') return true;
-                  if (destinationFilter === 'S/D') return !c.destinoCarga;
-                  return c.destinoCarga === destinationFilter;
-                }).length;
-                return count;
-              })()}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {(() => {
-                return (
-                    <>
-                        <input 
-                            title="Selecionar Todas"
-                            type="checkbox" 
-                            checked={allVisibleSelected}
-                            disabled={visibleUnallocated.length === 0}
-                            onChange={() => {
-                                if (allVisibleSelected) {
-                                    setSelectedCargoIds(new Set());
-                                } else {
-                                    setSelectedCargoIds(new Set(visibleUnallocated.map(c => c.id)));
-                                }
-                            }}
-                            className="w-4 h-4 rounded border-neutral-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 mt-[-2px] mr-1"
-                        />
-                        
-                        {selectedCargoIds.size > 0 && (
-                          <button
-                            onClick={() => setIsBatchMoveOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors"
-                            title="Mover selecionadas para um local/baia"
-                          >
-                            <MoveRight className="w-3.5 h-3.5" />
-                            Mover {selectedCargoIds.size}
-                          </button>
+      
+        {/* Destination Quick Filters */}
+        <div className="px-4 py-4 border-b border-subtle bg-sidebar/50">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+                {filterButtons.map(btn => (
+                    <button
+                        key={btn.key}
+                        onClick={() => setDestinationFilter(btn.key)}
+                        className={cn(
+                            "px-4 py-2 text-[10px] font-black tracking-widest rounded-xl transition-all border shrink-0 uppercase",
+                            destinationFilter === btn.key 
+                                ? "bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20" 
+                                : "bg-header border-subtle text-muted hover:text-primary hover:border-strong cursor-pointer"
                         )}
+                    >
+                        {btn.label}
+                    </button>
+                ))}
+            </div>
+        </div>
 
+        {/* List Header & Global Actions */}
+        <div className="flex-1 overflow-auto p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-[10px] font-black tracking-[0.2em] text-muted uppercase">Inventory</h2>
+                    <span className="text-[11px] font-black bg-brand-primary text-white px-2.5 py-0.5 rounded-full shadow-md shadow-brand-primary/20">
+                        {(() => {
+                            const count = unallocatedCargoes.filter(c => {
+                                if (destinationFilter === 'TODOS') return true;
+                                if (destinationFilter === 'S/D') return !c.destinoCarga;
+                                return c.destinoCarga === destinationFilter;
+                            }).length;
+                            return count;
+                        })()}
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input 
+                        title="Selecionar Visíveis"
+                        type="checkbox" 
+                        checked={allVisibleSelected}
+                        disabled={visibleUnallocated.length === 0}
+                        onChange={() => {
+                            if (allVisibleSelected) setSelectedCargoIds(new Set());
+                            else setSelectedCargoIds(new Set(visibleUnallocated.map(c => c.id)));
+                        }}
+                        className="w-4 h-4 rounded-md border-strong text-brand-primary focus:ring-brand-primary cursor-pointer disabled:opacity-30 mr-1"
+                    />
+
+                    {selectedCargoIds.size > 0 && (
                         <button
-                          onClick={async () => {
-                            if (selectedCargoIds.size > 0) {
-                                if (window.confirm(`Tem certeza que deseja deletar as ${selectedCargoIds.size} carga(s) selecionada(s)?`)) {
+                            onClick={() => setIsBatchMoveOpen(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black text-white bg-brand-primary hover:brightness-110 shadow-lg shadow-brand-primary/20 transition-all"
+                        >
+                            <MoveRight className="w-3 h-3" />
+                            {selectedCargoIds.size}
+                        </button>
+                    )}
+
+                    <button
+                        onClick={async () => {
+                            const msg = selectedCargoIds.size > 0 
+                                ? `Excluir ${selectedCargoIds.size} cargas selecionadas?` 
+                                : `Excluir TODAS as ${unallocatedCargoes.length} não alocadas?`;
+                            
+                            if (window.confirm(msg)) {
+                                if (selectedCargoIds.size > 0) {
                                     await useCargoStore.getState().deleteMultipleCargoes(Array.from(selectedCargoIds));
                                     setSelectedCargoIds(new Set());
-                                }
-                            } else {
-                                if (window.confirm(`Tem certeza que deseja excluir TODAS as ${unallocatedCargoes.length} carga(s) não alocada(s)?`)) {
+                                } else {
                                     await clearUnallocatedCargoes();
                                 }
                             }
-                          }}
-                          disabled={unallocatedCargoes.length === 0}
-                          className={cn(
-                              "transition-colors p-1 rounded",
-                              selectedCargoIds.size > 0 
-                                ? "text-white bg-red-600 hover:bg-red-500 shadow-sm" 
-                                : "text-neutral-500 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
-                          )}
-                          title={selectedCargoIds.size > 0 ? "Excluir selecionadas" : "Excluir todas as cargas"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setIsManualModalOpen(true)}
-                          className="text-neutral-500 dark:text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 p-1 rounded transition-colors"
-                          title="Adicionar carga manual"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
+                        }}
+                        disabled={unallocatedCargoes.length === 0}
+                        className={cn(
+                            "p-2 rounded-xl transition-all",
+                            selectedCargoIds.size > 0 
+                                ? "bg-status-error text-white shadow-lg shadow-status-error/20" 
+                                : "text-muted hover:text-status-error hover:bg-status-error/10 disabled:opacity-30"
+                        )}
+                        title="Excluir Cargas"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
 
-                    </>
-                );
-            })()}
-          </div>
-        </div>
+                    <button
+                        onClick={() => setIsManualModalOpen(true)}
+                        className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
+                        title="Nova Carga Manual"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
 
          {!manifestsLoaded && !isProcessing && (
             <div className="text-sm text-neutral-500 dark:text-neutral-600 text-center mt-10 p-4 border border-dashed border-neutral-400 dark:border-neutral-800 rounded-lg">
