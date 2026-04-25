@@ -15,7 +15,7 @@ interface CargoPreviewProps {
    cargo?: Partial<Cargo>; // Optional cargo object for consistent scaling
 }
 
-export function CargoPreview({ format, length, width, height, color, quantity = 1, cargo }: CargoPreviewProps) {
+export function CargoPreview({ format, length, width, height, color, quantity = 1, dynamicScale, cargo }: CargoPreviewProps) {
     
     // Fallback pra criar dummy object caso cargo prop doesn't exist
     const mockCargo = cargo || {
@@ -49,8 +49,18 @@ export function CargoPreview({ format, length, width, height, color, quantity = 
         }
     }
 
+    // Determine visual size based on props
+    const displayWidth = dynamicScale ? Math.min(totalWidth, 60) : totalWidth;
+    const displayHeight = dynamicScale ? (totalHeight * (displayWidth / totalWidth)) : totalHeight;
+
     return (
-        <svg width={totalWidth} height={totalHeight} className="overflow-hidden">
+        <svg 
+            width={displayWidth} 
+            height={displayHeight} 
+            viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+            className="overflow-hidden drop-shadow-sm"
+            preserveAspectRatio="xMidYMid meet"
+        >
             {shapes}
         </svg>
     );

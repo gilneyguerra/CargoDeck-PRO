@@ -236,9 +236,9 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
                     {cargo.category || 'FREIGHT'}
                   </span>
                 </div>
-                <span className="font-black text-sm text-primary truncate" style={{ fontSize: `${fontSize}px` }}>
-                  {cargo.identifier}
-                </span>
+                  <span className="font-black text-sm text-primary truncate">
+                    {cargo.identifier}
+                  </span>
              </div>
              <div className="flex items-center gap-1 shrink-0">
                 <button
@@ -257,12 +257,12 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           </div>
 
           {/* Corpo do Card */}
-          <div className="flex gap-4 items-center min-h-[60px]">
-             <div className="shrink-0 bg-main p-1.5 rounded-xl border border-subtle shadow-inner">
-                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#4f46e5'} quantity={cargo.quantity} cargo={cargo} />
+          <div className="flex gap-5 items-center min-h-[70px]">
+             <div className="shrink-0 bg-main p-2 rounded-2xl border border-subtle shadow-inner">
+                <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#4f46e5'} quantity={cargo.quantity} cargo={cargo} dynamicScale={true} />
              </div>
-             <div className="flex-1 min-w-0">
-                <p className="text-xs text-secondary font-medium leading-relaxed line-clamp-3 italic opacity-80" style={{ fontSize: `${fontSize * 0.9}px` }}>
+             <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-[11px] text-secondary font-medium leading-relaxed line-clamp-3 italic opacity-80 overflow-hidden">
                    {cargo.description || 'Sem descrição detalhada.'}
                 </p>
              </div>
