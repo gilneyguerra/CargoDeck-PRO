@@ -127,11 +127,10 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
       className={cn(
         "group relative flex flex-col transition-all duration-300 select-none",
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
-        isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
           ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-xl border border-black/10 dark:border-white/5 shadow-black/40"
-          : "border border-subtle rounded-2xl p-3.5 gap-2 bg-card w-full overflow-hidden shadow-sm hover:shadow-md",
+          : "border border-subtle rounded-2xl p-3 gap-2 bg-card w-full shadow-sm hover:shadow-md",
         !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-brand-primary/50" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-status-warning/40 bg-status-warning/5" : "",
         isHighlight ? "ring-4 ring-status-warning shadow-[0_0_25px_rgba(251,191,36,0.6)] z-50 transform scale-[1.03]" : "",

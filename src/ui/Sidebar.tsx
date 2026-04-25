@@ -174,7 +174,7 @@ export function Sidebar() {
     };
 
     return (
-    <aside className="w-80 border-r border-subtle bg-sidebar flex flex-col shrink-0 h-full shadow-lg z-20">
+    <aside className="w-[340px] border-r border-subtle bg-sidebar flex flex-col shrink-0 h-full shadow-lg z-20">
         {/* Manifest Import Section */}
         <div className="p-6 border-b border-subtle bg-header/30">
             <h2 className="text-[10px] font-black text-muted mb-4 tracking-[0.15em] uppercase">Manifest Management</h2>
