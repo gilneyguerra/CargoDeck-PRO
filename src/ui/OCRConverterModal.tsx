@@ -17,24 +17,15 @@ async function loadPdfJs() {
   if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
 
   return new Promise((resolve, reject) => {
-    // Carrega o Worker primeiro para garantir que o fallback (Fake Worker) funcione
-    const workerScript = document.createElement('script');
-    workerScript.src = window.location.origin + PDFJS_WORKER_URL;
-    workerScript.onload = () => {
-      // Depois carrega a biblioteca principal
-      const mainScript = document.createElement('script');
-      mainScript.src = window.location.origin + PDFJS_URL;
-      mainScript.onload = () => {
-        const pdfjsLib = (window as any).pdfjsLib;
-        // Tenta usar o worker real, mas se falhar, o fake worker agora terá o window.pdfjsWorker pronto
-        pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + PDFJS_WORKER_URL;
-        resolve(pdfjsLib);
-      };
-      mainScript.onerror = () => reject(new Error('Falha ao carregar motor PDF principal (/public/pdf.min.js)'));
-      document.head.appendChild(mainScript);
+    const script = document.createElement('script');
+    script.src = window.location.origin + PDFJS_URL;
+    script.onload = () => {
+      const pdfjsLib = (window as any).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + PDFJS_WORKER_URL;
+      resolve(pdfjsLib);
     };
-    workerScript.onerror = () => reject(new Error('Falha ao carregar motor PDF worker (/public/pdf.worker.min.js)'));
-    document.head.appendChild(workerScript);
+    script.onerror = () => reject(new Error('Falha ao carregar motor PDF local (/public/pdf.min.js)'));
+    document.head.appendChild(script);
   });
 }
 
