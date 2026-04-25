@@ -1,6 +1,6 @@
 import { 
   Trash2, Download, CloudUpload, UserCircle, LogIn,
-  Sun, Moon, Weight, Ship
+  Sun, Moon, Weight, Ship, Plus
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
