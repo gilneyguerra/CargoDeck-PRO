@@ -1,21 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
-import * as pdfjs from 'pdfjs-dist';
-
-// pdfjs worker setup - High resilience Blob bridge approach
-(function setupWorker() {
-    try {
-        const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
-        const blobCode = `importScripts("${workerUrl}");`;
-        const blob = new Blob([blobCode], { type: 'application/javascript' });
-        pdfjs.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
-    } catch (e) {
-        console.error('Failed to setup worker bridge:', e);
-        // Fallback to direct link if blob fails
-        pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
-    }
-})();
 
 interface FileProgress {
   name: string;
@@ -76,8 +61,12 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const performOCR = async (file: File, onProgress: (p: number) => void): Promise<string> => {
+    // Dynamic load of PDF.js to bypass build issues
+    const pdfjsLib: any = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
     const worker = await createWorker('por', 1, {
