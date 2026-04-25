@@ -257,11 +257,21 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 const weightTonnes = isTon ? rawWeight : kgToTonnes(rawWeight);
 
                 const explicitId = extractIdentifier(rawDesc);
-                const identifier = explicitId ?? (isGeneric ? m[2] : m[2]);
+                const identifierRaw = (explicitId ?? (isGeneric ? m[2] : m[2])).replace(/[\n\r]+/g, ' ').trim();
+                // Limpeza agressiva do identificador para remover ruído do cabeçalho
+                const identifier = identifierRaw
+                    .replace(/DATA\s*[:\-]?\s*\d{2}\/\d{2}\/\d{4}/gi, '')
+                    .replace(/HORA\s*[:\-]?\s*\d{2}:\d{2}(?::\d{2})?/gi, '')
+                    .replace(/PAG\s*[:\-]?\s*\d+\/\d+/gi, '')
+                    .replace(/CBO\s+[A-Z]+/gi, '')
+                    .replace(/\b(PETROBRAS|MANIFESTO|TRANSPORTE|CARGAS|EMPRESA|ATENDIMENTO)\b/gi, '')
+                    .trim()
+                    .split(/\s+/)[0]; // Pega apenas a primeira palavra/bloco para o código identificador
+
                 const id = `${identifier}-${m[1]}`;
 
                 // Evita duplicatas se múltiplos patterns pegarem o mesmo item ou se o identificador já foi visto nesta extração
-                if (allParsedItems.some(item => item.data.id === id || (identifier && item.data.identifier === identifier))) {
+                if (allParsedItems.some(item => item.data.id === id || (identifier && identifier.length > 3 && item.data.identifier === identifier))) {
                     continue;
                 }
 
