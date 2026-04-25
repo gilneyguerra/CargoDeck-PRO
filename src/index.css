@@ -1,16 +1,47 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-main: var(--bg-main);
+  --color-sidebar: var(--bg-sidebar);
+  --color-header: var(--bg-header);
+  --color-card: var(--bg-card);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--border-strong);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-hover: var(--brand-hover);
+
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+  --color-status-info: var(--status-info);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+}
+
 /* CSS Variables for Light and Dark Themes - Refined Design System */
 :root {
-  --bg-main: #fcfcfd;
+  --bg-main: #f8fafc;
   --bg-card: #ffffff;
-  --bg-sidebar: #f8fafc;
+  --bg-sidebar: #f1f5f9;
   --bg-header: #ffffff;
   
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
   
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
