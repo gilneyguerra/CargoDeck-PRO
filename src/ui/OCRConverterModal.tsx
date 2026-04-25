@@ -10,6 +10,25 @@ interface FileProgress {
   error?: string;
 }
 
+const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function loadPdfJs() {
+  if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = PDFJS_URL;
+    script.onload = () => {
+      const pdfjsLib = (window as any).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+      resolve(pdfjsLib);
+    };
+    script.onerror = () => reject(new Error('Falha ao carregar motor PDF do CDN'));
+    document.head.appendChild(script);
+  });
+}
+
 export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [files, setFiles] = useState<FileProgress[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,9 +80,8 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const performOCR = async (file: File, onProgress: (p: number) => void): Promise<string> => {
-    // Dynamic load of PDF.js to bypass build issues
-    const pdfjsLib: any = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+    // Carrega o motor PDF via injeção de script (mais resiliente que ESM)
+    const pdfjsLib: any = await loadPdfJs();
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
