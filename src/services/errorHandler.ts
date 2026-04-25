@@ -56,11 +56,16 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCodes.U
         if (message.includes('PDFJS') || message.includes('Worker')) {
             return new AppError(ErrorCodes.PDF_CORRUPTED, `Falha no motor PDF: ${message}`, 'error', error);
         }
-    } else if (typeof error === 'string') {
-        message = error;
-    } else if (error && typeof error === 'object') {
-        // Tenta extrair mensagem de objetos de erro de bibliotecas externas
-        message = (error as any).message || (error as any).msg || JSON.stringify(error);
+    }
+    if (error && typeof error === 'object') {
+        const errObj = error as any;
+        message = errObj.message || errObj.msg || message;
+        if (message === 'Erro inesperado na aplicação.') {
+            // Se ainda for a mensagem padrão, tenta injetar detalhes do objeto
+            message = `Erro inesperado: ${errObj.name || 'Object'} - ${JSON.stringify(error).substring(0, 100)}`;
+        }
+    } else if (error !== undefined && error !== null) {
+        message = `Erro: ${String(error)}`;
     }
 
     return new AppError(defaultCode, message, 'error', contextError);

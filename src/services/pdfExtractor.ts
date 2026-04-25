@@ -438,22 +438,32 @@ export class PDFExtractor {
         try {
             // PERF: Carregamento sob demanda do motor PDF
             const pdfjsLib = await import('pdfjs-dist');
+            const version = pdfjsLib.version || '5.5.207';
             
-            // Configura o worker de forma mais robusta (Vite/Next.js compatível)
-            pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
-            
-            // Fallback caso o local falhe
-            if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+            // Configura o worker (Prioridade: Local -> CDN Versão Exata)
+            try {
+                // Tenta carregar o worker local primeiro
+                pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
+                logger.debug(`PDF.js version: ${version}. Usando worker: ${pdfjsLib.GlobalWorkerOptions.workerSrc}`);
+            } catch (err) {
+                // Fallback para CDN oficial se falhar ao configurar local
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+                logger.warn(`Falha ao configurar worker local. Usando CDN: ${pdfjsLib.GlobalWorkerOptions.workerSrc}`);
             }
 
             const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ 
-                data: arrayBuffer,
-                useWorkerFetch: true,
-                isEvalSupported: false,
-                canvasMaxAreaInBytes: 16777216 * 4
-            });
+            
+            let loadingTask;
+            try {
+                loadingTask = pdfjsLib.getDocument({ 
+                    data: arrayBuffer,
+                    useWorkerFetch: true,
+                    isEvalSupported: false,
+                    canvasMaxAreaInBytes: 16777216 * 4 // Aumenta limite para PDFs grandes
+                });
+            } catch (err) {
+                throw new AppError(ErrorCodes.PDF_READ_FAILED, `Falha ao inicializar documento PDF: ${err instanceof Error ? err.message : String(err)}`, 'error', err);
+            }
             
             const pdf = await loadingTask.promise;
 
