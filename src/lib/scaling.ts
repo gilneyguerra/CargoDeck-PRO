@@ -6,10 +6,10 @@ import type { Cargo } from '@/domain/Cargo'
  */
 
 /**
- * Base scale: 1 meter = 3 pixels
- * Reduced from 4 to make cargo elements smaller while maintaining readability
+ * Base scale: 1 meter = 25 pixels
+ * Increased from 20 to improve readability and fit text better
  */
-export const BASE_SCALE = 20
+export const BASE_SCALE = 25
 
 /**
  * Convert real-world dimension (meters) to visual pixels linearly
@@ -37,10 +37,10 @@ export function getCargoFontSize(cargo: Cargo): number {
   const minDim = Math.min(cargo.widthMeters, cargo.lengthMeters);
   
   // Base font size on the smallest dimension to ensure it fits better
-  const baseSize = minDim * 2.5 + 4;
+  const baseSize = minDim * 3.5 + 5;
   
-  // Clamp between 5px and 14px
-  return Math.max(5, Math.min(14, baseSize));
+  // Clamp between 6px and 16px
+  return Math.max(6, Math.min(16, baseSize));
 }
 
 /**

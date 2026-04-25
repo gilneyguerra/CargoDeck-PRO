@@ -181,13 +181,15 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
           </div>
           <span className={cn(
-            "absolute inset-0 flex items-center justify-center font-bold text-center leading-tight pointer-events-none px-1 overflow-hidden truncate",
+            "absolute inset-0 flex items-center justify-center font-bold text-center leading-tight pointer-events-none px-2 overflow-hidden break-words",
             textColorClass,
             !isLightBackground && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
           )} style={{ 
-            fontSize: `${Math.max(5, fontSize * 0.8)}px`, 
-            display: (cargo.widthMeters < 0.8 || cargo.lengthMeters < 0.8) ? 'none' : 'flex',
-            maxWidth: '100%'
+            fontSize: `${Math.max(6, fontSize * 0.85)}px`, 
+            display: (cargo.widthMeters < 0.6 || cargo.lengthMeters < 0.6) ? 'none' : 'flex',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            padding: '4px'
           }}>
             {cargo.identifier}
           </span>
