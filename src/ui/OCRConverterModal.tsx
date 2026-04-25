@@ -53,8 +53,10 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
 
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done', result: text, progress: 100 } : f));
         } catch (err: any) {
-            console.error('OCR Error Detail:', err);
-            const errorMessage = err?.message || (typeof err === 'string' ? err : JSON.stringify(err)) || 'Falha na detecção OCR';
+            console.error('OCR Processing Detail:', err);
+            // Captura propriedades não-enumeráveis como 'message' e 'stack'
+            const errorInfo = typeof err === 'object' ? JSON.stringify(err, Object.getOwnPropertyNames(err)) : String(err);
+            const errorMessage = err?.message || errorInfo || 'Falha na detecção OCR';
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: errorMessage } : f));
         }
     }
