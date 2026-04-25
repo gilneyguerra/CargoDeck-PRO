@@ -72,18 +72,15 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
-    // API Tesseract.js v5+ (compatível com v7)
-    const worker = await createWorker({
+    // API Tesseract.js v5+ (consolidada)
+    // O idioma e o OEM são passados diretamente na criação
+    const worker = await createWorker('por' as any, 1, {
         logger: m => {
-            if (m.status === 'recognizing text') onProgress(m.progress);
+            if (m.status === 'recognizing text') (onProgress as any)(m.progress);
         }
     });
 
     try {
-        // Inicialização obrigatória na API moderna
-        await worker.loadLanguage('por');
-        await worker.initialize('por');
-
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const viewport = page.getViewport({ scale: 2.0 });
