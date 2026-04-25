@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
+import { loadPdfJs } from '../services/pdfLoader';
 
 interface FileProgress {
   name: string;
@@ -8,25 +9,6 @@ interface FileProgress {
   progress: number;
   result?: string;
   error?: string;
-}
-
-const PDFJS_URL = '/pdf.min.js';
-const PDFJS_WORKER_URL = '/pdf.worker.min.js';
-
-async function loadPdfJs() {
-  if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = window.location.origin + PDFJS_URL;
-    script.onload = () => {
-      const pdfjsLib = (window as any).pdfjsLib;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + PDFJS_WORKER_URL;
-      resolve(pdfjsLib);
-    };
-    script.onerror = () => reject(new Error('Falha ao carregar motor PDF local (/public/pdf.min.js)'));
-    document.head.appendChild(script);
-  });
 }
 
 export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

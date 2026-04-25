@@ -437,17 +437,11 @@ export class PDFExtractor {
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
         try {
             // PERF: Carregamento dinâmico para evitar aumentar o bundle principal
-            // @ts-ignore - Evita erro de tipagem em alguns ambientes de build
-            const pdfjsLib = await import('pdfjs-dist').then(m => m.default || m);
-            const version = pdfjsLib.version || '5.5.207';
+            const { loadPdfJs } = await import('./pdfLoader');
+            const pdfjsLib = await loadPdfJs();
+            const version = pdfjsLib.version || '2.16.105';
             
-            // pdfjs worker setup - High resilience Blob bridge approach
-            const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.js';
-            const blobCode = `importScripts("${workerUrl}");`;
-            const blob = new Blob([blobCode], { type: 'application/javascript' });
-            pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
-            
-            logger.info(`Motor PDF.js ${version} inicializado com worker local.`);
+            logger.info(`Motor PDF.js ${version} inicializado com motor local unificado.`);
 
             const arrayBuffer = await file.arrayBuffer();
             
