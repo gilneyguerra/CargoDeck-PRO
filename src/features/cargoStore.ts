@@ -120,16 +120,29 @@ export const useCargoStore = create<CargoState>()(
 
             setExtractedCargoes: (cargoes) => {
                 try {
-                    // Extrai metadados do manifesto do primeiro item (todos devem ter o mesmo cabeçalho)
-                    const firstCargo = cargoes[0];
-                    const manifestMeta = firstCargo ? {
-                        // O nome do navio (manifestShipName) deve ser definido apenas pelo usuário
-                        // e não extraído automaticamente do manifesto.
+                    const state = get();
+                    const existingCargoes = state.getAllCargo();
+                    const existingIds = new Set(existingCargoes.map(c => c.identifier).filter(Boolean));
+                    
+                    const newCargoes = cargoes.filter(c => !existingIds.has(c.identifier));
+                    const skippedCount = cargoes.length - newCargoes.length;
+
+                    if (skippedCount > 0) {
+                        useNotificationStore.getState().notify(
+                            `${skippedCount} carga(s) ignorada(s) por já estarem à bordo (duplicatas bloqueadas).`,
+                            'info'
+                        );
+                    }
+
+                    if (newCargoes.length === 0) return;
+
+                    const firstCargo = newCargoes[0];
+                    const manifestMeta = {
                         manifestAtendimento: firstCargo.numeroAtendimento  ?? null,
                         manifestRoteiro:     firstCargo.roteiroPrevisto    ?? null,
-                    } : {};
+                    };
 
-                    const sanitizedCargoes = cargoes.map(c => SecurityService.sanitizeObject(c));
+                    const sanitizedCargoes = newCargoes.map(c => SecurityService.sanitizeObject(c));
 
                     set((state) => ({
                         unallocatedCargoes: [...state.unallocatedCargoes, ...sanitizedCargoes],
@@ -137,18 +150,14 @@ export const useCargoStore = create<CargoState>()(
                         ...manifestMeta,
                     }));
 
-
-                    logger.info(`Adicionadas ${cargoes.length} cargas extraídas do PDF.`, {
-                        cargoCount: cargoes.length,
-                        totalUnallocated: get().unallocatedCargoes.length,
-                        ...manifestMeta,
+                    logger.info(`Adicionadas ${newCargoes.length} novas cargas.`, {
+                        cargoCount: newCargoes.length,
+                        skippedCount,
+                        totalUnallocated: get().unallocatedCargoes.length
                     });
                 } catch (error) {
                     logger.error('Falha ao adicionar cargas extraídas:', error);
-                    throw handleApplicationError(error, {
-                        context: 'setExtractedCargoes',
-                        cargoCount: cargoes.length
-                    });
+                    throw handleApplicationError(error, { context: 'setExtractedCargoes' });
                 }
             },
 
@@ -491,124 +500,84 @@ export const useCargoStore = create<CargoState>()(
 
             moveCargoToBay: (cargoId, bayId, positionInBay, x, y, isRotated) => {
                 try {
-                    // Save state before operation for potential undo/redo functionality
-                    // In a more advanced implementation, we could save to history here
+                    const state = get();
+                    let cargoToMove: Cargo | undefined;
                     
+                    // 1. Localizar a carga (em não alocadas ou em qualquer baia)
+                    cargoToMove = state.unallocatedCargoes.find(c => c.id === cargoId);
+                    if (!cargoToMove) {
+                        for (const loc of state.locations) {
+                            for (const bay of loc.bays) {
+                                const found = bay.allocatedCargoes.find(c => c.id === cargoId);
+                                if (found) {
+                                    cargoToMove = found;
+                                    break;
+                                }
+                            }
+                            if (cargoToMove) break;
+                        }
+                    }
+
+                    if (!cargoToMove) {
+                        logger.warn(`Tentativa de mover carga inexistente: ${cargoId}`);
+                        return;
+                    }
+
+                    // 2. Validação de Duplicidade (Identificador)
+                    if (cargoToMove.identifier) {
+                        const duplicate = findDuplicateOnboard(cargoToMove.identifier, cargoId, state.locations);
+                        if (duplicate) {
+                            const message = `Atenção: A carga "${cargoToMove.identifier}" já está alocada no "${duplicate.locationName}" (${duplicate.sideName}). Remova a duplicata antes de mover.`;
+                            useNotificationStore.getState().notify(message, 'warning', 8000);
+                            // Força um refresh do estado para garantir que o Draggable snap-back ocorra
+                            set({ ...state });
+                            return;
+                        }
+                    }
+
+                    // 3. Preparar Novo Estado (Remoção e Adição em passo único ou garantido)
                     set((state) => {
-                        let cargoToMove: Cargo | undefined;
-                        let sourceBayId: string | undefined;
-                        let sourceLocationId: string | undefined;
-
-                        cargoToMove = state.unallocatedCargoes.find(c => c.id === cargoId);
-                        if (!cargoToMove) {
-                            outer: for (const loc of state.locations) {
-                                for (const bay of loc.bays) {
-                                    const found = bay.allocatedCargoes.find(c => c.id === cargoId);
-                                    if (found) {
-                                        cargoToMove = found;
-                                        sourceBayId = bay.id;
-                                        sourceLocationId = loc.id;
-                                        break outer;
-                                    }
+                        // Remover de unallocated
+                        const nextUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
+                        
+                        // Remover de todas as baias e adicionar na baia alvo
+                        const nextLocations = state.locations.map(loc => ({
+                            ...loc,
+                            bays: loc.bays.map(bay => {
+                                // Primeiro, removemos a carga se ela estava aqui (garante não duplicidade)
+                                let updatedCargoes = bay.allocatedCargoes.filter(c => c.id !== cargoId);
+                                
+                                // Depois, se esta for a baia de destino, adicionamos a carga
+                                if (bay.id === bayId) {
+                                    updatedCargoes = [...updatedCargoes, {
+                                        ...cargoToMove!,
+                                        bayId: bay.id,
+                                        status: 'ALLOCATED',
+                                        positionInBay: positionInBay ?? 'center',
+                                        x: x,
+                                        y: y,
+                                        isRotated: isRotated ?? cargoToMove!.isRotated ?? false
+                                    }];
                                 }
-                            }
-                        }
 
-                        if (!cargoToMove) {
-                            logger.warn(`Tentativa de mover carga inexistente: ${cargoId}`);
-                            return state;
-                        }
-
-                        if (cargoToMove.identifier) {
-                            const duplicate = findDuplicateOnboard(cargoToMove.identifier, cargoId, state.locations);
-                            if (duplicate) {
-                                const message = `Atenção, a carga "${cargoToMove.identifier}" já encontra-se à bordo na aba do "${duplicate.locationName}" Lado "${duplicate.sideName}".`;
-                                setTimeout(() => useNotificationStore.getState().notify(message, 'warning', 8000), 0);
-                                return state; 
-                            }
-                        }
-
-
-                        let newUnallocated = state.unallocatedCargoes;
-                        let newLocations = state.locations;
-
-                        if (sourceLocationId !== undefined) {
-                            newLocations = state.locations.map(loc => {
-                                if (loc.id === sourceLocationId) {
-                                    return {
-                                        ...loc,
-                                        bays: loc.bays.map(bay => {
-                                            if (bay.id === sourceBayId) {
-                                                const filtered = bay.allocatedCargoes.filter(c => c.id !== cargoId);
-                                                return {
-                                                    ...bay,
-                                                    allocatedCargoes: filtered,
-                                                    currentWeightTonnes: filtered.reduce((acc, c) => acc + (c.weightTonnes * c.quantity), 0),
-                                                    currentOccupiedArea: filtered.reduce((acc, c) => acc + (c.lengthMeters * c.widthMeters * c.quantity), 0)
-                                                };
-                                            }
-                                            return bay;
-                                        })
-                                    };
-                                }
-                                return loc;
-                            });
-                        } else {
-                            newUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
-                        }
-
-                        newLocations = newLocations.map(loc => {
-                            return {
-                                ...loc,
-                                bays: loc.bays.map(bay => {
-                                    if (bay.id === bayId) {
-                                         const updatedCargoes: Cargo[] = [...bay.allocatedCargoes, {
-                                                ...cargoToMove,
-                                                bayId: bay.id,
-                                                status: 'ALLOCATED' as const,
-                                                positionInBay: positionInBay ?? 'center',
-                                                x: x,
-                                                y: y,
-                                                isRotated: isRotated ?? false
-                                            }];
-
-                                        return {
-                                            ...bay,
-                                            allocatedCargoes: updatedCargoes,
-                                            ...calculateBayStats(updatedCargoes)
-                                        };
-
-                                    }
-                                    return bay;
-                                })
-                            };
-                        });
+                                return {
+                                    ...bay,
+                                    allocatedCargoes: updatedCargoes,
+                                    ...calculateBayStats(updatedCargoes)
+                                };
+                            })
+                        }));
 
                         return {
-                            ...state,
-                            unallocatedCargoes: newUnallocated,
-                            locations: newLocations
+                            unallocatedCargoes: nextUnallocated,
+                            locations: nextLocations
                         };
                     });
-                    logger.info(`Carga ${cargoId} movida para baia ${bayId}.`, { 
-                        cargoId,
-                        bayId,
-                        positionInBay,
-                        x,
-                        y,
-                        isRotated
-                    });
+
+                    logger.info(`Carga ${cargoId} movida com sucesso para baia ${bayId}.`);
                 } catch (error) {
-                    logger.error(`Falha ao mover carga ${cargoId} para baia ${bayId}:`, error);
-                    throw handleApplicationError(error, { 
-                        context: 'moveCargoToBay',
-                        cargoId,
-                        bayId,
-                        positionInBay,
-                        x,
-                        y,
-                        isRotated
-                    });
+                    logger.error(`Erro ao mover carga ${cargoId}:`, error);
+                    handleApplicationError(error, { context: 'moveCargoToBay', cargoId, bayId });
                 }
             },
 

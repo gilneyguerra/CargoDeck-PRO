@@ -260,8 +260,10 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 const identifier = explicitId ?? (isGeneric ? m[2] : m[2]);
                 const id = `${identifier}-${m[1]}`;
 
-                // Evita duplicatas se múltiplos patterns pegarem o mesmo item
-                if (allParsedItems.some(item => item.data.id === id)) continue;
+                // Evita duplicatas se múltiplos patterns pegarem o mesmo item ou se o identificador já foi visto nesta extração
+                if (allParsedItems.some(item => item.data.id === id || (identifier && item.data.identifier === identifier))) {
+                    continue;
+                }
 
                 allParsedItems.push({
                     index: m.index,
