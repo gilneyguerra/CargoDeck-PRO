@@ -41,6 +41,27 @@ export interface Cargo {
   color?: string; // Hex color for visual representation
   format?: 'Retangular' | 'Quadrado' | 'Tubular'; // Shape format for graphical representation
 
+  // New detailed manifest data structure (Section 5)
+  dimensoes?: {
+    comprimento: number;
+    largura: number;
+    altura: number;
+    unidade: 'm';
+  };
+  peso?: {
+    valorOriginal: number; // em KG
+    valorEmToneladas: number; 
+    unidade: 't';
+  };
+  tamanhoFisico?: {
+    larguraPixels: number;
+    alturaPixels: number;
+    profundidadePixels: number;
+    escala: number;
+  };
+  dataExtracao?: string; // ISO string
+  fonteManifesto?: string;
+
   // Manifest Data — extracted from PDF header
   nomeEmbarcacao?: string;     // Nome da embarcação (ex: "Navio Alpha")
   numeroAtendimento?: string;  // Número de atendimento (ex: "509442732")

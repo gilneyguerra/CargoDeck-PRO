@@ -113,9 +113,7 @@ export function Sidebar() {
                     return {
                         id: item.id,
                         description: item.description,
-                        // Usa o código identificador real (ex: "MLTU 280189-9"), não o ID interno
                         identifier: item.identifier,
-                        // Peso já vem em toneladas do extrator (foi convertido de KG)
                         weightTonnes: item.weight,
                         widthMeters,
                         lengthMeters,
@@ -130,7 +128,22 @@ export function Sidebar() {
                         observations: item.isBackload ? 'BACKLOAD' : undefined,
                         color: getCategoryColor(item.tipoDetectado),
                         format: detectFormat(item),
-                        // Dados do manifesto
+                        // Dados do manifesto (Novo formato aninhado)
+                        dimensoes: {
+                            comprimento: lengthMeters,
+                            largura: widthMeters,
+                            altura: heightMeters,
+                            unidade: 'm'
+                        },
+                        peso: {
+                            valorOriginal: item.weightKg,
+                            valorEmToneladas: item.weight,
+                            unidade: 't'
+                        },
+                        tamanhoFisico: item.tamanhoFisico,
+                        dataExtracao: item.dataExtracao || new Date().toISOString(),
+                        fonteManifesto: file.name,
+                        // Suporte legado (para compatibilidade com componentes existentes)
                         nomeEmbarcacao:    item.nomeEmbarcacao,
                         numeroAtendimento: item.numeroAtendimento,
                         origemCarga:       item.origemCarga,

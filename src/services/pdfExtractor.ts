@@ -31,6 +31,15 @@ export interface CargoItem {
     origemCarga?: string;
     destinoCarga?: string;
     roteiroPrevisto?: string[];
+    // Novos campos (Seção 5)
+    dataExtracao?: string;
+    fonteManifesto?: string;
+    tamanhoFisico?: {
+        larguraPixels: number;
+        alturaPixels: number;
+        profundidadePixels: number;
+        escala: number;
+    };
 }
 
 interface ManifestHeader {
@@ -86,37 +95,54 @@ const CARGO_TYPES: Record<string, string> = {
 
 function parseHeaderInfo(fullText: string): ManifestHeader {
     const header: ManifestHeader = {};
-    const atendimentoMatch = fullText.match(/ATENDIMENTO\s*[:\-]\s*(\d{7,12})/i) || fullText.match(/\b(5\d{8})\b/);
+    
+    // 1. Número do Atendimento (Circulado em preto no cabeçalho)
+    const atendimentoMatch = fullText.match(/ATENDIMENTO\s*[:\-]?\s*(\d{7,12})/i) || fullText.match(/\b(5\d{8,11})\b/);
     if (atendimentoMatch) header.numeroAtendimento = atendimentoMatch[1].trim();
 
-    const embarcacaoMatch = fullText.match(/EQUIPAMENTO\s+\d+\s+([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/m);
+    // 2. Nome da Embarcação (No cabeçalho, circulado em preto)
+    // Busca por padrões comuns de nomes de navios ou prefixos
+    const embarcacaoMatch = fullText.match(/EMBARCAÇÃO\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/i) ||
+                            fullText.match(/NAVIO\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/i) ||
+                            fullText.match(/EQUIPAMENTO\s+\d+\s+([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/m);
     if (embarcacaoMatch) {
         const candidate = embarcacaoMatch[1].trim();
         if (!candidate.match(SHIP_CODE_BLACKLIST)) header.nomeEmbarcacao = candidate;
     }
 
-    const roteiroMatch = fullText.match(/Roteiro\s+previsto\s+([A-Z0-9]{2,6}(?:\s*->\s*[A-Z0-9]{2,6}){2,})/i);
+    // 3. Roteiro Previsto (Padrão sugerido na Seção 7)
+    const roteiroRegex = /(?:Roteiro Previsto de Cargas|ROTEIRO PREVISTO|ROTEIRO):\s([A-Z0-9\s->]+)/i;
+    const roteiroMatch = fullText.match(roteiroRegex);
     let validCodes = new Set<string>();
     if (roteiroMatch) {
-        header.roteiroPrevisto = roteiroMatch[1].split(/\s*->\s*/).map(s => s.trim().toUpperCase());
+        header.roteiroPrevisto = roteiroMatch[1].split(/\s*->\s*|\s+-\s+/).map(s => s.trim().toUpperCase());
         validCodes = new Set(header.roteiroPrevisto);
     }
 
-    const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
-    let secMatch;
-    while ((secMatch = sectionHeaderRegex.exec(fullText)) !== null) {
-        const origemAcronym = secMatch[1].trim().toUpperCase();
-        const destinoAcronym = secMatch[3].trim().toUpperCase();
-        
-        if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) continue;
-        
-        if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) {
-            continue;
-        }
+    // 4. Local de Origem / Destino (Padrão sugerido na Seção 7)
+    const origemRegex = /(?:Origem):\s([A-Z0-9]{3,4}\s-\s[^\n\r]+)/i;
+    const destinoRegex = /(?:Destino):\s([A-Z0-9]{3,4}\s-\s[^\n\r]+)/i;
+    
+    const oMatch = fullText.match(origemRegex);
+    const dMatch = fullText.match(destinoRegex);
+    
+    if (oMatch) header.origemCarga = oMatch[1].trim();
+    if (dMatch) header.destinoCarga = dMatch[1].trim();
 
-        header.origemCarga = origemAcronym;
-        header.destinoCarga = destinoAcronym;
-        break; // Tenta pegar o primeiro válido
+    // Fallback: Busca via seção (acrônimos) se os padrões explícitos falharem
+    if (!header.origemCarga || !header.destinoCarga) {
+        const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
+        let secMatch;
+        while ((secMatch = sectionHeaderRegex.exec(fullText)) !== null) {
+            const origemAcronym = secMatch[1].trim().toUpperCase();
+            const destinoAcronym = secMatch[3].trim().toUpperCase();
+            if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) continue;
+            if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) continue;
+
+            if (!header.origemCarga) header.origemCarga = `${origemAcronym} - ${secMatch[2].trim()}`;
+            if (!header.destinoCarga) header.destinoCarga = `${destinoAcronym} - ${secMatch[4].trim()}`;
+            break;
+        }
     }
 
     return header;
@@ -131,20 +157,18 @@ function detectCargoType(text: string): string | undefined {
 }
 
 function extractIdentifier(text: string): string | undefined {
-    // 1. Padrões comuns de prefixo + número (ex: U2 JF0158, T10 JF0049, KD123, SOS-12)
-    // Atualizado: agora suporta múltiplos hifens para códigos como RT-CX-14026
+    // Novo Padrão Sugerido (Seção 7): Busca códigos de contêiner ou sequências numéricas
+    const suggestedPattern = /(\b[A-Z]{3,4}\s\d{6,9}[-]?\d?\b|\b\d{6,9}[-]?\d?\b)/gi;
+    const match = text.match(suggestedPattern);
+    if (match) return match[0].trim().toUpperCase();
+
+    // Fallback para padrões específicos do projeto anterior caso o sugerido falhe
     const containerMatch = text.match(/\b([A-Z0-9]{2,4}\s?[A-Z]{2}\s?\d{4,7})\b/i) || 
                            text.match(/\b([A-Z0-9]{2,4}(?:[-][A-Z0-9]{1,4}){1,3}[-]?\d{2,7})\b/i) ||
                            text.match(/\b([A-Z]{2,4}[-]?\d{2,7})\b/i);
     if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').toUpperCase().trim();
 
-    // 2. Padrões puramente alfanuméricos de 6-11 chars
-    const alphanumeric = text.match(/\b([A-Z]{2,4}\s?\d{5,7}[-]?\d?)\b/); // Relaxado para 2-4 letras e 5-7 números
-    if (alphanumeric) return alphanumeric[1].replace(/\s+/, ' ').trim();
-
-    // 3. Padrão numérico final
-    const numericMatch = text.match(/\b(\d{5,9}-\d{1,2})\b/) || text.match(/\b(\d{5,9})\b/); // Relaxado para 5 dígitos
-    return numericMatch?.[1];
+    return undefined;
 }
 
 // ─── Parser Principal ────────────────────────────────────────────────────────
@@ -202,12 +226,12 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     }
 
     // Padrão: Cargas Normais (Petrobras/TAGAZ e Genérico)
-    // O padrão Petrobras exige o ano NNNN/NNNN. O padrão genérico é mais flexível para CBO e outros.
+    // Atualizado com regex sugerida na Seção 7 para dimensões e suporte a múltiplos formatos
     const patterns = [
-        // 1. Padrão Petrobras Tradicional (ajustado para \d{1,4}/\d{1,4} e quantidades flexíveis)
-        /\b(\d{3,4})\s+(\d{6,12})\s+\d{1,4}\/\d{1,4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s+([a-zA-Z£$€.,|\d]+)/gi,
-        // 2. Padrão Genérico/CBO (ajustado para suportar opcionalmente as colunas extras de Petrobras)
-        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(?:\d{1,4}\/\d{1,4}\s+[\d,.]+\s+)?(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s*[xX×]\s*([a-zA-Z£$€.,|\d]+)\s+([a-zA-Z£$€.,|\d]+)/gi
+        // 1. Padrão Petrobras Tradicional
+        /\b(\d{3,4})\s+(\d{6,12})\s+\d{1,4}\/\d{1,4}\s+[\d,.]+\s+(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×-]\s*([\d.,lI|oO]+)\s*[xX×-]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)\s*(?:KG|TON|TN)?/gi,
+        // 2. Padrão Genérico/CBO
+        /\b(\d{3,4})\s+(\d{6,12}|[A-Z0-9-]{6,15})\s+(?:\d{1,4}\/\d{1,4}\s+[\d,.]+\s+)?(UN|BBL|M|M3|FT3|PE3|KG|TON|CX|PC|SC|GL|LT|TN|UND)\s+(.{5,150}?)\s+([\d.,lI|oO]+)\s*[xX×-]\s*([\d.,lI|oO]+)\s*[xX×-]\s*([\d.,lI|oO]+)\s+([\d.,lI|oO]+)\s*(?:KG|TON|TN)?/gi
     ];
 
     for (const pattern of patterns) {
@@ -277,6 +301,15 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                 // rawWeight das cestas quase sempre vem em KG no manifesto
                 const weightTonnes = kgToTonnes(item.data.weight!);
 
+                // Cálculo de tamanho físico (1m = 20px)
+                const escala = 20;
+                const tamanhoFisico = {
+                    larguraPixels: Math.round(item.data.width! * escala),
+                    alturaPixels: Math.round(item.data.length! * escala),
+                    profundidadePixels: Math.round((item.data.height || 1) * escala),
+                    escala
+                };
+
                 items.push({
                     ...item.data,
                     id,
@@ -290,7 +323,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     tipoDetectado: detectCargoType(item.rawDesc) || 'BASKET',
                     nomeEmbarcacao: header.nomeEmbarcacao, 
                     numeroAtendimento: header.numeroAtendimento, 
-                    roteiroPrevisto: header.roteiroPrevisto
+                    roteiroPrevisto: header.roteiroPrevisto,
+                    dataExtracao: new Date().toISOString(),
+                    tamanhoFisico
                 } as CargoItem);
             }
         } else {
@@ -306,6 +341,16 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
             if (!seenIds.has(item.data.id!)) {
                 seenIds.add(item.data.id!);
                 const sec = getSectionFor(item.index);
+
+                // Cálculo de tamanho físico (1m = 20px)
+                const escala = 20;
+                const tamanhoFisico = {
+                    larguraPixels: Math.round(item.data.width! * escala),
+                    alturaPixels: Math.round(item.data.length! * escala),
+                    profundidadePixels: Math.round((item.data.height || 1) * escala),
+                    escala
+                };
+
                 items.push({
                     ...item.data,
                     origemCarga: sec.origem,
@@ -314,7 +359,9 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     tipoDetectado: detectCargoType(item.rawDesc),
                     nomeEmbarcacao: header.nomeEmbarcacao, 
                     numeroAtendimento: header.numeroAtendimento, 
-                    roteiroPrevisto: header.roteiroPrevisto
+                    roteiroPrevisto: header.roteiroPrevisto,
+                    dataExtracao: new Date().toISOString(),
+                    tamanhoFisico
                 } as CargoItem);
             } else {
                 logger.debug(`Item ignorado (Duplicidade): ${item.data.id}`);
@@ -395,10 +442,12 @@ export class PDFExtractor {
             const fullText = '\n' + pageTexts.join('\n');
             // ─────────────────────────────────────────────────────────────────
 
-            // ─── Detecção de PDF Escaneado (sem texto) ───────────────────────
+            // ─── Detecção de PDF Escaneado (sem texto ou sem metadados válidos) ───────────────────────
             const usefulChars = fullText.replace(/\s+/g, '').length;
-            if (usefulChars < 100) {
-                logger.info(`PDF "${file.name}" parece ser escaneado (apenas ${usefulChars} chars úteis). Ativando OCR...`);
+            const hasKeywords = /MANIFESTO|TRANSPORTE|CARGA|ORIGEM|DESTINO|DESCRIÇÃO|ATENDIMENTO|EQUIPAMENTO/i.test(fullText);
+
+            if (usefulChars < 100 || !hasKeywords) {
+                logger.info(`PDF "${file.name}" parece ser escaneado (${usefulChars} chars, keywords: ${hasKeywords}). Ativando OCR...`);
 
                 // PERF: Inicializa o worker Tesseract UMA ÚNICA VEZ para todas as páginas.
                 // Criar/destruir um Web Worker a cada página tem custo altíssimo de CPU/memória.
