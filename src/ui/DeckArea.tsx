@@ -106,7 +106,7 @@ const DroppableBaySide = memo(function DroppableBaySide({ bay, side, isLast, dec
          </span>
      </div>
       
-            <div className="flex flex-wrap gap-2 items-start content-start justify-center w-full relative">
+            <div className="flex flex-wrap gap-1 items-start content-start justify-center w-full relative">
               {cargoes.map(cargo => {
                 const isMatch = searchTerm.length > 0 && 
                   (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 

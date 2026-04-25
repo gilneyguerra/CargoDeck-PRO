@@ -30,15 +30,23 @@ export function getScaledDimensions(cargo: Cargo): { width: number, height: numb
 }
 
 /**
- * Get font size based on cargo size for consistent text scaling
+ * Get font size based on cargo dimensions for consistent text scaling.
+ * Larger items get larger text, up to a limit.
  */
-export function getCargoFontSize(_cargo: Cargo): number {
-  return 10;
+export function getCargoFontSize(cargo: Cargo): number {
+  const minDim = Math.min(cargo.widthMeters, cargo.lengthMeters);
+  
+  // Base font size on the smallest dimension to ensure it fits better
+  const baseSize = minDim * 2.5 + 4;
+  
+  // Clamp between 5px and 14px
+  return Math.max(5, Math.min(14, baseSize));
 }
 
 /**
  * Get icon size based on cargo size for consistent icon scaling
  */
-export function getCargoIconSize(_cargo: Cargo): number {
-  return 24;
+export function getCargoIconSize(cargo: Cargo): number {
+  const minDim = Math.min(cargo.widthMeters, cargo.lengthMeters);
+  return Math.max(12, Math.min(24, minDim * 4));
 }

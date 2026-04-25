@@ -129,7 +129,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
-          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-md"
+          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-lg overflow-hidden border border-black/10 dark:border-white/5 shadow-black/20"
           : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 min-w-[44px] min-h-[44px] w-full overflow-visible",
         !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-indigo-500/50" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-amber-500/60 bg-amber-500/5 dark:bg-amber-900/10" : "",
@@ -181,20 +181,20 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
           </div>
           <span className={cn(
-            "absolute inset-0 flex items-center justify-center font-bold text-center leading-none pointer-events-none",
+            "absolute inset-0 flex items-center justify-center font-bold text-center leading-tight pointer-events-none px-0.5 break-all",
             textColorClass,
-            !isLightBackground && "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-          )} style={{ fontSize: `${Math.max(8, fontSize * 0.9)}px` }}>
+            !isLightBackground && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+          )} style={{ fontSize: `${Math.max(5, fontSize * 0.85)}px`, display: (cargo.widthMeters < 0.8 || cargo.lengthMeters < 0.8) ? 'none' : 'flex' }}>
             {cargo.quantity > 1 ? `${cargo.quantity}x ` : ''}{cargo.identifier}
           </span>
 
-          {cargo.destinoCarga && (
+          {cargo.destinoCarga && cargo.widthMeters > 1.2 && cargo.lengthMeters > 1.2 && (
             <div 
               className={cn(
-                "absolute bottom-0 right-0 px-1 py-0.5 rounded-tl-sm font-black tracking-tighter shadow-sm z-20 pointer-events-none",
-                isLightBackground ? "bg-black/10 text-black/60" : "bg-white/20 text-white/80"
+                "absolute bottom-0 right-0 px-1 py-0 rounded-tl-sm font-black tracking-tighter shadow-sm z-20 pointer-events-none border-l border-t border-black/10",
+                isLightBackground ? "bg-black/20 text-black/80" : "bg-white/30 text-white"
               )}
-              style={{ fontSize: `${Math.max(6, fontSize * 0.7)}px` }}
+              style={{ fontSize: `${Math.max(6, fontSize * 0.65)}px` }}
             >
               {cargo.destinoCarga}
             </div>
