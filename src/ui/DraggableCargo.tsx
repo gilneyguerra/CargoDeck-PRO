@@ -129,7 +129,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
-          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-lg overflow-hidden border border-black/10 dark:border-white/5 shadow-black/20"
+          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-lg border border-black/10 dark:border-white/5 shadow-black/20"
           : "border border-neutral-400 dark:border-neutral-700 rounded p-2 gap-1 bg-neutral-100 dark:bg-neutral-900 min-w-[44px] min-h-[44px] w-full overflow-visible",
         !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-indigo-500/50" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-amber-500/60 bg-amber-500/5 dark:bg-amber-900/10" : "",
@@ -204,22 +204,22 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           )}
         </div>
 
-          <div className="absolute -top-3 -right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+          <div className="absolute -top-2 -right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-[1100]">
             {cargo.isBackload && (
-              <div className="bg-amber-500 text-white p-1 rounded-full shadow-sm">
+              <div className="bg-amber-500 text-white p-1 rounded-full shadow-md ring-1 ring-black/20">
                 <LogOut size={10} />
               </div>
             )}
             <button
                onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-               className="bg-blue-600/90 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-500 drop-shadow-md border border-white/20"
+               className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-500 shadow-lg ring-1 ring-white/50 transition-transform hover:scale-110 active:scale-95"
                title="Editar Carga"
             >
               <Edit size={12} />
             </button>
             <button
                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-               className="bg-red-600/90 text-white rounded-full w-6 h-6 flex items-center justify-center text-[11px] hover:bg-red-500 drop-shadow-md border border-white/20"
+               className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-[11px] hover:bg-red-500 shadow-lg ring-1 ring-white/50 transition-transform hover:scale-110 active:scale-95 font-bold"
                title="Remover Definitivamente"
             >
                ✕
