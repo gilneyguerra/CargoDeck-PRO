@@ -180,7 +180,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           <div style={{ display: 'inline-block', transform: `rotate(${isRotated ? 90 : 0}deg)` }}>
             <CargoPreview format={cargo.format || 'Retangular'} length={cargo.lengthMeters} width={cargo.widthMeters} height={cargo.heightMeters || 1} color={cargo.color || '#3b82f6'} quantity={cargo.quantity} cargo={cargo} />
           </div>
-        <div className="absolute inset-0 flex flex-col p-1.5 pointer-events-none">
+        <div className="absolute inset-0 flex flex-col p-1.5 pointer-events-none overflow-hidden">
           {/* Identificador (Topo/Meio) */}
           <div className={cn(
             "flex-1 flex items-center justify-center font-bold text-center leading-tight overflow-hidden break-words",
@@ -194,7 +194,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           {cargo.destinoCarga && (cargo.widthMeters > 0.8 && cargo.lengthMeters > 0.8) && (
             <div 
               className={cn(
-                "mt-auto px-1.5 py-0.5 rounded-md font-black tracking-tighter shadow-sm text-center border border-black/10",
+                "mt-auto px-1.5 py-0.5 rounded-md font-black tracking-tighter shadow-sm text-center border border-black/10 truncate",
                 isLightBackground ? "bg-black/10 text-black/90" : "bg-white/30 text-black"
               )}
               style={{ fontSize: `${Math.max(6, fontSize * 0.75)}px` }}
