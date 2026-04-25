@@ -11,6 +11,8 @@ import { ManualCargoModal } from './ManualCargoModal';
 import { EditCargoModal } from './EditCargoModal';
 import DraggableCargo from './DraggableCargo';
 import { BackloadResolutionModal } from './BackloadResolutionModal';
+import { OCRConverterModal } from './OCRConverterModal';
+import { ScanText } from 'lucide-react';
 
 // ─── Helpers para mapeamento de itens extraídos do PDF ───────────────────────
 
@@ -61,6 +63,7 @@ export function Sidebar() {
     const [destinationFilter, setDestinationFilter] = useState<string>('TODOS');
     const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
     const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
+    const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
 
     // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
     const memoDestinations = useMemo(() => {
@@ -208,6 +211,14 @@ export function Sidebar() {
                         <span className="text-[10px] font-medium text-muted">Apenas arquivos .PDF</span>
                     </div>
                 )}
+            </button>
+
+            <button
+                onClick={() => setIsOCRModalOpen(true)}
+                className="w-full mt-4 flex items-center justify-center gap-3 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all active:scale-[0.98] border border-brand-primary/20 shadow-sm"
+            >
+                <ScanText className="w-5 h-5" />
+                FERRAMENTA DE CONVERSÃO OCR
             </button>
 
             {error && (
@@ -372,6 +383,8 @@ export function Sidebar() {
         onClose={() => setIsBatchMoveOpen(false)}
         onSuccess={() => setSelectedCargoIds(new Set())}
       />
+
+      {isOCRModalOpen && <OCRConverterModal isOpen={isOCRModalOpen} onClose={() => setIsOCRModalOpen(false)} />}
     </aside>
   );
 }
