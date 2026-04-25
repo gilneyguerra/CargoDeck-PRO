@@ -265,8 +265,7 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     .replace(/PAG\s*[:\-]?\s*\d+\/\d+/gi, '')
                     .replace(/\b(PETROBRAS|MANIFESTO|TRANSPORTE|CARGAS|EMPRESA|ATENDIMENTO|EQUIPAMENTO|CBO|FLAMENGO|BASE|PACU|DATA|HORA|PAG|UNIT|UND|BBL|DESCRIÇÃO|ITEM|QTDE|CX|LXA|PESO|VALOR|MDA|GERÊNCIA)\b/gi, '')
                     .replace(/[|\/\-\:\s]+/g, ' ')
-                    .trim()
-                    .split(/\s+/)[0]; // Pega apenas a primeira palavra/bloco para o código identificador
+                    .trim();
 
                 const id = `${identifier}-${m[1]}`;
 
