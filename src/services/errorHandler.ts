@@ -43,21 +43,27 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCodes.U
     if (error instanceof AppError) {
         return error;
     }
+    
+    let message = 'Erro inesperado na aplicação.';
+    let contextError = error;
+
     if (error instanceof Error) {
+        message = error.message || message;
         // Tenta mapear erros conhecidos para AppError
-        if (error.message.includes('Network Error')) {
-            return new AppError(ErrorCodes.NETWORK_ERROR, error.message, 'error', error);
+        if (message.includes('Network Error')) {
+            return new AppError(ErrorCodes.NETWORK_ERROR, message, 'error', error);
         }
-        if (error.message.includes('PDFJS')) {
-            return new AppError(ErrorCodes.PDF_CORRUPTED, error.message, 'error', error);
+        if (message.includes('PDFJS') || message.includes('Worker')) {
+            return new AppError(ErrorCodes.PDF_CORRUPTED, `Falha no motor PDF: ${message}`, 'error', error);
         }
-        if (error.message.includes('Tesseract')) {
-            return new AppError(ErrorCodes.PDF_OCR_FAILED, error.message, 'error', error);
-        }
-        return new AppError(defaultCode, error.message, 'error', error);
+    } else if (typeof error === 'string') {
+        message = error;
+    } else if (error && typeof error === 'object') {
+        // Tenta extrair mensagem de objetos de erro de bibliotecas externas
+        message = (error as any).message || (error as any).msg || JSON.stringify(error);
     }
-    // Se for um tipo primitivo ou objeto genérico
-    return new AppError(defaultCode, String(error), 'error', error);
+
+    return new AppError(defaultCode, message, 'error', contextError);
 }
 
 /**

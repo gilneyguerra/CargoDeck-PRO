@@ -436,10 +436,26 @@ export class PDFExtractor {
 
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
         try {
+            // PERF: Carregamento sob demanda do motor PDF
             const pdfjsLib = await import('pdfjs-dist');
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+            
+            // Configura o worker de forma mais robusta (Vite/Next.js compatível)
+            pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/pdf.worker.min.js';
+            
+            // Fallback caso o local falhe
+            if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+            }
+
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const loadingTask = pdfjsLib.getDocument({ 
+                data: arrayBuffer,
+                useWorkerFetch: true,
+                isEvalSupported: false,
+                canvasMaxAreaInBytes: 16777216 * 4
+            });
+            
+            const pdf = await loadingTask.promise;
 
             // ─── PERF: Extraia texto de todas as páginas em paralelo ──────────
             // Promise.all dispara todas as requisições de página simultaneamente,
