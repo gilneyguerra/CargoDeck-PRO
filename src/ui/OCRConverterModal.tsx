@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 // pdfjs worker setup
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
 
 interface FileProgress {
   name: string;
@@ -54,7 +56,9 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
 
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done', result: text, progress: 100 } : f));
         } catch (err: any) {
-            setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: err.message } : f));
+            console.error('OCR Error:', err);
+            const errorMessage = err?.message || String(err) || 'Erro desconhecido na extração';
+            setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: errorMessage } : f));
         }
     }
     
