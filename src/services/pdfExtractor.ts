@@ -436,14 +436,16 @@ export class PDFExtractor {
 
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
         try {
-            // PERF: Carregamento sob demanda do motor PDF (Legacy build por ser mais estável em Vite)
-            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf').then(m => m.default || m);
+            // PERF: Carregamento dinâmico para evitar aumentar o bundle principal
+            // @ts-ignore - Evita erro de tipagem em alguns ambientes de build
+            const pdfjsLib = await import('pdfjs-dist').then(m => m.default || m);
             const version = pdfjsLib.version || '5.5.207';
             
-            // Força o uso do worker local presente na pasta public
+            // Configura o worker usando path absoluto da raiz para o Vercel/Produção
+            // O arquivo deve estar em public/pdf.worker.min.js
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
             
-            logger.info(`Motor PDF.js ${version} inicializado via CDN.`);
+            logger.info(`Motor PDF.js ${version} inicializado com worker local.`);
 
             const arrayBuffer = await file.arrayBuffer();
             
