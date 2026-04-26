@@ -146,20 +146,25 @@ export function DeckArea() {
     const activeLocation = locations.find(l => l.id === activeLocationId);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-    // Contagem de itens encontrados na pesquisa para este deck específico
-    const searchMatchCount = useMemo(() => {
-        if (!searchTerm || !activeLocation) return 0;
-        let count = 0;
-        activeLocation.bays.forEach(bay => {
-            bay.allocatedCargoes.forEach(cargo => {
-              if (cargo.identifier.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                  cargo.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-                count++;
-              }
+    // Contagem de itens encontrados na pesquisa EM TODAS AS ABAS (Global)
+    const globalSearchMatchCount = useMemo(() => {
+        if (!searchTerm) return 0;
+        const term = searchTerm.toLowerCase();
+        let totalCount = 0;
+        
+        locations.forEach(loc => {
+            loc.bays.forEach(bay => {
+                bay.allocatedCargoes.forEach(cargo => {
+                    if (cargo.identifier.toLowerCase().includes(term) || 
+                        cargo.description.toLowerCase().includes(term)) {
+                        totalCount++;
+                    }
+                });
             });
         });
-        return count;
-    }, [searchTerm, activeLocation]);
+        
+        return totalCount;
+    }, [searchTerm, locations]);
 
     const handleAddLocation = () => {
         const name = prompt('Nome do novo local: (ex. Porão 1)');
@@ -207,13 +212,13 @@ export function DeckArea() {
                 </div>
                 
                 <div className="flex items-center gap-5">
-                    {/* Contador de Resultados da Busca */}
+                    {/* Contador de Resultados da Busca GLOBAL (Todas as abas) */}
                     {searchTerm && (
                       <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
                          <div className="bg-status-warning/10 border border-status-warning/30 px-3 py-2 rounded-xl flex items-center gap-2 shadow-sm">
                             <CheckCircle2 className="w-3.5 h-3.5 text-status-warning" />
                             <span className="text-[10px] font-black text-status-warning uppercase tracking-widest">
-                               {searchMatchCount} {searchMatchCount === 1 ? 'ITEM ENCONTRADO' : 'ITENS ENCONTRADOS'}
+                               {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM ENCONTRADO (GLOBAL)' : 'ITENS ENCONTRADOS (GLOBAL)'}
                             </span>
                          </div>
                       </div>
@@ -232,7 +237,7 @@ export function DeckArea() {
                     
                     <button 
                       onClick={() => setIsSettingsOpen(true)}
-                      className="flex items-center gap-3 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-6 py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95"
+                      className="flex items-center gap-3 bg-header border border-strong text-primary hover:text-brand-primary hover:border-brand-primary px-6 py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95"
                     >
                       <Settings className="w-4 h-4" />
                       CONFIGURAR DECK
