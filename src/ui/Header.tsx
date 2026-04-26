@@ -183,7 +183,7 @@ export function Header() {
         {(totalPort > 0 || totalStarboard > 0) && (
             <div 
               className="flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/40 backdrop-blur-md border border-subtle rounded-2xl py-2.5 order-2"
-              title="Indicador de Trim (Equilíbrio Lateral): Mostra a distribuição de peso entre os lados Bombordo e Boreste para evitar inclinação."
+              title="Indicador de Banda (Equilíbrio Lateral): Mostra a distribuição de peso entre os lados Bombordo e Boreste para evitar inclinação lateral."
             >
               <div className="flex flex-col items-center gap-2 flex-1 max-w-[320px]">
                 <div className="flex justify-between w-full text-[10px] font-black text-muted tracking-wide uppercase opacity-70">
