@@ -149,10 +149,9 @@ return (
 });
 
 export function DeckArea() {
-     const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, unallocatedCargoes, getAllCargo, setEditingCargo, editLocation, deleteLocation } = useCargoStore();
+     const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, setEditingCargo, editLocation, deleteLocation } = useCargoStore();
     const activeLocation = locations.find(l => l.id === activeLocationId);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [searchMessage, setSearchMessage] = useState('');
 
     const handleAddLocation = () => {
         const name = prompt('Nome do novo local: (ex. Porão 1)');
