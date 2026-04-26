@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { loadPdfJs } from '../services/pdfLoader';

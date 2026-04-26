@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { getScaledDimensions } from '@/lib/scaling';
 import type { Cargo } from '@/domain/Cargo';
 
