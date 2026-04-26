@@ -161,6 +161,7 @@ export function Header() {
             ) : (
               <button
                 onClick={() => setIsEditingShip(true)}
+                title="Identificar Embarcação: Clique para editar o nome do navio ou unidade offshore."
                 className="flex items-center gap-3 px-4 py-2 rounded-xl bg-sidebar hover:bg-main transition-all border border-subtle group/btn shadow-sm"
               >
                 <div className="flex flex-col items-start translate-y-0.5">
@@ -180,7 +181,10 @@ export function Header() {
 
         {/* Center Section: Stability Info */}
         {(totalPort > 0 || totalStarboard > 0) && (
-            <div className="flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/40 backdrop-blur-md border border-subtle rounded-2xl py-2.5 order-2">
+            <div 
+              className="flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/40 backdrop-blur-md border border-subtle rounded-2xl py-2.5 order-2"
+              title="Indicador de Trim (Equilíbrio Lateral): Mostra a distribuição de peso entre os lados Bombordo e Boreste para evitar inclinação."
+            >
               <div className="flex flex-col items-center gap-2 flex-1 max-w-[320px]">
                 <div className="flex justify-between w-full text-[10px] font-black text-muted tracking-wide uppercase opacity-70">
                    <span className={totalPort > totalStarboard + 50 ? "text-status-error" : ""}>BOMBORDO</span>
@@ -205,7 +209,10 @@ export function Header() {
 
               <div className="h-10 w-px bg-border-subtle" />
 
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center"
+                title="Centro de Gravidade Vertical (VCG): Medida crítica de estabilidade. Valores muito altos podem indicar risco de tombamento."
+              >
                 <span className="text-[9px] text-muted font-bold tracking-widest uppercase mb-1">Stability VCG</span>
                 <div className="flex items-center gap-2">
                    <Weight size={18} className={isTopHeavy ? "text-status-error" : "text-status-success"} />
@@ -220,7 +227,10 @@ export function Header() {
         {/* Right Section: Badges & Actions */}
         <div className="flex items-center gap-4 order-3 ml-auto">
           {/* Peso Plano */}
-          <div className="hidden xl:flex flex-col items-end px-5 py-2 bg-brand-primary/5 border border-brand-primary/10 rounded-2xl">
+          <div 
+            className="hidden xl:flex flex-col items-end px-5 py-2 bg-brand-primary/5 border border-brand-primary/10 rounded-2xl"
+            title="Carga Útil Total: Soma do peso de todas as cargas alocadas em todos os decks."
+          >
             <span className="text-[9px] text-brand-primary font-black uppercase tracking-widest mb-0.5">Carga Total</span>
             <span className="text-primary font-black text-lg tabular-nums leading-none">{currentTotalWeight.toFixed(1)} <sub className="text-[10px] font-bold bottom-0 uppercase ml-1 opacity-60">Ton</sub></span>
           </div>
@@ -234,16 +244,26 @@ export function Header() {
               onClick={() => {
                 if (window.confirm('Limpar manifestos?')) useCargoStore.getState().clearAllCargoes();
               }}
-              title="Limpar Tudo"
+              title="Zerar Plano de Carga: Remove instantaneamente todas as cargas e limpa o inventário."
             >
               <Trash2 size={20} />
             </button>
 
             <div className="flex items-center gap-2 p-1.5 bg-sidebar/50 border border-subtle rounded-2xl">
-               <button onClick={handleExportCsv} disabled={!manifestsLoaded} className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all">
+               <button 
+                 onClick={handleExportCsv} 
+                 disabled={!manifestsLoaded} 
+                 title="Exportar Dados (CSV): Gera uma planilha com a lista completa de cargas e suas coordenadas."
+                 className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all"
+               >
                  <Download size={14} /> CSV
                </button>
-               <button onClick={handleExportPdf} disabled={!manifestsLoaded} className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all">
+               <button 
+                 onClick={handleExportPdf} 
+                 disabled={!manifestsLoaded} 
+                 title="Exportar Relatório (PDF): Gera o mapa visual do deck e o manifesto de carga consolidado."
+                 className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all"
+               >
                  <Download size={14} /> PDF
                </button>
             </div>
@@ -251,6 +271,7 @@ export function Header() {
             <button
               onClick={handleSaveToCloud}
               disabled={saving}
+              title="Sincronizar: Salva o estado atual do deck no servidor para acesso remoto."
               className="flex items-center gap-3 bg-status-success text-white hover:brightness-110 disabled:opacity-40 px-6 py-3 rounded-2xl text-xs font-black shadow-xl shadow-status-success/20 active:scale-95 transition-all"
             >
               <CloudUpload size={18} /> 
@@ -262,7 +283,11 @@ export function Header() {
 
           {/* User Section */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsDark(prev => !prev)} className="p-3 text-secondary hover:bg-sidebar rounded-2xl border border-transparent hover:border-subtle transition-all">
+            <button 
+              onClick={() => setIsDark(prev => !prev)} 
+              title={isDark ? "Alternar para Modo Claro" : "Alternar para Modo Escuro"}
+              className="p-3 text-secondary hover:bg-sidebar rounded-2xl border border-transparent hover:border-subtle transition-all"
+            >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 

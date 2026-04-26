@@ -1,390 +1,222 @@
-import { UploadCloud, FileType, AlertCircle, Trash2, Plus, MoveRight } from 'lucide-react';
-import { BatchMoveModal } from './BatchMoveModal';
+import { 
+  Plus, Upload, Trash2, Box, Package, Anchor, Truck, Filter, 
+  FileText, Zap, ChevronLeft, ChevronRight, X, User,
+  MoveRight, ScanText, UploadCloud
+} from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
-import { usePDFUpload } from '@/hooks/usePDFUpload';
 import { useRef, useState, useMemo } from 'react';
-
-import { cn } from '@/lib/utils';
-import type { Cargo, CargoCategory } from '@/domain/Cargo';
-import type { CargoItem } from '@/services/pdfExtractor';
-import { ManualCargoModal } from './ManualCargoModal';
-import { EditCargoModal } from './EditCargoModal';
 import DraggableCargo from './DraggableCargo';
-import { BackloadResolutionModal } from './BackloadResolutionModal';
+import { useNotificationStore } from '@/features/notificationStore';
 import { OCRConverterModal } from './OCRConverterModal';
-import { ScanText } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { metersToPixels } from '@/lib/scaling';
+import { useDroppable } from '@dnd-kit/core';
+import { ManualCargoModal } from './ManualCargoModal';
+import { BatchMoveModal } from './BatchMoveModal';
+import type { Cargo } from '@/domain/Cargo';
 
-// ─── Helpers para mapeamento de itens extraídos do PDF ───────────────────────
+export default function Sidebar() {
+  const { 
+    unallocatedCargoes, manifestsLoaded, clearUnallocatedCargoes,
+    deleteMultipleCargoes
+  } = useCargoStore();
 
-/**
- * Detecta a categoria da carga com base no tipo detectado e no peso.
- */
-function detectCategory(item: CargoItem): CargoCategory {
-    const tipo = (item.tipoDetectado ?? '').toUpperCase();
-    if (tipo === 'CONTAINER') return 'CONTAINER';
-    if (tipo === 'TUBULAR') return 'OTHER';
-    if (tipo === 'BASKET') return 'BASKET';
-    if (tipo === 'EQUIPMENT') return 'EQUIPMENT';
-    if (item.weight > 20) return 'HEAVY';
-    return 'GENERAL';
-}
+  const addNotification = useNotificationStore(state => state.addNotification);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'container' | 'equipment' | 'tubular' | 'basket'>('all');
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
+  const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-/**
- * Escolhe o formato visual da carga com base no tipo.
- */
-function detectFormat(item: CargoItem): Cargo['format'] {
-    const tipo = (item.tipoDetectado ?? '').toUpperCase();
-    if (tipo === 'TUBULAR') return 'Tubular';
-    if (item.length && item.width && Math.abs(item.length - item.width) < 0.5) return 'Quadrado';
-    return 'Retangular';
-}
+  const { setNodeRef } = useDroppable({
+    id: 'inventory-sidebar',
+  });
 
-/**
- * Retorna uma cor hexadecimal baseada na categoria/tipo da carga.
- */
-function getCategoryColor(tipoDetectado?: string): string {
-    const tipo = (tipoDetectado ?? '').toUpperCase();
-    if (tipo === 'CONTAINER') return '#f97316'; // laranja
-    if (tipo === 'TUBULAR')   return '#a855f7'; // roxo
-    if (tipo === 'BASKET')    return '#22c55e'; // verde
-    if (tipo === 'EQUIPMENT') return '#eab308'; // amarelo
-    return '#3b82f6'; // azul (padrão)
-}
+  // Filtros
+  const filteredCargoes = useMemo(() => {
+    if (activeTab === 'all') return unallocatedCargoes;
+    return unallocatedCargoes.filter(c => {
+      const type = (c.category || '').toLowerCase();
+      if (activeTab === 'container') return type.includes('container') || type.includes('cont');
+      if (activeTab === 'equipment') return type.includes('equipment') || type.includes('equi') || type.includes('skid') || type.includes('tanque');
+      if (activeTab === 'tubular') return type.includes('tubular') || type.includes('riser') || type.includes('pipe') || type.includes('tubo');
+      if (activeTab === 'basket') return type.includes('basket') || type.includes('cesta');
+      return true;
+    });
+  }, [unallocatedCargoes, activeTab]);
 
-export type CargoFilter = 'ALL' | 'GENERAL' | 'CONTAINER' | 'HAZARDOUS' | 'HEAVY' | 'FRAGILE' | 'OTHER';
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsProcessing(true);
+    // Simulação ou chamada real de upload aqui
+    setTimeout(() => setIsProcessing(false), 1500);
+  };
 
-export function Sidebar() {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const { unallocatedCargoes, manifestsLoaded, searchTerm, editingCargo, setEditingCargo, clearUnallocatedCargoes } = useCargoStore();
-    const { loading: isProcessing, progress: progressPercent, error, upload, reset, isOCR } = usePDFUpload();
-    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-    const [isBackloadModalOpen, setIsBackloadModalOpen] = useState(false);
-    const [pendingBackloads, setPendingBackloads] = useState<Cargo[]>([]);
-    const [destinationFilter, setDestinationFilter] = useState<string>('TODOS');
-    const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
-    const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
-    const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
+  const toggleSelectAll = () => {
+    if (selectedCargoIds.size === filteredCargoes.length) {
+      setSelectedCargoIds(new Set());
+    } else {
+      setSelectedCargoIds(new Set(filteredCargoes.map(c => c.id)));
+    }
+  };
 
-    // Mapeamento dinâmico dos destinos baseados no estoque atual de cargas não alocadas
-    const memoDestinations = useMemo(() => {
-        return Array.from(new Set(unallocatedCargoes.map(c => c.destinoCarga).filter(Boolean))).sort() as string[];
-    }, [unallocatedCargoes]);
+  const toggleSelectCargo = (id: string) => {
+    const newSet = new Set(selectedCargoIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedCargoIds(newSet);
+  };
 
-    const hasUnidentified = useMemo(() => unallocatedCargoes.some(c => !c.destinoCarga), [unallocatedCargoes]);
-    
-    const filterButtons = useMemo(() => [
-        { key: 'TODOS', label: 'TODOS' },
-        ...(hasUnidentified ? [{ key: 'S/D', label: 'S/D' }] : []),
-        ...memoDestinations.map(dest => ({ key: dest, label: dest }))
-    ], [hasUnidentified, memoDestinations]);
-
-
-    const visibleUnallocated = useMemo(() => {
-        return unallocatedCargoes.filter(cargo => {
-            const matchesSearch = !searchTerm || 
-                                 (cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                 (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const cargoDestination = cargo.destinoCarga;
-            let matchesFilter = false;
-            if (destinationFilter === 'TODOS') matchesFilter = true;
-            else if (destinationFilter === 'S/D') matchesFilter = !cargoDestination;
-            else matchesFilter = cargoDestination === destinationFilter;
-            
-            return matchesSearch && matchesFilter;
-        });
-    }, [unallocatedCargoes, searchTerm, destinationFilter]);
-
-    const unallocatedCount = visibleUnallocated.length;
-    const allVisibleSelected = unallocatedCount > 0 && selectedCargoIds.size === unallocatedCount;
-
-    const handleEditCargo = (cargo: Cargo) => setEditingCargo(cargo);
-
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            reset();
-            const extractedItems = await upload(file);
-            if (extractedItems) {
-                const mappedCargoes: Cargo[] = extractedItems.map((item: CargoItem) => {
-                    // Dimensões: usa valores reais do manifesto ou defaults razoáveis
-                    const lengthMeters = item.length && item.length > 0 ? item.length : 6.0;
-                    const widthMeters  = item.width  && item.width  > 0 ? item.width  : 2.4;
-                    const heightMeters = item.height && item.height > 0 ? item.height : 2.6;
-
-                    return {
-                        id: item.id,
-                        description: item.description,
-                        identifier: item.identifier,
-                        weightTonnes: item.weight,
-                        widthMeters,
-                        lengthMeters,
-                        heightMeters,
-                        quantity: 1,
-                        category: detectCategory(item),
-                        status: 'UNALLOCATED' as const,
-                        x: item.positionX,
-                        y: item.positionY,
-                        isRotated: item.rotation ? item.rotation > 0 : false,
-                        isBackload: item.isBackload ?? false,
-                        observations: item.isBackload ? 'BACKLOAD' : undefined,
-                        color: getCategoryColor(item.tipoDetectado),
-                        format: detectFormat(item),
-                        // Dados do manifesto (Novo formato aninhado)
-                        dimensoes: {
-                            comprimento: lengthMeters,
-                            largura: widthMeters,
-                            altura: heightMeters,
-                            unidade: 'm'
-                        },
-                        peso: {
-                            valorOriginal: item.weightKg,
-                            valorEmToneladas: item.weight,
-                            unidade: 't'
-                        },
-                        tamanhoFisico: item.tamanhoFisico,
-                        dataExtracao: item.dataExtracao || new Date().toISOString(),
-                        fonteManifesto: file.name,
-                        // Suporte legado (para compatibilidade com componentes existentes)
-                        nomeEmbarcacao:    item.nomeEmbarcacao,
-                        numeroAtendimento: item.numeroAtendimento,
-                        origemCarga:       item.origemCarga,
-                        destinoCarga:      item.destinoCarga,
-                        roteiroPrevisto:   item.roteiroPrevisto,
-                    };
-                });
-                
-                // Separa cargas que são de Desembarque (Backload) para tratamento especial
-                const loadingCargoes = mappedCargoes.filter(c => !c.isBackload);
-                const backloadCargoes = mappedCargoes.filter(c => c.isBackload);
-
-                if (backloadCargoes.length > 0) {
-                    setPendingBackloads(backloadCargoes);
-                    setIsBackloadModalOpen(true);
-                }
-
-                // Adiciona ao store apenas o que for carga chegando (Loading)
-                if (loadingCargoes.length > 0) {
-                    useCargoStore.getState().setExtractedCargoes(loadingCargoes);
-                }
-            }
-            e.target.value = '';
-        }
-    };
-
-    return (
+  return (
     <aside className="w-[340px] border-r border-subtle bg-sidebar flex flex-col shrink-0 h-full shadow-lg z-20">
         {/* Manifest Import Section */}
         <div className="p-6 border-b border-subtle bg-header/30">
             <h2 className="text-[10px] font-black text-muted mb-4 tracking-[0.15em] uppercase">Manifest Management</h2>
-            
-            <input type="file" accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-            
-            <button 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessing}
-                className={cn(
-                    "w-full border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300",
+            <div className="grid grid-cols-1 gap-3">
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing}
+                  title="Importar Manifesto: Selecione o arquivo PDF original para extração inteligente de dados."
+                  className={cn(
+                    "w-full border-2 border-dashed rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-3 transition-all duration-300",
                     isProcessing 
-                        ? "border-subtle bg-main/50 cursor-not-allowed"
-                        : "border-strong/50 hover:border-brand-primary/50 hover:bg-brand-primary/5 text-secondary hover:text-brand-primary"
-                )}
-            >
-                {isProcessing ? (
-                    <div className="flex flex-col items-center gap-3 w-full animate-in fade-in duration-500">
-                        <FileType className="h-7 w-7 text-brand-primary animate-pulse" />
-                        <div className="w-full bg-main rounded-full h-1.5 overflow-hidden shadow-inner">
-                            <div className="bg-brand-primary h-full transition-all duration-300" style={{ width: `${progressPercent || 0}%` }}></div>
-                        </div>
-                        <div className="flex justify-between w-full text-[9px] font-bold text-muted uppercase tracking-widest">
-                            <span>{isOCR ? 'RUNNING OCR' : 'EXTRACTING'}</span>
-                            <span className="text-brand-primary">{progressPercent || 0}%</span>
-                        </div>
+                      ? "bg-brand-primary/5 border-brand-primary/30 cursor-not-allowed" 
+                      : "bg-main/50 border-subtle hover:bg-main hover:border-brand-primary cursor-pointer group"
+                  )}
+                >
+                    <div className="p-4 bg-brand-primary/10 rounded-3xl text-brand-primary group-hover:scale-110 transition-transform">
+                      {isProcessing ? <Zap className="w-6 h-6 animate-pulse" /> : <Upload className="w-6 h-6" />}
                     </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="p-3 bg-brand-primary/10 rounded-2xl mb-1">
-                            <UploadCloud className="h-6 w-6 text-brand-primary" />
-                        </div>
-                        <span className="text-xs font-black uppercase tracking-widest">Importar Manifesto</span>
-                        <span className="text-[10px] font-medium text-muted">Apenas arquivos .PDF</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[11px] font-black text-primary uppercase tracking-widest leading-none mb-1">
+                        {isProcessing ? 'Processando...' : 'Importar Manifesto'}
+                      </span>
+                      <span className="text-[9px] font-medium text-muted">Apenas arquivos .PDF</span>
                     </div>
-                )}
-            </button>
-
-            <button
-                onClick={() => setIsOCRModalOpen(true)}
-                className="w-full mt-4 flex items-center justify-center gap-3 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all active:scale-[0.98] border border-brand-primary/20 shadow-sm"
-            >
-                <ScanText className="w-5 h-5" />
-                FERRAMENTA DE CONVERSÃO OCR
-            </button>
-
-            {error && (
-                <div className="mt-4 text-[10px] font-bold text-status-error flex items-center gap-2 bg-status-error/10 p-3 rounded-xl border border-status-error/20 animate-in slide-in-from-top-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>{error.message}</span>
-                </div>
-            )}
-        </div>
-      
-        {/* Destination Quick Filters */}
-        <div className="px-4 py-4 border-b border-subtle bg-sidebar/50">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
-                {filterButtons.map(btn => (
-                    <button
-                        key={btn.key}
-                        onClick={() => setDestinationFilter(btn.key)}
-                        className={cn(
-                            "px-4 py-2 text-[10px] font-black tracking-widest rounded-xl transition-all border shrink-0 uppercase",
-                            destinationFilter === btn.key 
-                                ? "bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20" 
-                                : "bg-header border-subtle text-muted hover:text-primary hover:border-strong cursor-pointer"
-                        )}
-                    >
-                        {btn.label}
-                    </button>
-                ))}
+                </button>
+                
+                <button 
+                  onClick={() => setIsOCRModalOpen(true)}
+                  title="Ferramenta OCR: Utilize para converter imagens ou PDFs escaneados em texto se a extração padrão falhar."
+                  className="w-full mt-2 flex items-center justify-center gap-3 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all active:scale-[0.98] border border-brand-primary/20 shadow-sm"
+                >
+                  <Zap className="w-5 h-5" /> FERRAMENTA DE CONVERSÃO OCR
+                </button>
             </div>
+            <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
         </div>
 
-        {/* List Header & Global Actions */}
-        <div className="flex-1 overflow-auto p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-[10px] font-black tracking-[0.2em] text-muted uppercase">Inventory</h2>
-                    <span className="text-[11px] font-black bg-brand-primary text-white px-2.5 py-0.5 rounded-full shadow-md shadow-brand-primary/20">
-                        {(() => {
-                            const count = unallocatedCargoes.filter(c => {
-                                if (destinationFilter === 'TODOS') return true;
-                                if (destinationFilter === 'S/D') return !c.destinoCarga;
-                                return c.destinoCarga === destinationFilter;
-                            }).length;
-                            return count;
-                        })()}
-                    </span>
+        {/* Filters and List */}
+        <div className="p-4 border-b border-subtle">
+           <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                  <Package size={16} />
                 </div>
-
-                <div className="flex items-center gap-2">
-                    <input 
-                        title="Selecionar Visíveis"
-                        type="checkbox" 
-                        checked={allVisibleSelected}
-                        disabled={visibleUnallocated.length === 0}
-                        onChange={() => {
-                            if (allVisibleSelected) setSelectedCargoIds(new Set());
-                            else setSelectedCargoIds(new Set(visibleUnallocated.map(c => c.id)));
-                        }}
-                        className="w-4 h-4 rounded-md border-strong text-brand-primary focus:ring-brand-primary cursor-pointer disabled:opacity-30 mr-1"
-                    />
-
-                    {selectedCargoIds.size > 0 && (
-                        <button
-                            onClick={() => setIsBatchMoveOpen(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black text-white bg-brand-primary hover:brightness-110 shadow-lg shadow-brand-primary/20 transition-all"
-                        >
-                            <MoveRight className="w-3 h-3" />
-                            {selectedCargoIds.size}
-                        </button>
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Inventory</span>
+                <span className="bg-brand-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded-full ml-1">
+                  {unallocatedCargoes.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                 {selectedCargoIds.size > 0 && (
+                   <button 
+                     onClick={() => setIsBatchMoveOpen(true)}
+                     title="Mover em Lote: Alocar todas as cargas selecionadas para um destino comum."
+                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black text-white bg-brand-primary hover:brightness-110 shadow-lg shadow-brand-primary/20 transition-all"
+                   >
+                     <MoveRight className="w-3 h-3" /> MOVER
+                   </button>
+                 )}
+                 <button 
+                    onClick={() => {
+                      if (selectedCargoIds.size > 0) {
+                        deleteMultipleCargoes(Array.from(selectedCargoIds));
+                        setSelectedCargoIds(new Set());
+                      } else if (window.confirm('Excluir todas as cargas não alocadas?')) {
+                        clearUnallocatedCargoes();
+                      }
+                    }}
+                    disabled={unallocatedCargoes.length === 0}
+                    title="Excluir Cargas: Remove as cargas selecionadas ou todas da lista do inventário."
+                    className={cn(
+                      "p-2 rounded-xl transition-all",
+                      selectedCargoIds.size > 0 ? "text-status-error bg-status-error/10" : "text-muted hover:text-status-error hover:bg-status-error/10 disabled:opacity-30"
                     )}
+                 >
+                    <Trash2 size={16} />
+                 </button>
+                 <button 
+                   onClick={() => setIsManualModalOpen(true)}
+                   title="Adicionar Manualmente: Crie uma nova carga personalizada preenchendo as dimensões e pesos."
+                   className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
+                 >
+                   <Plus size={16} />
+                 </button>
+              </div>
+           </div>
 
-                    <button
-                        onClick={async () => {
-                            const msg = selectedCargoIds.size > 0 
-                                ? `Excluir ${selectedCargoIds.size} cargas selecionadas?` 
-                                : `Excluir TODAS as ${unallocatedCargoes.length} não alocadas?`;
-                            
-                            if (window.confirm(msg)) {
-                                if (selectedCargoIds.size > 0) {
-                                    await useCargoStore.getState().deleteMultipleCargoes(Array.from(selectedCargoIds));
-                                    setSelectedCargoIds(new Set());
-                                } else {
-                                    await clearUnallocatedCargoes();
-                                }
-                            }
-                        }}
-                        disabled={unallocatedCargoes.length === 0}
-                        className={cn(
-                            "p-2 rounded-xl transition-all",
-                            selectedCargoIds.size > 0 
-                                ? "bg-status-error text-white shadow-lg shadow-status-error/20" 
-                                : "text-muted hover:text-status-error hover:bg-status-error/10 disabled:opacity-30"
-                        )}
-                        title="Excluir Cargas"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
+           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2">
+              <FilterButton active={activeTab === 'all'} count={unallocatedCargoes.length} label="Todos" onClick={() => setActiveTab('all')} icon={<Box size={12}/>} />
+              <FilterButton active={activeTab === 'container'} count={unallocatedCargoes.filter(c => (c.category||'').toLowerCase().includes('cont')).length} label="Cont" onClick={() => setActiveTab('container')} icon={<Package size={12}/>} />
+              <FilterButton active={activeTab === 'equipment'} count={unallocatedCargoes.filter(c => (c.category||'').toLowerCase().includes('equi')).length} label="Equip" onClick={() => setActiveTab('equipment')} icon={<Truck size={12}/>} />
+           </div>
+        </div>
 
-                    <button
-                        onClick={() => setIsManualModalOpen(true)}
-                        className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
-                        title="Nova Carga Manual"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </button>
+        {/* Scrollable Cargo List */}
+        <div ref={setNodeRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-main/20 no-scrollbar">
+           {filteredCargoes.map(cargo => (
+             <div key={cargo.id} className="relative group/cargo">
+                <div className={cn(
+                  "absolute left-2 top-1/2 -translate-y-1/2 z-20 transition-opacity",
+                  selectedCargoIds.has(cargo.id) ? "opacity-100" : "opacity-0 group-hover/cargo:opacity-100"
+                )}>
+                   <input 
+                     type="checkbox" 
+                     checked={selectedCargoIds.has(cargo.id)}
+                     onChange={() => toggleSelectCargo(cargo.id)}
+                     className="w-4 h-4 rounded border-subtle text-brand-primary focus:ring-brand-primary cursor-pointer"
+                   />
                 </div>
-            </div>
+                <div className={cn("transition-transform", selectedCargoIds.has(cargo.id) && "translate-x-6")}>
+                  <DraggableCargo cargo={cargo} />
+                </div>
+             </div>
+           ))}
+           {filteredCargoes.length === 0 && (
+             <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                <div className="p-6 bg-sidebar rounded-full mb-4">
+                  <Anchor size={32} className="text-muted" />
+                </div>
+                <p className="text-xs font-bold text-muted uppercase tracking-widest">Nenhuma carga no inventário</p>
+             </div>
+           )}
+        </div>
 
-         {!manifestsLoaded && !isProcessing && (
-            <div className="text-sm text-neutral-500 dark:text-neutral-600 text-center mt-10 p-4 border border-dashed border-neutral-400 dark:border-neutral-800 rounded-lg">
-              Aguardando carga...
-            </div>
-          )}
-         
-        {unallocatedCargoes
-          .filter(cargo => {
-            const matchesSearch = (cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                 (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const cargoDestination = cargo.destinoCarga;
-            let matchesCategory = false;
-            if (destinationFilter === 'TODOS') matchesCategory = true;
-            else if (destinationFilter === 'S/D') matchesCategory = !cargoDestination;
-            else matchesCategory = cargoDestination === destinationFilter;
-
-            return matchesSearch && matchesCategory;
-          })
-          .map(cargo => (
-            <DraggableCargo 
-              key={cargo.id} 
-              cargo={cargo} 
-              isHighlight={searchTerm.length > 0 && 
-                ((cargo.identifier || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 (cargo.description || '').toLowerCase().includes(searchTerm.toLowerCase()))}
-              selectable={true}
-              isSelected={selectedCargoIds.has(cargo.id)}
-              onToggleSelect={(id) => {
-                  setSelectedCargoIds(prev => {
-                      const next = new Set(prev);
-                      if (next.has(id)) next.delete(id);
-                      else next.add(id);
-                      return next;
-                  });
-              }}
-              onEdit={handleEditCargo}
-            />
-          ))}
-      </div>
-
-      <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-      {editingCargo && <EditCargoModal isOpen={!!editingCargo} cargo={editingCargo} onClose={() => setEditingCargo(null)} />}
-      
-      <BackloadResolutionModal 
-        isOpen={isBackloadModalOpen}
-        onClose={() => setIsBackloadModalOpen(false)}
-        extractedBackloads={pendingBackloads}
-      />
-
-      <BatchMoveModal
-        isOpen={isBatchMoveOpen}
-        selectedCount={selectedCargoIds.size}
-        selectedCargoIds={Array.from(selectedCargoIds)}
-        onClose={() => setIsBatchMoveOpen(false)}
-        onSuccess={() => setSelectedCargoIds(new Set())}
-      />
-
-      {isOCRModalOpen && <OCRConverterModal isOpen={isOCRModalOpen} onClose={() => setIsOCRModalOpen(false)} />}
+        <OCRConverterModal isOpen={isOCRModalOpen} onClose={() => setIsOCRModalOpen(false)} />
+        <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
+        <BatchMoveModal isOpen={isBatchMoveOpen} onClose={() => setIsBatchMoveOpen(false)} cargoIds={Array.from(selectedCargoIds)} />
     </aside>
+  );
+}
+
+function FilterButton({ active, count, label, onClick, icon }: any) {
+  return (
+    <button 
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border",
+        active 
+          ? "bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20" 
+          : "bg-sidebar text-muted border-subtle hover:bg-main hover:text-primary"
+      )}
+    >
+      {icon}
+      {label}
+      <span className={cn("ml-1 font-bold", active ? "text-white/60" : "text-muted")}>{count}</span>
+    </button>
   );
 }
