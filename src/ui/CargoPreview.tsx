@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { getScaledDimensions } from '@/lib/scaling';
 import type { Cargo } from '@/domain/Cargo';
 
@@ -32,7 +32,7 @@ export function CargoPreview({ format, length, width, height, color, quantity = 
     const totalWidth = quantity * (actualDrawWidth + spacing) - spacing;
     const totalHeight = format === 'Tubular' ? scaledLength : scaledHeight;
 
-    const shapes: React.ReactNode[] = [];
+    const shapes: ReactNode[] = [];
     for (let i = 0; i < quantity; i++) {
         const xOffset = i * (actualDrawWidth + spacing);
         if (format === 'Tubular') {

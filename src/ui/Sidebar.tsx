@@ -3,7 +3,7 @@ import {
   Zap, MoveRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, type ChangeEvent } from 'react';
 import DraggableCargo from './DraggableCargo';
 import { useNotificationStore } from '@/features/notificationStore';
 import { OCRConverterModal } from './OCRConverterModal';
@@ -59,7 +59,7 @@ export default function Sidebar() {
     return result;
   }, [unallocatedCargoes, activeTab, searchTerm]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsProcessing(true);

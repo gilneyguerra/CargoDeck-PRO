@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { X } from 'lucide-react';
 import type { CargoCategory } from '@/domain/Cargo';
@@ -20,7 +20,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   const [isRemovable, setIsRemovable] = useState(false);
   const [observations, setObservations] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const w = Number(weightTonnes);
     const l = Number(lengthMeters);

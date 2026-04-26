@@ -1,9 +1,9 @@
 import { useNotificationStore, NotificationType } from '@/features/notificationStore';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
-const icons: Record<NotificationType, React.ReactNode> = {
+const icons: Record<NotificationType, ReactNode> = {
   success: <CheckCircle className="w-5 h-5 text-green-500" />,
   error: <AlertCircle className="w-5 h-5 text-red-500" />,
   warning: <AlertTriangle className="w-5 h-5 text-amber-500" />,

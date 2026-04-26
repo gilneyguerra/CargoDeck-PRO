@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCargoStore } from '@/features/cargoStore';
 import { X } from 'lucide-react';
@@ -45,7 +45,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
     }
   }, [cargo]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!cargo) return;
 

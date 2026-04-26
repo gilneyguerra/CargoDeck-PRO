@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, LogIn, AlertCircle } from 'lucide-react';
 
@@ -14,7 +14,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
 
   if (!isOpen) return null;
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
