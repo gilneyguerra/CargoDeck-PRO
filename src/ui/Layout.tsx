@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-// BUILD_VERSION: 1.10.4-REDEPLOY-SYNC-V2
+// BUILD_VERSION: 1.11.0-GLOBAL-SEARCH-SYNC-V1
 import { Header } from './Header';
 import Sidebar from './Sidebar';
 
@@ -9,7 +9,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   // Removido appVersion da store, pois não existe no CargoState
-  const staticVersion = "1.10";
+  const staticVersion = "1.11";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg text-text transition-colors duration-300">
