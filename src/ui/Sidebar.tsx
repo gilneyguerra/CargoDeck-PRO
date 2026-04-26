@@ -1,7 +1,6 @@
 import { 
-  Plus, Upload, Trash2, Box, Package, Anchor, Truck, Filter, 
-  FileText, Zap, ChevronLeft, ChevronRight, X, User,
-  MoveRight, ScanText, UploadCloud
+  Plus, Upload, Trash2, Box, Package, Anchor, Truck, 
+  Zap, MoveRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useRef, useState, useMemo } from 'react';
@@ -9,19 +8,17 @@ import DraggableCargo from './DraggableCargo';
 import { useNotificationStore } from '@/features/notificationStore';
 import { OCRConverterModal } from './OCRConverterModal';
 import { cn } from '@/lib/utils';
-import { metersToPixels } from '@/lib/scaling';
 import { useDroppable } from '@dnd-kit/core';
 import { ManualCargoModal } from './ManualCargoModal';
 import { BatchMoveModal } from './BatchMoveModal';
-import type { Cargo } from '@/domain/Cargo';
 
 export default function Sidebar() {
   const { 
-    unallocatedCargoes, manifestsLoaded, clearUnallocatedCargoes,
-    deleteMultipleCargoes
+    unallocatedCargoes, clearUnallocatedCargoes,
+    deleteMultipleCargoes, setEditingCargo
   } = useCargoStore();
 
-  const addNotification = useNotificationStore(state => state.addNotification);
+  const notify = useNotificationStore(state => state.notify);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'container' | 'equipment' | 'tubular' | 'basket'>('all');
@@ -51,16 +48,11 @@ export default function Sidebar() {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsProcessing(true);
-    // Simulação ou chamada real de upload aqui
-    setTimeout(() => setIsProcessing(false), 1500);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedCargoIds.size === filteredCargoes.length) {
-      setSelectedCargoIds(new Set());
-    } else {
-      setSelectedCargoIds(new Set(filteredCargoes.map(c => c.id)));
-    }
+    notify('Iniciando processamento do arquivo...', 'info');
+    setTimeout(() => {
+      setIsProcessing(false);
+      notify('Manifesto processado!', 'success');
+    }, 1500);
   };
 
   const toggleSelectCargo = (id: string) => {
@@ -182,7 +174,13 @@ export default function Sidebar() {
                    />
                 </div>
                 <div className={cn("transition-transform", selectedCargoIds.has(cargo.id) && "translate-x-6")}>
-                  <DraggableCargo cargo={cargo} />
+                  <DraggableCargo 
+                    cargo={cargo} 
+                    onEdit={setEditingCargo}
+                    selectable={true}
+                    isSelected={selectedCargoIds.has(cargo.id)}
+                    onToggleSelect={toggleSelectCargo}
+                  />
                 </div>
              </div>
            ))}
@@ -198,7 +196,16 @@ export default function Sidebar() {
 
         <OCRConverterModal isOpen={isOCRModalOpen} onClose={() => setIsOCRModalOpen(false)} />
         <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-        <BatchMoveModal isOpen={isBatchMoveOpen} onClose={() => setIsBatchMoveOpen(false)} cargoIds={Array.from(selectedCargoIds)} />
+        <BatchMoveModal 
+          isOpen={isBatchMoveOpen} 
+          onClose={() => setIsBatchMoveOpen(false)} 
+          selectedCargoIds={Array.from(selectedCargoIds)} 
+          selectedCount={selectedCargoIds.size}
+          onSuccess={() => {
+            setSelectedCargoIds(new Set());
+            notify('Cargas movidas com sucesso!', 'success');
+          }}
+        />
     </aside>
   );
 }
