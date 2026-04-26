@@ -15,7 +15,7 @@ import { BatchMoveModal } from './BatchMoveModal';
 export default function Sidebar() {
   const { 
     unallocatedCargoes, clearUnallocatedCargoes,
-    deleteMultipleCargoes, setEditingCargo
+    deleteMultipleCargoes, setEditingCargo, searchTerm
   } = useCargoStore();
 
   const notify = useNotificationStore(state => state.notify);
@@ -31,18 +31,33 @@ export default function Sidebar() {
     id: 'inventory-sidebar',
   });
 
-  // Filtros
+  // Filtros combinados com Busca Global
   const filteredCargoes = useMemo(() => {
-    if (activeTab === 'all') return unallocatedCargoes;
-    return unallocatedCargoes.filter(c => {
-      const type = (c.category || '').toLowerCase();
-      if (activeTab === 'container') return type.includes('container') || type.includes('cont');
-      if (activeTab === 'equipment') return type.includes('equipment') || type.includes('equi') || type.includes('skid') || type.includes('tanque');
-      if (activeTab === 'tubular') return type.includes('tubular') || type.includes('riser') || type.includes('pipe') || type.includes('tubo');
-      if (activeTab === 'basket') return type.includes('basket') || type.includes('cesta');
-      return true;
-    });
-  }, [unallocatedCargoes, activeTab]);
+    let result = unallocatedCargoes;
+
+    // 1. Filtro de Categorias lateral
+    if (activeTab !== 'all') {
+      result = result.filter(c => {
+        const type = (c.category || '').toLowerCase();
+        if (activeTab === 'container') return type.includes('container') || type.includes('cont');
+        if (activeTab === 'equipment') return type.includes('equipment') || type.includes('equi') || type.includes('skid') || type.includes('tanque');
+        if (activeTab === 'tubular') return type.includes('tubular') || type.includes('riser') || type.includes('pipe') || type.includes('tubo');
+        if (activeTab === 'basket') return type.includes('basket') || type.includes('cesta');
+        return true;
+      });
+    }
+
+    // 2. Filtro de Busca Global
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(c => 
+        (c.identifier || '').toLowerCase().includes(term) || 
+        (c.description || '').toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [unallocatedCargoes, activeTab, searchTerm]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

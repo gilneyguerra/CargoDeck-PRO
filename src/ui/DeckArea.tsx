@@ -12,7 +12,17 @@ import DraggableCargo from './DraggableCargo';
 import { metersToPixels } from '@/lib/scaling';
 
 
-function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoLocation, isActive: boolean, onClick: () => void, onEdit: (loc: CargoLocation) => void, onDelete: (id: string) => void }) {
+interface LocationTabProps {
+  loc: CargoLocation;
+  isActive: boolean;
+  onClick: () => void;
+  onEdit: (loc: CargoLocation) => void;
+  onDelete: (id: string) => void;
+  matchCount: number;
+  key?: string | number;
+}
+
+function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: LocationTabProps) {
    const { setNodeRef } = useDroppable({
      id: `tab-${loc.id}`
    });
@@ -29,18 +39,32 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete }: { loc: CargoL
                 : "bg-header/50 border-subtle text-muted hover:text-primary hover:border-strong bg-white/50 dark:bg-black/20"
             )}
           >
-          <span>{loc.name}</span>
-          {(() => {
-            const totalCargoes = loc.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
-            return totalCargoes > 0 && (
+          <div className="flex items-center gap-2">
+            <span>{loc.name}</span>
+            {matchCount > 0 && (
+              <span className="flex h-2 w-2 rounded-full bg-status-warning animate-pulse" />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {(() => {
+              const totalCargoes = loc.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
+              return totalCargoes > 0 && (
+                <span className={cn(
+                  "text-[9px] px-2 py-0.5 rounded-lg font-black min-w-[20px] text-center",
+                  isActive ? "bg-white/20 text-white" : "bg-sidebar text-muted"
+                )}>
+                  {totalCargoes}
+                </span>
+              );
+            })()}
+            {matchCount > 0 && (
               <span className={cn(
-                "text-[9px] px-2 py-0.5 rounded-lg font-black min-w-[20px] text-center",
-                isActive ? "bg-white/20 text-white" : "bg-sidebar text-muted"
+                "text-[9px] px-2 py-0.5 rounded-lg font-black min-w-[20px] text-center bg-status-warning text-white shadow-sm shadow-status-warning/30"
               )}>
-                {totalCargoes}
+                {matchCount}
               </span>
-            );
-          })()}
+            )}
+          </div>
           </button>
           
           <div className="flex items-center absolute -top-3 -right-2 opacity-0 group-hover:opacity-100 transition-all z-20 scale-90 group-hover:scale-100">
@@ -146,24 +170,48 @@ export function DeckArea() {
     const activeLocation = locations.find(l => l.id === activeLocationId);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-    // Contagem de itens encontrados na pesquisa EM TODAS AS ABAS (Global)
-    const globalSearchMatchCount = useMemo(() => {
+    // Auxiliar para contar matches por localização
+    const getMatchesForLocation = (loc: CargoLocation) => {
         if (!searchTerm) return 0;
         const term = searchTerm.toLowerCase();
-        let totalCount = 0;
+        let count = 0;
+        loc.bays.forEach(bay => {
+            bay.allocatedCargoes.forEach(cargo => {
+                if (cargo.identifier.toLowerCase().includes(term) || 
+                    cargo.description.toLowerCase().includes(term)) {
+                    count++;
+                }
+            });
+        });
+        return count;
+    };
+
+    // Contagem de itens encontrados na pesquisa EM TODO O APP (Global: Deck + Inventário)
+    const { globalSearchMatchCount, inventoryMatchCount } = useMemo(() => {
+        if (!searchTerm) return { globalSearchMatchCount: 0, inventoryMatchCount: 0 };
+        const term = searchTerm.toLowerCase();
+        let deckCount = 0;
         
         locations.forEach(loc => {
             loc.bays.forEach(bay => {
                 bay.allocatedCargoes.forEach(cargo => {
                     if (cargo.identifier.toLowerCase().includes(term) || 
                         cargo.description.toLowerCase().includes(term)) {
-                        totalCount++;
+                        deckCount++;
                     }
                 });
             });
         });
+
+        const invCount = useCargoStore.getState().unallocatedCargoes.filter(c => 
+            c.identifier.toLowerCase().includes(term) || 
+            c.description.toLowerCase().includes(term)
+        ).length;
         
-        return totalCount;
+        return { 
+            globalSearchMatchCount: deckCount + invCount,
+            inventoryMatchCount: invCount
+        };
     }, [searchTerm, locations]);
 
     const handleAddLocation = () => {
@@ -183,6 +231,7 @@ export function DeckArea() {
                         key={loc.id} 
                         loc={loc} 
                         isActive={activeLocationId === loc.id} 
+                        matchCount={getMatchesForLocation(loc)}
                         onClick={() => setActiveLocation(loc.id)}
                         onEdit={(editLoc) => {
                           const name = prompt('Editar nome do local:', editLoc.name);
@@ -215,11 +264,18 @@ export function DeckArea() {
                     {/* Contador de Resultados da Busca GLOBAL (Todas as abas) */}
                     {searchTerm && (
                       <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                         <div className="bg-status-warning/10 border border-status-warning/30 px-3 py-2 rounded-xl flex items-center gap-2 shadow-sm">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-status-warning" />
-                            <span className="text-[10px] font-black text-status-warning uppercase tracking-widest">
-                               {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM ENCONTRADO (GLOBAL)' : 'ITENS ENCONTRADOS (GLOBAL)'}
-                            </span>
+                         <div className="bg-status-warning/10 border border-status-warning/30 px-4 py-2 rounded-xl flex items-center gap-3 shadow-sm">
+                            <CheckCircle2 className="w-4 h-4 text-status-warning" />
+                            <div className="flex flex-col items-start leading-none">
+                              <span className="text-[10px] font-black text-status-warning uppercase tracking-widest mb-0.5">
+                                 {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM ENCONTRADO' : 'ITENS ENCONTRADOS'}
+                              </span>
+                              <div className="flex items-center gap-1.5 opacity-70">
+                                 <span className="text-[8px] font-bold text-status-warning uppercase">Deck: {globalSearchMatchCount - inventoryMatchCount}</span>
+                                 <div className="w-1 h-1 rounded-full bg-status-warning/40" />
+                                 <span className="text-[8px] font-bold text-status-warning uppercase">Inventário: {inventoryMatchCount}</span>
+                              </div>
+                            </div>
                          </div>
                       </div>
                     )}
