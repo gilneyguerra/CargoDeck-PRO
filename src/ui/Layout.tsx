@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+// BUILD_VERSION: 1.10.4-RESTORED-USABILITY
 import { Header } from './Header';
 import Sidebar from './Sidebar';
 
