@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-// BUILD_VERSION: 1.10.4-RESTORED-USABILITY
+// BUILD_VERSION: 1.10.4-REDEPLOY-SYNC-V2
 import { Header } from './Header';
 import Sidebar from './Sidebar';
 
