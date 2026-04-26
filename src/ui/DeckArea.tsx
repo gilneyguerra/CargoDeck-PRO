@@ -90,11 +90,11 @@ const DroppableBaySide = memo(function DroppableBaySide({ bay, side, isLast, dec
           )}
           style={{ minWidth: metersToPixels(sideWidth) }}
         >
-      <div className="w-full flex justify-between items-center mb-2 px-1 border-b border-subtle/50 pb-1.5">
-         <span className="text-muted font-black text-[8px] tracking-[0.2em] uppercase opacity-60">
+      <div className="w-full flex justify-between items-center mb-2 px-1 border-b border-subtle/50 pb-2">
+         <span className="text-secondary font-black text-[10px] tracking-[0.2em] uppercase">
            {side === 'port' ? 'BOMBORDO' : side === 'center' ? 'CENTRO' : 'BORESTE'}
          </span>
-         <span className="text-[8px] font-black px-2 py-0.5 rounded-lg bg-sidebar text-muted border border-subtle/30 uppercase tracking-tighter">
+         <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-sidebar text-primary border border-subtle/50 uppercase tracking-tighter">
             {cargoes.length} ITENS
          </span>
      </div>
@@ -128,13 +128,13 @@ const DroppableBay = memo(function DroppableBay({ bay, activeLocation, searchTer
 return (
    <div 
      className={cn(
-       "w-full border rounded-2xl relative flex flex-col items-center pt-10 pb-4 transition-all min-h-[100px] shadow-sm",
+       "w-full border rounded-2xl relative flex flex-col items-center pt-12 pb-4 transition-all min-h-[120px] shadow-sm",
        "bg-header/50 dark:bg-black/20 border-subtle"
      )}
    >
       <div className="absolute top-3 left-4 flex items-center gap-2">
-        <div className="bg-main text-primary text-[9px] font-mono font-black px-2.5 py-1 rounded-lg border border-subtle shadow-sm flex items-center gap-2 uppercase tracking-widest">
-           <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+        <div className="bg-main text-primary text-[11px] font-mono font-black px-3 py-1.5 rounded-xl border border-strong shadow-md flex items-center gap-2 uppercase tracking-widest">
+           <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
            Baia {String(bay.number).padStart(2, '0')}
         </div>
       </div>
@@ -207,9 +207,8 @@ export function DeckArea() {
                         onChange={(e) => {
                           const term = e.target.value;
                           setSearchTerm(term);
-                          // ... (lógica de busca mantida igual)
                         }}
-                        className="w-72 pl-12 pr-4 py-3 text-[11px] font-black tracking-widest bg-main border border-subtle rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all placeholder:text-muted/50 uppercase"
+                        className="w-80 pl-12 pr-4 py-4 text-[12px] font-black tracking-widest bg-main border-2 border-subtle rounded-[1.2rem] focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all placeholder:text-muted placeholder:opacity-100 text-primary uppercase shadow-sm"
                       />
                     </div>
                     
@@ -223,12 +222,12 @@ export function DeckArea() {
                 </div>
             </div>
             
-            <div className="flex-1 bg-main border border-subtle rounded-[2.5rem] p-10 relative flex flex-col items-center overflow-auto shadow-inner shadow-black/5">
-                <div className="w-fit min-w-full h-fit bg-sidebar/30 border border-subtle/50 rounded-t-[100px] rounded-b-[2rem] relative flex flex-col p-12 shadow-2xl">
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 text-muted/30 text-[9px] font-mono font-black tracking-[1em] uppercase whitespace-nowrap">PROA</div>
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-muted/30 text-[9px] font-mono font-black tracking-[1em] uppercase whitespace-nowrap">POPA</div>
-                    <div className="absolute left-[-40px] top-1/2 -translate-y-1/2 -rotate-90 text-muted/30 text-[9px] font-mono font-black tracking-[1em] uppercase whitespace-nowrap">BOMBORDO</div>
-                    <div className="absolute right-[-35px] top-1/2 -translate-y-1/2 rotate-90 text-muted/30 text-[9px] font-mono font-black tracking-[1em] uppercase whitespace-nowrap">BORESTE</div>
+            <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-12 relative flex flex-col items-center overflow-auto shadow-inner shadow-black/5">
+                <div className="w-fit min-w-full h-fit bg-sidebar/30 border border-subtle/50 rounded-t-[120px] rounded-b-[3rem] relative flex flex-col p-16 shadow-2xl">
+                    <div className="absolute top-8 left-1/2 -translate-x-1/2 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">PROA</div>
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">POPA</div>
+                    <div className="absolute left-[-45px] top-1/2 -translate-y-1/2 -rotate-90 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">BOMBORDO</div>
+                    <div className="absolute right-[-45px] top-1/2 -translate-y-1/2 rotate-90 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">BORESTE</div>
                     
                      <div className="flex-1 mt-8 mb-8 flex flex-col gap-6 relative z-10 w-full">
                          {bays.map(bay => (
