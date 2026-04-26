@@ -110,10 +110,8 @@ const DroppableBaySide = memo(function DroppableBaySide({ bay, side, isLast, dec
           )}
           style={{ minWidth: metersToPixels(sideWidth) }}
         >
-      <div className="w-full flex justify-between items-center mb-2 px-1 border-b border-subtle/50 pb-2">
-         <span className="text-secondary font-black text-[9px] tracking-[0.2em] uppercase">
-           {side === 'port' ? 'BOMBORDO' : side === 'center' ? 'CENTRO' : 'BORESTE'}
-         </span>
+      {/* Rótulos internos removidos para evitar redundância com a orientação global */}
+      <div className="w-full flex justify-end items-center mb-2 px-1 border-b border-subtle/50 pb-2">
          <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-sidebar text-primary border border-subtle uppercase">
             {cargoes.length} {cargoes.length === 1 ? 'ITEM' : 'ITENS'}
          </span>
@@ -301,12 +299,13 @@ export function DeckArea() {
                 </div>
             </div>
             
-            <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-10 relative flex flex-col items-center overflow-auto shadow-inner">
+            <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-24 relative flex flex-col items-center overflow-auto shadow-inner">
                 <div className="w-fit min-w-full h-fit bg-sidebar/10 border border-subtle/50 rounded-t-[140px] rounded-b-[4rem] relative flex flex-col p-20 shadow-2xl">
-                    <div className="absolute top-10 left-1/2 -translate-x-1/2 text-primary text-[11px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">PROA</div>
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-primary text-[11px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">POPA</div>
-                    <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 -rotate-90 text-primary text-[11px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">BOMBORDO</div>
-                    <div className="absolute right-[-10px] top-1/2 -translate-y-1/2 rotate-90 text-primary text-[11px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">BORESTE</div>
+                    {/* Orientações Globais - Movidas para posições mais externas e com fonte preta conforme solicitado */}
+                    <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">PROA</div>
+                    <div className="absolute bottom-[-50px] left-1/2 -translate-x-1/2 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">POPA</div>
+                    <div className="absolute left-[-70px] top-1/2 -translate-y-1/2 -rotate-90 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">BOMBORDO</div>
+                    <div className="absolute right-[-70px] top-1/2 -translate-y-1/2 rotate-90 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">BORESTE</div>
                     
                      <div className="flex-1 flex flex-col gap-8 relative z-10 w-full py-4">
                          {bays.map(bay => (
