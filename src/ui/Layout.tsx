@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { useCargoStore } from '@/features/cargoStore';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { appVersion } = useCargoStore();
+  // Removido appVersion da store, pois não existe no CargoState
+  const staticVersion = "1.10";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg text-text transition-colors duration-300">
@@ -22,7 +22,7 @@ export function Layout({ children }: LayoutProps) {
       
       <div className="flex items-center justify-end px-6 py-2 bg-header/50 border-t border-subtle text-[9px] text-muted shrink-0 transition-colors duration-300 font-mono tracking-widest uppercase">
         <span className="font-black mr-2 opacity-80">CargoDeck Pro Logistics System</span>
-        <span className="opacity-40 font-bold">Build v{appVersion || '1.10'}</span>
+        <span className="opacity-40 font-bold">Build v{staticVersion}</span>
       </div>
     </div>
   );
