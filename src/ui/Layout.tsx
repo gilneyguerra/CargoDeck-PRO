@@ -21,9 +21,9 @@ export function Layout({ children }: LayoutProps) {
         </main>
       </div>
       
-      <div className="flex items-center justify-end px-6 py-2 bg-header/50 border-t border-subtle text-[10px] text-secondary/80 shrink-0 transition-colors duration-300 font-mono tracking-widest uppercase">
-        <span className="font-black mr-2 opacity-90">CargoDeck Pro Logistics System</span>
-        <span className="opacity-60 font-black">Build v{staticVersion}</span>
+      <div className="flex items-center justify-end px-6 py-2 bg-header/50 border-t border-subtle text-[10px] text-primary shrink-0 transition-colors duration-300 font-mono tracking-widest uppercase">
+        <span className="font-black mr-2">CargoDeck Pro Logistics System</span>
+        <span className="font-black">Build v{staticVersion}</span>
       </div>
     </div>
   );
