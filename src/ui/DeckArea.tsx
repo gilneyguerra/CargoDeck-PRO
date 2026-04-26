@@ -214,7 +214,7 @@ export function DeckArea() {
                     
                     <button 
                       onClick={() => setIsSettingsOpen(true)}
-                      className="flex items-center gap-3 bg-header border border-subtle text-muted hover:text-brand-primary hover:border-brand-primary/50 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-md"
+                      className="flex items-center gap-3 bg-header border border-strong text-primary hover:text-brand-primary hover:border-brand-primary px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-md hover:shadow-lg active:scale-95"
                     >
                       <Settings className="w-4 h-4" />
                       CONFIGURAR DECK
@@ -224,10 +224,10 @@ export function DeckArea() {
             
             <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-12 relative flex flex-col items-center overflow-auto shadow-inner shadow-black/5">
                 <div className="w-fit min-w-full h-fit bg-sidebar/30 border border-subtle/50 rounded-t-[120px] rounded-b-[3rem] relative flex flex-col p-16 shadow-2xl">
-                    <div className="absolute top-8 left-1/2 -translate-x-1/2 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">PROA</div>
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">POPA</div>
-                    <div className="absolute left-[-45px] top-1/2 -translate-y-1/2 -rotate-90 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">BOMBORDO</div>
-                    <div className="absolute right-[-45px] top-1/2 -translate-y-1/2 rotate-90 text-muted text-[11px] font-mono font-black tracking-[1.2em] uppercase whitespace-nowrap">BORESTE</div>
+                    <div className="absolute top-8 left-1/2 -translate-x-1/2 text-primary dark:text-white text-[12px] font-black tracking-[1.2em] uppercase whitespace-nowrap opacity-80">PROA</div>
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-primary dark:text-white text-[12px] font-black tracking-[1.2em] uppercase whitespace-nowrap opacity-80">POPA</div>
+                    <div className="absolute left-[-50px] top-1/2 -translate-y-1/2 -rotate-90 text-primary dark:text-white text-[12px] font-black tracking-[1.2em] uppercase whitespace-nowrap opacity-80">BOMBORDO</div>
+                    <div className="absolute right-[-50px] top-1/2 -translate-y-1/2 rotate-90 text-primary dark:text-white text-[12px] font-black tracking-[1.2em] uppercase whitespace-nowrap opacity-80">BORESTE</div>
                     
                      <div className="flex-1 mt-8 mb-8 flex flex-col gap-6 relative z-10 w-full">
                          {bays.map(bay => (
