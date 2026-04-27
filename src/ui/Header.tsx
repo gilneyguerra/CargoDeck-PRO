@@ -319,7 +319,7 @@ export function Header() {
 
               <button 
                 onClick={() => { setExportModalOpen(false); setDirHandle(null); } } 
-                className="w-full py-4 text-xs font-bold text-muted hover:text-primary transition-colors text-center"
+                className="w-full py-4 text-xs font-black text-black hover:bg-main border-2 border-transparent hover:border-subtle rounded-2xl transition-all text-center uppercase tracking-[0.25em]"
               >
                 CANCELAR
               </button>

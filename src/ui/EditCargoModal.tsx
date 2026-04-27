@@ -210,9 +210,9 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
         <div className="px-10 py-10 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-8">
             <button
                 type="button" onClick={onClose}
-                className="text-xs font-black text-secondary hover:text-primary uppercase tracking-[0.25em] transition-colors"
+                className="px-8 py-4 rounded-2xl text-xs font-black text-black bg-main border-2 border-subtle hover:bg-sidebar transition-all active:scale-95 uppercase tracking-[0.2em]"
             >
-                Abandon Protocol
+                CANCELAR
             </button>
             <button
                 type="submit" form="edit-cargo-form"
