@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Trash2, CheckCircle, AlertCircle, LogOut, Search } from 'lucide-react';
+import { X, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import type { Cargo } from '@/domain/Cargo';
 import { logger } from '../utils/logger';
-import { cn } from '@/lib/utils';
 
 interface BackloadResolutionModalProps {
   isOpen: boolean;

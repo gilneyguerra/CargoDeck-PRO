@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
-import { ArrowRight, Ship, Layers, Shuffle, Plus, Minus, Divide, X } from 'lucide-react';
+import { ArrowRight, Ship, Layers, Shuffle, Plus, Minus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BatchMoveModalProps {

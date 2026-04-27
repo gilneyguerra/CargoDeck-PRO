@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
-import { X, LogIn, AlertCircle, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, AlertCircle, ShieldCheck } from 'lucide-react';
 
 const SUPABASE_CONFIGURED = !!(import.meta.env?.VITE_SUPABASE_URL || 'https://vdjrfoxnibufxqntwrkr.supabase.co');
 

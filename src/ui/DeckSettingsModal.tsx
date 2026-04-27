@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { X, Layout, Maximize2, MoveVertical, GitCommitVertical } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const { locations, activeLocationId, updateActiveLocationConfig } = useCargoStore();
