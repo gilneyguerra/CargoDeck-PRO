@@ -13,6 +13,7 @@ import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './ui/ToastContainer';
+import { LandingPage } from '@/ui/LandingPage';
 
 function AppWithProviders() {
   const { 
@@ -150,10 +151,20 @@ function AppWithProviders() {
   )
 }
 
+function AppContent() {
+  const [view, setView] = useState<'landing' | 'app'>('landing');
+
+  if (view === 'landing') {
+    return <LandingPage onEnterApp={() => setView('app')} />;
+  }
+
+  return <AppWithProviders />;
+}
+
 function App() {
   return (
     <ErrorBoundary>
-      <AppWithProviders />
+      <AppContent />
     </ErrorBoundary>
   );
 }
