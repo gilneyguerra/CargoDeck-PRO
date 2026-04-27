@@ -195,14 +195,14 @@ export function Header() {
                <button 
                  onClick={handleExportCsv} 
                  disabled={!manifestsLoaded} 
-                 className="flex items-center gap-2 bg-main border border-subtle text-black hover:bg-sidebar transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md"
+                 className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-black hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
                >
                  <Download size={14} /> CSV
                </button>
                <button 
                  onClick={handleExportPdf} 
                  disabled={!manifestsLoaded} 
-                 className="flex items-center gap-2 bg-main border border-subtle text-black hover:bg-sidebar transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md"
+                 className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-black hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
                >
                  <Download size={14} /> PDF
                </button>
