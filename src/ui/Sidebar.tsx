@@ -81,7 +81,7 @@ export default function Sidebar() {
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
         {/* Manifest Import Section */}
         <div className="p-8 border-b border-subtle bg-header/20">
-            <h2 className="text-[11px] font-extrabold text-muted mb-5 tracking-[0.2em] uppercase opacity-80">Logistics Hub</h2>
+            <h2 className="text-[11px] font-black text-black mb-5 tracking-[0.2em] uppercase opacity-90">Logistics Hub</h2>
             <div className="grid grid-cols-1 gap-4">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
@@ -101,7 +101,7 @@ export default function Sidebar() {
                       <span className="text-xs font-black text-primary uppercase tracking-[0.1em] mb-1.5">
                         {isProcessing ? 'SCANNING DATA...' : 'UPLOAD MANIFEST'}
                       </span>
-                      <span className="text-[10px] font-bold text-muted/60">Surgical PDF Processing</span>
+                      <span className="text-[10px] font-black text-black">Surgical PDF Processing</span>
                     </div>
                 </button>
                 
@@ -110,7 +110,7 @@ export default function Sidebar() {
                   title="Ferramenta OCR"
                   className="w-full mt-2 flex items-center justify-center gap-3 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary px-6 py-4 rounded-2xl text-[10px] font-extrabold uppercase tracking-[0.15em] transition-all active:scale-[0.98] shadow-low hover:shadow-medium"
                 >
-                  <Zap className="w-5 h-5" /> ADVANCED OCR CONVERTER
+                  <Zap className="w-5 h-5" /> <span className="text-black">ADVANCED OCR CONVERTER</span>
                 </button>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
@@ -125,7 +125,7 @@ export default function Sidebar() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[11px] font-black text-primary uppercase tracking-widest">Inventory</span>
-                <span className="text-[9px] font-bold text-muted uppercase">Ready for Loading</span>
+                <span className="text-[9px] font-black text-black uppercase">Ready for Loading</span>
               </div>
               <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ml-auto shadow-medium">
                 {unallocatedCargoes.length}
@@ -213,7 +213,7 @@ export default function Sidebar() {
                 <div className="p-6 bg-sidebar rounded-full mb-4">
                   <Anchor size={32} className="text-muted" />
                 </div>
-                <p className="text-xs font-bold text-muted uppercase tracking-widest">Nenhuma carga no inventário</p>
+                <p className="text-xs font-black text-black uppercase tracking-widest">Nenhuma carga no inventário</p>
              </div>
            )}
         </div>
@@ -242,7 +242,7 @@ function FilterButton({ active, count, label, onClick, icon }: any) {
         "flex items-center gap-2 px-4 py-2 rounded-2xl text-[11px] font-extrabold uppercase tracking-tight whitespace-nowrap transition-all border shadow-low",
         active 
           ? "bg-brand-primary text-white border-brand-primary scale-105 z-10" 
-          : "bg-main border-subtle text-muted hover:text-primary hover:border-brand-primary"
+          : "bg-main border-subtle text-black hover:text-brand-primary hover:border-brand-primary"
       )}
     >
       {icon}

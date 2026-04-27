@@ -378,7 +378,7 @@ export function DeckArea() {
                         placeholder="BUSCAR NO DECK..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-80 pl-14 pr-6 py-4.5 text-xs font-extrabold tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/50 text-primary uppercase shadow-low h-[60px]"
+                        className="w-80 pl-14 pr-6 py-4.5 text-xs font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-black text-black uppercase shadow-low h-[60px]"
                       />
                     </div>
                     
