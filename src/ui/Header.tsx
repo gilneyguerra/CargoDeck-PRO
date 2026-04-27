@@ -111,12 +111,23 @@ export function Header() {
         
         {/* Left Section: Logo & Navio */}
         <div className="flex items-center gap-6 order-1">
-          <div className="flex items-center gap-3">
-             <img 
-               src="/logo.png" 
-               alt="CargoDeck Plan" 
-               className="h-11 w-auto object-contain hover:scale-[1.02] transition-transform cursor-pointer active:scale-95" 
-             />
+          <div className="flex items-center gap-3 group cursor-pointer">
+             <div className="relative">
+                <div className="absolute -inset-1 bg-brand-primary/20 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity" />
+                <img 
+                  src="/logo-icon.png" 
+                  alt="CargoDeck Plan" 
+                  className="relative h-10 w-10 object-contain drop-shadow-sm transition-transform group-hover:scale-110" 
+                />
+             </div>
+             <div className="flex flex-col -gap-1">
+                <span className="text-[22px] font-black tracking-tight text-primary leading-none">
+                  CargoDeck
+                </span>
+                <span className="text-[12px] font-black text-brand-primary uppercase tracking-[0.3em] ml-0.5 opacity-90">
+                  Plan
+                </span>
+             </div>
           </div>
           
           <div className="h-8 w-px bg-border-subtle hidden sm:block" />
