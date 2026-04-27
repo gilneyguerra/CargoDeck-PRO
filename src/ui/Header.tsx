@@ -187,17 +187,17 @@ export function Header() {
                  onClick={handleExportCsv} 
                  disabled={!manifestsLoaded} 
                  title="Exportar CSV"
-                 className="flex items-center gap-2 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all hover:shadow-low"
+                 className="flex items-center gap-2 bg-main border border-subtle text-secondary hover:bg-status-success/10 hover:text-status-success hover:border-status-success/40 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all hover:shadow-low group/csv"
                >
-                 <Download size={14} /> CSV
+                 <Download size={14} className="group-hover/csv:scale-110 transition-transform" /> CSV
                </button>
                <button 
                  onClick={handleExportPdf} 
                  disabled={!manifestsLoaded} 
                  title="Exportar PDF"
-                 className="flex items-center gap-2 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all hover:shadow-low"
+                 className="flex items-center gap-2 bg-main border border-subtle text-secondary hover:bg-[#ef4444]/10 hover:text-[#ef4444] hover:border-[#ef4444]/40 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all hover:shadow-low group/pdf"
                >
-                 <Download size={14} /> PDF
+                 <Download size={14} className="group-hover/pdf:scale-110 transition-transform" /> PDF
                </button>
             </div>
 
