@@ -468,7 +468,7 @@ export class PDFExtractor {
                 processedCanvas = await imagePreprocessor.preprocess(canvas);
                 logger.info('Página pré-processada com OpenCV.js (AVA)');
             } catch (err) {
-                logger.warn('Falha no AVA, utilizando renderização original', err instanceof Error ? err : undefined);
+                logger.warn('Falha no AVA, utilizando renderização original', { error: err instanceof Error ? err.message : String(err) });
             }
         }
         
