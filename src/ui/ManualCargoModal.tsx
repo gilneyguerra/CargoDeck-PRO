@@ -56,7 +56,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
   return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 glass">
+      <div className="bg-main border-2 border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-primary via-indigo-500 to-brand-primary z-50" />
         
         {/* Header Section */}
@@ -107,7 +107,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                             <label className="block text-[9px] font-black text-primary uppercase tracking-widest ml-1">Weight (Tonnes)</label>
                             <input
                                 type="number" step="0.001" value={weightTonnes} onChange={e => setWeightTonnes(e.target.value)}
-                                className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
+                                className="w-full bg-main border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary shadow-sm"
                                 required
                             />
                         </div>
@@ -115,7 +115,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                             <label className="block text-[9px] font-black text-primary uppercase tracking-widest ml-1">Length (m)</label>
                             <input
                                 type="number" step="0.01" value={lengthMeters} onChange={e => setLengthMeters(e.target.value)}
-                                className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
+                                className="w-full bg-main border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary shadow-sm"
                                 required
                             />
                         </div>
@@ -123,7 +123,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                             <label className="block text-[9px] font-black text-primary uppercase tracking-widest ml-1">Width (m)</label>
                             <input
                                 type="number" step="0.01" value={widthMeters} onChange={e => setWidthMeters(e.target.value)}
-                                className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
+                                className="w-full bg-main border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary shadow-sm"
                                 required
                             />
                         </div>
@@ -131,7 +131,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                             <label className="block text-[9px] font-black text-primary uppercase tracking-widest ml-1">Height (m)</label>
                             <input
                                 type="number" step="0.01" value={heightMeters} onChange={e => setHeightMeters(e.target.value)}
-                                className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
+                                className="w-full bg-main border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary shadow-sm"
                             />
                         </div>
                     </div>
