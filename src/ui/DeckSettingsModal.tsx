@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-/* eslint-disable react-hooks/set-state-in-effect */
+import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
-import { X } from 'lucide-react';
+import { X, Layout, Maximize2, MoveVertical, GitCommitVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const { locations, activeLocationId, updateActiveLocationConfig } = useCargoStore();
@@ -21,10 +22,8 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
       setLength(activeLocation.config.lengthMeters);
       setWidth(activeLocation.config.widthMeters || 15);
       setBaysCount(activeLocation.config.numberOfBays);
-      
       const defaultLength = activeLocation.config.lengthMeters / (activeLocation.config.numberOfBays || 1);
       setBayLength(activeLocation.config.bayLengthMeters !== undefined ? activeLocation.config.bayLengthMeters : defaultLength);
-
       setElevationMeters(activeLocation.config.elevationMeters !== undefined ? activeLocation.config.elevationMeters : 30);
       setPortWidth(activeLocation.config.portWidthMeters || 5);
       setCenterWidth(activeLocation.config.centerWidthMeters || 5);
@@ -44,23 +43,16 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
       alert(`Erro dimensional: A soma das larguras das posições (${sumW}m) excede a Largura Total do deck (${tW}m).`);
       return;
     }
-
     if (sumL > tL) {
-      alert(`Erro dimensional: O comprimento das ${baysCount} baias somadas (${sumL}m) excede o Comprimento Total do deck (${tL}m).`);
+      alert(`Erro dimensional: O comprimento das baias somadas (${sumL}m) excede o Comprimento Total (${tL}m).`);
       return;
     }
 
-    // Step 4b: confirm before destructive bay count change
     const newBaysCount = Number(baysCount);
     if (newBaysCount !== activeLocation.config.numberOfBays) {
-      const totalAllocated = activeLocation.bays.reduce(
-        (acc, bay) => acc + bay.allocatedCargoes.length, 0
-      );
+      const totalAllocated = activeLocation.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
       if (totalAllocated > 0) {
-        const confirmed = window.confirm(
-          `Atenção: Alterar o número de baias irá mover ${totalAllocated} carga(s) alocada(s) de volta para a lista de não alocadas.\n\nDeseja continuar?`
-        );
-        if (!confirmed) return;
+        if (!window.confirm(`Atenção: Alterar o número de baias retornará ${totalAllocated} carga(s) para o inventário. Continuar?`)) return;
       }
     }
 
@@ -77,80 +69,109 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4 font-sans animate-in fade-in duration-300">
-      <div className="bg-header border border-subtle rounded-[2.5rem] p-10 w-full max-w-xl shadow-high relative overflow-hidden glass">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-primary via-indigo-400 to-brand-primary" />
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div className="bg-header border border-subtle rounded-[2.5rem] w-full max-w-xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+        {/* Top Accent Line */}
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-brand-primary to-emerald-500 z-50" />
         
-        <button onClick={onClose} className="absolute top-6 right-8 text-muted hover:text-primary transition-colors p-2 hover:bg-main rounded-full">
-          <X className="w-6 h-6" />
-        </button>
-        
-        <div className="mb-10">
-          <h2 className="text-3xl font-extrabold text-primary tracking-tighter uppercase leading-none">{activeLocation.name}</h2>
-          <p className="text-[11px] font-bold text-muted uppercase tracking-[0.3em] mt-3 opacity-80">Deck Architecture Settings</p>
+        {/* Header Section (Fixed) */}
+        <div className="px-8 pt-8 pb-6 border-b border-subtle shrink-0">
+            <button onClick={onClose} className="absolute top-7 right-8 text-muted hover:text-primary p-2 hover:bg-main rounded-full transition-all">
+                <X className="w-6 h-6" />
+            </button>
+            <div className="flex flex-col gap-1.5">
+                <h2 className="text-2xl font-black text-primary tracking-tighter uppercase leading-none">{activeLocation.name}</h2>
+                <p className="text-[9px] font-black text-muted uppercase tracking-[0.4em] opacity-80">Deck Architecture & Spatial Scaling</p>
+            </div>
         </div>
-        
-        <div className="space-y-8">
-          <div className="grid grid-cols-2 gap-8">
-             <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted uppercase tracking-[0.2em] ml-1">Total Length (m)</label>
-                <div className="relative">
-                  <input type="number" value={length} onChange={e => setLength(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-2xl p-5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/5" />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted/40 uppercase">Axis Y</span>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+            <div className="space-y-8">
+                {/* Master Dimensions */}
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-[9px] font-black text-muted uppercase tracking-widest ml-1">
+                            <MoveVertical size={10} className="text-emerald-500" /> Total Length (m)
+                        </label>
+                        <div className="relative">
+                            <input type="number" value={length} onChange={e => setLength(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-xl px-5 py-3.5 text-xs font-mono font-bold text-primary outline-none focus:border-emerald-500 transition-all shadow-inner" />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted/30 uppercase">Y-Axis</span>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-[9px] font-black text-muted uppercase tracking-widest ml-1">
+                             <Maximize2 size={10} className="text-emerald-500" /> Total Width (m)
+                        </label>
+                        <div className="relative">
+                            <input type="number" value={width} onChange={e => setWidth(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-xl px-5 py-3.5 text-xs font-mono font-bold text-primary outline-none focus:border-emerald-500 transition-all shadow-inner" />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted/30 uppercase">X-Axis</span>
+                        </div>
+                    </div>
                 </div>
-             </div>
-             <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted uppercase tracking-[0.2em] ml-1">Total Width (m)</label>
-                <div className="relative">
-                  <input type="number" value={width} onChange={e => setWidth(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-2xl p-5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/5" />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted/40 uppercase">Axis X</span>
+
+                {/* Elevation Tracking */}
+                <div className="bg-main/30 p-5 rounded-2xl border border-subtle shadow-inner space-y-3">
+                    <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
+                       <GitCommitVertical size={12} className="text-emerald-500" /> Deck Z-Elevation
+                    </label>
+                    <input type="number" step="0.1" value={elevationMeters} onChange={e => setElevationMeters(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-xl px-5 py-3 text-xs font-bold text-primary outline-none focus:border-emerald-500 transition-all" />
+                    <p className="text-[9px] font-bold text-muted uppercase opacity-60 tracking-tighter">Reference altitude for Center of Gravity stability analysis.</p>
                 </div>
-             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-muted uppercase tracking-[0.2em] ml-1">Floor Z-Elevation (m)</label>
-            <input type="number" step="0.1" value={elevationMeters} onChange={e => setElevationMeters(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-2xl p-5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/5" />
-            <p className="text-[10px] text-muted font-bold mt-1 ml-1 opacity-60">Reference for stability calculations.</p>
-          </div>
+
+                {/* Transversal Zones */}
+                <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest ml-1">
+                        <Layout size={10} className="text-emerald-500" /> Transversal Zone Widths
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[8px] font-black text-muted text-center uppercase tracking-tighter">Port</span>
+                            <input type="number" step="0.1" value={portWidth} onChange={e => setPortWidth(e.target.value)} className="w-full bg-header border border-subtle text-center rounded-xl py-2.5 text-xs font-mono font-bold text-primary outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[8px] font-black text-muted text-center uppercase tracking-tighter">Center</span>
+                            <input type="number" step="0.1" value={centerWidth} onChange={e => setCenterWidth(e.target.value)} className="w-full bg-header border border-subtle text-center rounded-xl py-2.5 text-xs font-mono font-bold text-primary outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[8px] font-black text-muted text-center uppercase tracking-tighter">Stbd</span>
+                            <input type="number" step="0.1" value={starboardWidth} onChange={e => setStarboardWidth(e.target.value)} className="w-full bg-header border border-subtle text-center rounded-xl py-2.5 text-xs font-mono font-bold text-primary outline-none focus:border-emerald-500" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bay Geometry */}
+                <div className="grid grid-cols-2 gap-8 pt-4">
+                    <div className="space-y-2">
+                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Logical Bay Count</label>
+                        <input type="number" value={baysCount} onChange={e => setBaysCount(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-xl px-5 py-3 text-xs font-bold text-primary outline-none focus:border-emerald-500" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Bay Pitch (m)</label>
+                        <input type="number" value={bayLength} onChange={e => setBayLength(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-xl px-5 py-3 text-xs font-bold text-primary outline-none focus:border-emerald-500" />
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 mt-8 p-6 bg-sidebar/30 rounded-3xl border border-subtle/50">
-          <div className="space-y-2 text-center">
-            <label className="text-[9px] font-black text-muted uppercase tracking-wider">Port</label>
-            <input type="number" step="0.1" value={portWidth} onChange={e => setPortWidth(e.target.value)} className="w-full bg-main border border-subtle text-center rounded-xl p-3 text-xs font-extrabold text-primary outline-none focus:border-brand-primary" />
-          </div>
-          <div className="space-y-2 text-center">
-            <label className="text-[9px] font-black text-muted uppercase tracking-wider">Center</label>
-            <input type="number" step="0.1" value={centerWidth} onChange={e => setCenterWidth(e.target.value)} className="w-full bg-main border border-subtle text-center rounded-xl p-3 text-xs font-extrabold text-primary outline-none focus:border-brand-primary" />
-          </div>
-          <div className="space-y-2 text-center">
-            <label className="text-[9px] font-black text-muted uppercase tracking-wider">Starboard</label>
-            <input type="number" step="0.1" value={starboardWidth} onChange={e => setStarboardWidth(e.target.value)} className="w-full bg-main border border-subtle text-center rounded-xl p-3 text-xs font-extrabold text-primary outline-none focus:border-brand-primary" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-8 mt-8 pb-8 border-b border-subtle">
-          <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-muted uppercase tracking-[0.2em] ml-1">Bay Count</label>
-            <input type="number" value={baysCount} onChange={e => setBaysCount(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-2xl p-5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-muted uppercase tracking-[0.2em] ml-1">Bay Pitch (m)</label>
-            <input type="number" value={bayLength} onChange={e => setBayLength(e.target.value)} className="w-full bg-main border-2 border-subtle rounded-2xl p-5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary" />
-          </div>
-        </div>
-
-        <div className="mt-10 flex gap-4">
-          <button onClick={onClose} className="flex-1 py-5 text-xs font-extrabold text-muted hover:text-primary uppercase tracking-widest transition-colors">
-            CANCEL
-          </button>
-          <button onClick={handleSave} className="flex-[2] py-5 bg-gradient-to-br from-[#10b981] to-[#059669] text-white rounded-2xl text-xs font-extrabold uppercase tracking-[0.2em] shadow-high shadow-status-success/20 hover:brightness-110 active:scale-95 transition-all hover-lift">
-            UPDATE CONFIGURATION
-          </button>
+        {/* Footer Section (Fixed) */}
+        <div className="p-8 border-t border-subtle bg-sidebar/20 shrink-0 flex items-center justify-between gap-6">
+            <button
+                type="button" onClick={onClose}
+                className="text-[10px] font-black text-muted hover:text-primary uppercase tracking-[0.2em] transition-colors"
+            >
+                Discard
+            </button>
+            <button
+                onClick={handleSave}
+                className="flex-1 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/10 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+                Synchronize Configuration
+            </button>
         </div>
       </div>
-    </div>
-  )
+    </div>,
+    document.body
+  );
 }

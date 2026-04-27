@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Trash2, CheckCircle, AlertCircle, LogOut, Search } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import type { Cargo } from '@/domain/Cargo';
 import { logger } from '../utils/logger';
+import { cn } from '@/lib/utils';
 
 interface BackloadResolutionModalProps {
   isOpen: boolean;
@@ -12,21 +14,17 @@ interface BackloadResolutionModalProps {
 
 export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }: BackloadResolutionModalProps) {
   const { getAllCargo, deleteCargo } = useCargoStore();
-  const allCargoOnBoard = useMemo(() => {
-    return isOpen ? getAllCargo() : [];
-  }, [getAllCargo, isOpen]);
+  const allCargoOnBoard = useMemo(() => isOpen ? getAllCargo() : [], [getAllCargo, isOpen]);
   
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Cruzamento de dados: busca cargos à bordo que dão match com os extraídos
   const resolutionItems = useMemo(() => {
     return extractedBackloads.map(backload => {
       const onboardMatch = allCargoOnBoard.find(ob => 
         ob.identifier.trim().toUpperCase() === backload.identifier.trim().toUpperCase() &&
         ob.description.trim().toUpperCase() === backload.description.trim().toUpperCase()
       );
-      
       return {
         backload,
         onboardMatch,
@@ -49,18 +47,14 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
       const matchesToDelete = currentMatches.map(item => item.onboardMatch!.id);
       const logDetails = currentMatches.map(item => `• ${item.backload.identifier} - ${item.backload.description}`).join('\n');
       
-      for (const id of matchesToDelete) {
-        await deleteCargo(id);
-      }
+      for (const id of matchesToDelete) await deleteCargo(id);
       
       setDeletedIds(prev => {
         const next = new Set(prev);
         matchesToDelete.forEach(id => next.add(id));
         return next;
       });
-      
       alert(`Foram desembarcadas as cargas listadas abaixo:\n\n${logDetails}`);
-      logger.info(`Remoção automática de ${matchesToDelete.length} cargas de backload realizada.`);
     } catch (err) {
       logger.error('Erro na remoção automática de backload:', err);
     } finally {
@@ -81,131 +75,133 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-400 dark:border-neutral-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative shadow-2xl overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div className="bg-header border border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+        {/* Top Accent Line */}
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 z-50" />
         
-        {/* Header */}
-        <div className="p-6 border-b border-neutral-300 dark:border-neutral-800 flex justify-between items-center bg-amber-500/5">
-          <div className="flex items-center gap-3">
-            <div className="bg-amber-500 text-white p-2 rounded-lg shadow-lg shadow-amber-500/20">
-              <LogOut size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white leading-none mb-1">Resolução de Backload</h2>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">Identificamos {extractedBackloads.length} itens de desembarque no manifesto.</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-neutral-500 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
-          
-          {foundMatches.length > 0 && (
-            <div className="mb-8">
-              <div className="flex justify-between items-end mb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                    <CheckCircle size={14} /> Correspondências Encontradas
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-1">Estas cargas estão à bordo e foram identificadas para remoção.</p>
+        {/* Header Section (Fixed) */}
+        <div className="px-8 pt-8 pb-6 border-b border-subtle shrink-0">
+            <button onClick={onClose} className="absolute top-7 right-8 text-muted hover:text-primary p-2 hover:bg-main rounded-full transition-all">
+                <X className="w-6 h-6" />
+            </button>
+            <div className="flex flex-col gap-1.5">
+                <h2 className="text-2xl font-black text-primary tracking-tighter uppercase leading-none">Backload Reconciliation</h2>
+                <div className="flex items-center gap-2 mt-2">
+                    <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-500/20">
+                       {extractedBackloads.length} items identifed in manifest
+                    </span>
                 </div>
-                <button 
-                  onClick={handleDeleteAllMatches}
-                  disabled={isProcessing}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95"
-                >
-                  <Trash2 size={14} /> DELETAR TODAS DA EMBARCAÇÃO
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {foundMatches.map(item => (
-                  <div key={item.backload.id} className="bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-lg p-3 flex justify-between items-center group hover:border-emerald-500/50 transition-colors shadow-sm">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-gray-800 dark:text-neutral-100">{item.backload.identifier}</span>
-                        <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500">{item.backload.weightTonnes.toFixed(1)}t</span>
-                      </div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-500 truncate">{item.backload.description}</div>
-                    </div>
-                    <div className="text-right ml-4">
-                      <button 
-                        onClick={() => handleManualDelete(item.onboardMatch!.id)}
-                        className="text-red-500 hover:text-red-400 p-2 rounded-full hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all font-bold"
-                        title="Remover apenas esta carga"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
-          )}
-
-          {missingCount > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                <Search size={14} /> Itens Não Localizados à Bordo
-              </h3>
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4 flex gap-3">
-                <AlertCircle className="text-amber-500 shrink-0" size={18} />
-                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-                  Estes itens constam como desembarque no manifesto, mas não foram encontrados no estoque atual. Verifique se o código identificador está correto ou se foram cadastrados em viagens anteriores.
-                </p>
-              </div>
-              <div className="space-y-2 opacity-70">
-                {resolutionItems.filter(item => !item.isFound).map(item => (
-                  <div key={item.backload.id} className="bg-neutral-200/50 dark:bg-neutral-800/30 border border-neutral-300 dark:border-neutral-800/50 rounded-lg p-3 flex justify-between items-center">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-neutral-600 dark:text-neutral-400">{item.backload.identifier}</span>
-                        <span className="text-[10px] bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500 italic">Pendente</span>
-                      </div>
-                      <div className="text-xs text-neutral-500 truncate">{item.backload.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {foundMatches.length === 0 && missingCount === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
-              <div className="bg-emerald-500/10 p-4 rounded-full">
-                <CheckCircle className="text-emerald-500" size={48} />
-              </div>
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white">Concluído!</h3>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xs">Não restam mais cargas de backload pendentes de resolução.</p>
-            </div>
-          )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-neutral-300 dark:border-neutral-800 bg-neutral-200/30 dark:bg-neutral-900/40 flex justify-between items-center">
-          <div className="flex gap-4">
-             <div className="flex flex-col">
-                <span className="text-[10px] text-neutral-500 font-bold uppercase">Deletados</span>
-                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{resolvedCount}</span>
-             </div>
-             <div className="flex flex-col">
-                <span className="text-[10px] text-neutral-500 font-bold uppercase">Pendentes</span>
-                <span className="text-lg font-bold text-amber-500">{missingCount}</span>
-             </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded-lg shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
-          >
-            CONCLUIR RESOLUÇÃO
-          </button>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+            <div className="space-y-8">
+                {foundMatches.length > 0 && (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <h3 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <CheckCircle size={12} /> Confirmed Matches
+                                </h3>
+                                <p className="text-[9px] font-bold text-muted uppercase tracking-tighter mt-1">On-board items ready for discharge protocol</p>
+                            </div>
+                            <button 
+                                onClick={handleDeleteAllMatches}
+                                disabled={isProcessing}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95 uppercase tracking-widest"
+                            >
+                                <Trash2 size={12} /> Batch Discharge
+                            </button>
+                        </div>
+
+                        <div className="space-y-2.5">
+                            {foundMatches.map(item => (
+                                <div key={item.backload.id} className="bg-main/40 border border-subtle rounded-2xl p-4 flex justify-between items-center group hover:border-emerald-500/30 transition-all shadow-inner">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-mono text-xs font-black text-primary">{item.backload.identifier}</span>
+                                            <span className="text-[8px] font-black bg-sidebar px-2 py-0.5 rounded-md text-muted border border-subtle uppercase tracking-widest">{item.backload.weightTonnes.toFixed(1)}t</span>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-muted uppercase tracking-tight truncate mt-1">{item.backload.description}</div>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleManualDelete(item.onboardMatch!.id)}
+                                        className="text-status-error p-2 rounded-xl hover:bg-status-error/10 opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Remove specific unit"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {missingCount > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <Search size={12} /> Unresolved Discrepancies
+                        </h3>
+                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex gap-4">
+                            <AlertCircle className="text-amber-500 shrink-0" size={20} />
+                            <p className="text-[10px] text-amber-700/80 font-bold uppercase leading-relaxed tracking-tight">
+                                These manifest items were not found in current inventory. Please verify identifier integrity or check historical storage.
+                            </p>
+                        </div>
+                        <div className="space-y-2 shadow-inner p-2 rounded-2xl bg-sidebar/20">
+                            {resolutionItems.filter(item => !item.isFound).map(item => (
+                                <div key={item.backload.id} className="bg-main/20 border border-subtle/50 rounded-xl p-3 flex justify-between items-center opacity-70">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs font-black text-muted">{item.backload.identifier}</span>
+                                            <span className="text-[7px] font-black bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded border border-amber-500/10 uppercase tracking-[0.2em]">Pending</span>
+                                        </div>
+                                        <div className="text-[9px] font-bold text-muted/60 uppercase tracking-tight truncate mt-0.5">{item.backload.description}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {foundMatches.length === 0 && missingCount === 0 && (
+                    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+                        <div className="p-6 bg-emerald-500/10 rounded-full border border-emerald-500/20 shadow-glow shadow-emerald-500/10">
+                            <CheckCircle className="text-emerald-500" size={48} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-black text-primary uppercase tracking-tighter">Manifest Resolved</h3>
+                            <p className="text-[10px] font-bold text-muted uppercase tracking-widest max-w-xs">All backload procedures have been synchronized with the master inventory.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
 
+        {/* Footer Section (Fixed) */}
+        <div className="p-8 border-t border-subtle bg-sidebar/20 shrink-0 flex items-center justify-between gap-8">
+            <div className="flex gap-8">
+                <div className="flex flex-col">
+                    <span className="text-[8px] text-muted font-black uppercase tracking-widest">Discharged</span>
+                    <span className="text-2xl font-black text-emerald-600 leading-tight">{resolvedCount}</span>
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[8px] text-muted font-black uppercase tracking-widest">Awaiting</span>
+                    <span className="text-2xl font-black text-amber-500 leading-tight">{missingCount}</span>
+                </div>
+            </div>
+            <button 
+                onClick={onClose}
+                className="flex-1 bg-brand-primary text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-primary/10 hover:brightness-110 active:scale-95 transition-all"
+            >
+                Finalize Resolution
+            </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

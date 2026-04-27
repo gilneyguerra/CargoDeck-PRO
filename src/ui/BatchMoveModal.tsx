@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
-import { ArrowRight, Ship, Layers, Shuffle, Plus, Minus, Divide } from 'lucide-react';
+import { ArrowRight, Ship, Layers, Shuffle, Plus, Minus, Divide, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BatchMoveModalProps {
@@ -65,16 +65,12 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
       };
       batchMoveCargoesToSides(selectedCargoIds, targetLocationId, effectiveBayId, counts);
     }
-    
     onSuccess();
     onClose();
   };
 
   const updateSideCount = (side: Side, delta: number) => {
-    setSideCounts(prev => {
-      const newVal = Math.max(0, prev[side] + delta);
-      return { ...prev, [side]: newVal };
-    });
+    setSideCounts(prev => ({ ...prev, [side]: Math.max(0, prev[side] + delta) }));
   };
 
   const splitEvenly = () => {
@@ -94,218 +90,171 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
   ];
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div className="bg-header border border-subtle rounded-[2.5rem] w-full max-w-lg shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+        {/* Top Accent Line */}
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 z-50" />
         
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <ArrowRight className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-white font-bold text-lg leading-tight">Mover Cargas</h2>
-              <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mt-0.5">
-                {selectedCount} carga{selectedCount !== 1 ? 's' : ''} selecionada{selectedCount !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 flex flex-col gap-5">
-          <div>
-            <label className="flex items-center gap-2 text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest mb-2">
-              <Ship className="w-3.5 h-3.5" />
-              1. Local de destino
-            </label>
-            <select
-              value={targetLocationId}
-              onChange={e => setTargetLocationId(e.target.value)}
-              className="w-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name} ({loc.bays.length} baias)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="flex items-center gap-2 text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                <Layers className="w-3.5 h-3.5" />
-                2. Lado da baia
-              </label>
-              {selectedCount > 1 && (
-                <button 
-                  onClick={() => setIsDistributingSides(!isDistributingSides)}
-                  className={cn(
-                    "text-[10px] font-black px-2 py-1 rounded-md transition-all border uppercase tracking-tighter",
-                    isDistributingSides 
-                      ? "bg-indigo-600 border-indigo-600 text-white" 
-                      : "bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-indigo-500 hover:text-indigo-500"
-                  )}
-                >
-                  {isDistributingSides ? 'MODO INDIVIDUAL' : 'DISTRIBUIR BORDOS'}
-                </button>
-              )}
-            </div>
-
-            {!isDistributingSides ? (
-              <div className="grid grid-cols-3 gap-2">
-                {sideLabels.map(s => (
-                  <button
-                    key={s.key}
-                    onClick={() => setTargetSide(s.key)}
-                    className={cn(
-                      "flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all",
-                      targetSide === s.key
-                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 shadow-md scale-[1.03]"
-                        : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-indigo-300 dark:hover:border-indigo-700"
-                    )}
-                  >
-                    <span className="text-xl">{s.emoji}</span>
-                    <span className="text-[11px] font-bold">{s.label}</span>
-                    <span className="text-[9px] opacity-60 uppercase font-black">{s.desc}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {sideLabels.map(s => (
-                    <div
-                      key={s.key}
-                      className={cn(
-                        "flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all bg-neutral-50 dark:bg-neutral-800/50",
-                        sideCounts[s.key] > 0 ? "border-indigo-300 dark:border-indigo-700" : "border-neutral-200 dark:border-neutral-800"
-                      )}
-                    >
-                      <span className="text-[10px] font-bold uppercase text-neutral-500 tracking-tighter">{s.label}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <button 
-                          onClick={() => updateSideCount(s.key, -1)}
-                          className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <input 
-                          type="number" 
-                          value={sideCounts[s.key]}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            setSideCounts(prev => ({ ...prev, [s.key]: val }));
-                          }}
-                          className="w-10 text-center bg-transparent font-bold text-sm focus:outline-none"
-                        />
-                        <button 
-                          onClick={() => updateSideCount(s.key, 1)}
-                          className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-2.5 h-2.5 rounded-full border border-white/20",
-                      totalDistributed === selectedCount ? "bg-emerald-500 animate-pulse" : totalDistributed > selectedCount ? "bg-red-500" : "bg-amber-500"
-                    )} />
-                    <span className={cn(
-                      "text-[10px] font-black uppercase tracking-wider",
-                      totalDistributed === selectedCount ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-500"
-                    )}>
-                      {totalDistributed} de {selectedCount} CARGAS
+        {/* Header Section (Fixed) */}
+        <div className="px-8 pt-8 pb-6 border-b border-subtle shrink-0">
+            <button onClick={onClose} className="absolute top-7 right-8 text-muted hover:text-primary p-2 hover:bg-main rounded-full transition-all">
+                <X className="w-6 h-6" />
+            </button>
+            <div className="flex flex-col gap-1.5">
+                <h2 className="text-2xl font-black text-primary tracking-tighter uppercase leading-none">Transfer Hub</h2>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="px-2.5 py-0.5 bg-brand-primary/10 text-brand-primary rounded-lg text-[9px] font-black uppercase tracking-widest border border-brand-primary/20">
+                       {selectedCount} item(s) selected
                     </span>
-                  </div>
-                  <button onClick={splitEvenly} className="flex items-center gap-1 text-[10px] font-black text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-tighter">
-                    <Divide className="w-3 h-3" />
-                    DIVIDIR IGUAL
-                  </button>
                 </div>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest mb-2">
-              <Shuffle className="w-3.5 h-3.5" />
-              3. Distribuição entre baias
-            </label>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setDistributionMode('single-bay')}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all",
-                  distributionMode === 'single-bay'
-                    ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20"
-                    : "border-neutral-200 dark:border-neutral-700 hover:border-indigo-300 dark:hover:border-indigo-700"
-                )}
-              >
-                <div className={cn(
-                  "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                  distributionMode === 'single-bay' ? "border-indigo-500" : "border-neutral-400"
-                )}>
-                  {distributionMode === 'single-bay' && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800 dark:text-neutral-100">Baia específica</p>
-                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-tight">Todas as cargas em uma baia única</p>
-                </div>
-              </button>
-
-              {distributionMode === 'single-bay' && activeLoc && (
-                <select
-                  value={targetBayId}
-                  onChange={e => setTargetBayId(e.target.value)}
-                  className="ml-7 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {activeLoc.bays.map(bay => (
-                    <option key={bay.id} value={bay.id}>
-                      BAIA {String(bay.number).padStart(2, '0')} — {bay.allocatedCargoes.length} CARGAS
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <button
-                onClick={() => setDistributionMode('distribute')}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all",
-                  distributionMode === 'distribute'
-                    ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20"
-                    : "border-neutral-200 dark:border-neutral-700 hover:border-indigo-300 dark:hover:border-indigo-700"
-                )}
-              >
-                <div className={cn(
-                  "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                  distributionMode === 'distribute' ? "border-indigo-500" : "border-neutral-400"
-                )}>
-                  {distributionMode === 'distribute' && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800 dark:text-neutral-100">Espalhar sequencialmente</p>
-                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-tight">Distribuído por {activeLoc?.bays.length ?? 0} baias</p>
-                </div>
-              </button>
             </div>
-          </div>
         </div>
 
-        <div className="flex gap-3 px-6 pb-6 mt-2">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 text-[10px] font-black uppercase tracking-widest text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-            Discard
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!targetLocationId || (distributionMode === 'single-bay' && !targetBayId) || !isDistributionValid}
-            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-95"
-          >
-            Execute Transfer
-          </button>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+            <div className="space-y-8">
+                {/* Destination Section */}
+                <div className="space-y-4">
+                    <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest ml-1">
+                        <Ship size={12} className="text-brand-primary" /> 1. Destination Port
+                    </label>
+                    <select
+                        value={targetLocationId} onChange={e => setTargetLocationId(e.target.value)}
+                        className="w-full bg-main border-2 border-subtle rounded-xl px-5 py-3 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-all appearance-none"
+                    >
+                        {locations.map(loc => (
+                            <option key={loc.id} value={loc.id}>{loc.name} ({loc.bays.length} bays)</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Stowage Side Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest ml-1">
+                            <Layers size={12} className="text-brand-primary" /> 2. Stowage Orientation
+                        </label>
+                        {selectedCount > 1 && (
+                            <button 
+                                onClick={() => setIsDistributingSides(!isDistributingSides)}
+                                className={cn(
+                                    "text-[9px] font-black px-3 py-1 rounded-lg transition-all border uppercase tracking-tighter",
+                                    isDistributingSides ? "bg-indigo-600 border-indigo-600 text-white shadow-low" : "bg-sidebar border-subtle text-muted hover:border-brand-primary"
+                                )}
+                            >
+                                {isDistributingSides ? 'Bulk Balance' : 'Single Side'}
+                            </button>
+                        )}
+                    </div>
+
+                    {!isDistributingSides ? (
+                        <div className="grid grid-cols-3 gap-3">
+                            {sideLabels.map(s => (
+                                <button
+                                    key={s.key} onClick={() => setTargetSide(s.key)}
+                                    className={cn(
+                                        "flex flex-col items-center gap-1.5 py-4 rounded-2xl border-2 transition-all",
+                                        targetSide === s.key ? "border-indigo-500 bg-indigo-500/5 text-indigo-600 shadow-medium" : "border-subtle text-muted hover:border-brand-primary/30"
+                                    )}
+                                >
+                                    <span className="text-xl">{s.emoji}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">{s.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-main/30 p-5 rounded-[1.5rem] border border-subtle space-y-4 shadow-inner">
+                            <div className="grid grid-cols-3 gap-3">
+                                {sideLabels.map(s => (
+                                    <div key={s.key} className="flex flex-col items-center gap-2 p-3 bg-header rounded-xl border border-subtle shadow-low">
+                                        <span className="text-[8px] font-black uppercase text-muted tracking-widest">{s.label}</span>
+                                        <div className="flex items-center justify-between w-full">
+                                            <button onClick={() => updateSideCount(s.key, -1)} className="p-1 hover:text-brand-primary transition-colors"><Minus size={14}/></button>
+                                            <span className="text-xs font-black font-mono">{sideCounts[s.key]}</span>
+                                            <button onClick={() => updateSideCount(s.key, 1)} className="p-1 hover:text-brand-primary transition-colors"><Plus size={14}/></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex items-center justify-between pt-2">
+                                <div className="flex items-center gap-2">
+                                    <div className={cn("w-2 h-2 rounded-full", totalDistributed === selectedCount ? "bg-emerald-500 shadow-glow shadow-emerald-500/20 animate-pulse" : "bg-amber-500")} />
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted">{totalDistributed} / {selectedCount} Allocated</span>
+                                </div>
+                                <button onClick={splitEvenly} className="text-[9px] font-black text-brand-primary hover:underline uppercase tracking-tighter">Split Evenly</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Bay Distribution Section */}
+                <div className="space-y-4">
+                    <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest ml-1">
+                        <Shuffle size={12} className="text-brand-primary" /> 3. Layout Strategy
+                    </label>
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={() => setDistributionMode('single-bay')}
+                            className={cn(
+                                "flex items-center gap-4 px-5 py-4 rounded-2xl border-2 text-left transition-all",
+                                distributionMode === 'single-bay' ? "border-indigo-500 bg-indigo-500/5 shadow-medium" : "border-subtle hover:border-brand-primary/30"
+                            )}
+                        >
+                            <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0", distributionMode === 'single-bay' ? "border-indigo-500" : "border-subtle")}>
+                                {distributionMode === 'single-bay' && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
+                            </div>
+                            <div className="flex flex-col">
+                                <p className="text-xs font-black text-primary uppercase tracking-tight leading-none">Concentrated</p>
+                                <p className="text-[9px] font-bold text-muted uppercase tracking-tighter mt-1">Allocation in a unique specific bay</p>
+                            </div>
+                        </button>
+
+                        {distributionMode === 'single-bay' && activeLoc && (
+                            <select
+                                value={targetBayId} onChange={e => setTargetBayId(e.target.value)}
+                                className="ml-8 bg-sidebar border-2 border-subtle rounded-xl px-4 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary appearance-none transition-all"
+                            >
+                                {activeLoc.bays.map(bay => (
+                                    <option key={bay.id} value={bay.id}>BAY {String(bay.number).padStart(2, '0')}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        <button
+                            onClick={() => setDistributionMode('distribute')}
+                            className={cn(
+                                "flex items-center gap-4 px-5 py-4 rounded-2xl border-2 text-left transition-all",
+                                distributionMode === 'distribute' ? "border-indigo-500 bg-indigo-500/5 shadow-medium" : "border-subtle hover:border-brand-primary/30"
+                            )}
+                        >
+                            <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0", distributionMode === 'distribute' ? "border-indigo-500" : "border-subtle")}>
+                                {distributionMode === 'distribute' && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
+                            </div>
+                            <div className="flex flex-col">
+                                <p className="text-xs font-black text-primary uppercase tracking-tight leading-none">Sequential Spread</p>
+                                <p className="text-[9px] font-bold text-muted uppercase tracking-tighter mt-1">Spread across all available locale bays</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Footer Section (Fixed) */}
+        <div className="p-8 border-t border-subtle bg-sidebar/20 shrink-0 flex items-center justify-between gap-6">
+            <button
+                type="button" onClick={onClose}
+                className="text-[10px] font-black text-muted hover:text-primary uppercase tracking-[0.2em] transition-colors"
+            >
+                Discard
+            </button>
+            <button
+                onClick={handleConfirm}
+                disabled={!targetLocationId || (distributionMode === 'single-bay' && !targetBayId) || !isDistributionValid}
+                className="flex-1 bg-brand-primary text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-primary/10 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-3"
+            >
+                <ArrowRight size={14} /> Execute Transfer
+            </button>
         </div>
       </div>
     </div>,
