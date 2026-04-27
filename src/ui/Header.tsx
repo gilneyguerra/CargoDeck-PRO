@@ -1,6 +1,6 @@
 import { 
   Trash2, Download, CloudUpload, UserCircle, LogIn,
-  Sun, Moon, Ship, Plus, Scale
+  Sun, Moon, Ship, Plus
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
@@ -65,6 +65,18 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const currentTotalWeight = useMemo(() => {
+    let weight = 0;
+    locations.forEach(loc => {
+      loc.bays.forEach(bay => {
+        bay.allocatedCargoes.forEach(c => {
+          weight += c.weightTonnes * c.quantity;
+        });
+      });
+    });
+    return weight;
+  }, [locations]);
+
   const handleExportPdf = () => {
     setExportFormat('pdf');
     setExportFilename('Plano_de_Carga_Consolidado.pdf');
@@ -92,39 +104,6 @@ export function Header() {
        setSaving(false);
      }
   };
-
-  const { totalPort, totalStarboard, totalTopHeavyMoment, currentTotalWeight } = useMemo(() => {
-    let port = 0;
-    let starboard = 0;
-    let topHeavy = 0;
-    let weight = 0;
-
-    locations.forEach(loc => {
-      const elev = loc.config.elevationMeters !== undefined ? loc.config.elevationMeters : 30;
-      loc.bays.forEach(bay => {
-        bay.allocatedCargoes.forEach(c => {
-          const cargoWeight = c.weightTonnes * c.quantity;
-          weight += cargoWeight;
-          if (c.positionInBay === 'port') port += cargoWeight;
-          else if (c.positionInBay === 'starboard') starboard += cargoWeight;
-          const cargoHeight = c.heightMeters || 2.5; 
-          const centerOfGravityZ = elev + (cargoHeight / 2);
-          topHeavy += (cargoWeight * centerOfGravityZ);
-        });
-      });
-    });
-
-    return { 
-      totalPort: port, 
-      totalStarboard: starboard, 
-      totalTopHeavyMoment: topHeavy, 
-      currentTotalWeight: weight 
-    };
-  }, [locations]);
-
-  const listDiff = Math.abs(totalPort - totalStarboard);
-  const isListing = listDiff > 50; 
-  const isTopHeavy = totalTopHeavyMoment > 100000;
 
   return (
     <>
@@ -179,65 +158,6 @@ export function Header() {
           </div>
         </div>
 
-        {/* Center Section: Stability Info */}
-        {(totalPort > 0 || totalStarboard > 0) && (
-            <div 
-              className="hidden xl:flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/30 border border-subtle rounded-2xl py-2 order-2 shadow-inner"
-              title="Indicador de Banda: Monitoramento de estabilidade transversal."
-            >
-              <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[320px]">
-                <div className="flex justify-between w-full text-[9px] font-black tracking-[0.2em] uppercase">
-                   <span className={cn("transition-colors", totalPort > totalStarboard + 50 ? "text-status-error" : "text-secondary")}>BOMBORDO</span>
-                   <span className={cn("transition-colors", totalStarboard > totalPort + 50 ? "text-status-error" : "text-secondary")}>BORESTE</span>
-                </div>
-                <div className="flex items-center gap-3 w-full">
-                  <span className="text-[11px] font-mono font-black text-primary tabular-nums w-12 text-right">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
-                  <div className="flex-1 h-3 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
-                    <div className="flex-1 flex justify-end">
-                       <div className={cn(
-                         "h-full transition-all duration-700 rounded-l-sm",
-                         isListing && totalPort > totalStarboard ? "bg-status-error" : "bg-brand-primary"
-                       )}
-                       style={{ width: `${Math.min(100, (totalPort / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }}></div>
-                    </div>
-                    <div className="w-px bg-border-strong mx-0.5 z-10 opacity-30" />
-                    <div className="flex-1">
-                      <div className={cn(
-                        "h-full transition-all duration-700 rounded-r-sm",
-                        isListing && totalStarboard > totalPort ? "bg-status-error" : "bg-brand-primary"
-                      )}
-                      style={{ width: `${Math.min(100, (totalStarboard / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }} />
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-mono font-black text-primary tabular-nums w-12">{totalStarboard.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
-                </div>
-              </div>
-
-              <div className="h-8 w-px bg-border-subtle opacity-30" />
-
-              <div 
-                className="flex flex-col items-center min-w-32"
-                title="Estabilidade VCG"
-              >
-                <span className="text-[9px] text-secondary font-black tracking-[0.2em] uppercase mb-1 opacity-70">Stability Index</span>
-                <div className="flex items-center gap-2">
-                   <div className={cn(
-                     "p-1 rounded-lg transition-colors",
-                     isTopHeavy ? "bg-status-error/10 text-status-error" : "bg-status-success/10 text-status-success"
-                   )}>
-                     <Scale size={14} />
-                   </div>
-                   <span className={cn(
-                     "text-base font-black tracking-tighter tabular-nums",
-                     isTopHeavy ? "text-status-error" : "text-primary"
-                   )}>
-                     {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] font-bold text-muted uppercase">tm</span>
-                   </span>
-                </div>
-              </div>
-            </div>
-        )}
-
         {/* Right Section: Badges & Actions */}
         <div className="flex items-center gap-4 order-3 ml-auto">
           {/* Peso Plano */}
@@ -250,7 +170,6 @@ export function Header() {
           </div>
 
           <div className="h-10 w-px bg-border-subtle hidden lg:block" />
-
           {/* Action Group */}
           <div className="flex items-center gap-2">
             <button
