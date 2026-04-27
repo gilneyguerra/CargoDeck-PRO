@@ -7,6 +7,7 @@
 import { AppError, handleApplicationError } from './errorHandler';
 import { logger } from '../utils/logger';
 import { ErrorCodes } from '../lib/errorCodes';
+import { imagePreprocessor } from './imagePreprocessor';
 
 // ─── Interfaces Públicas ────────────────────────────────────────────────────
 
@@ -156,16 +157,51 @@ function detectCargoType(text: string): string | undefined {
     return undefined;
 }
 
+function validateISO6346(containerId: string): boolean {
+    const cleanId = containerId.replace(/[\s-]/g, '').toUpperCase();
+    if (cleanId.length !== 11) return false;
+    
+    const charMap: Record<string, number> = {
+        'A':10, 'B':12, 'C':13, 'D':14, 'E':15, 'F':16, 'G':17, 'H':18, 'I':19,
+        'J':20, 'K':21, 'L':23, 'M':24, 'N':25, 'O':26, 'P':27, 'Q':28, 'R':29,
+        'S':30, 'T':31, 'U':32, 'V':34, 'W':35, 'X':36, 'Y':37, 'Z':38
+    };
+
+    try {
+        let total = 0;
+        for (let i = 0; i < 10; i++) {
+            const char = cleanId[i];
+            const val = !isNaN(parseInt(char)) ? parseInt(char) : charMap[char];
+            if (val === undefined) return false;
+            total += val * Math.pow(2, i);
+        }
+        const checkDigit = (total % 11) % 10;
+        return checkDigit === parseInt(cleanId[10]);
+    } catch {
+        return false;
+    }
+}
+
 function extractIdentifier(text: string): string | undefined {
     // Novo Padrão Sugerido (Seção 7): Busca códigos de contêiner ou sequências numéricas
-    const suggestedPattern = /(\b[A-Z]{3,4}\s\d{6,9}[-]?\d?\b|\b\d{6,9}[-]?\d?\b)/gi;
-    const match = text.match(suggestedPattern);
-    if (match) return match[0].trim().toUpperCase();
+    const suggestedPattern = /(\b[A-Z]{3,4}\s\d{6,7}[-]?\d?\b|\b\d{6,9}[-]?\d?\b)/gi;
+    const matches = text.match(suggestedPattern);
+    
+    if (matches) {
+        for (const match of matches) {
+            const clean = match.trim().toUpperCase();
+            // Se for padrão de container (letras+números), valida via ISO 6346
+            if (/[A-Z]{3,4}/.test(clean) && clean.replace(/\s/g, '').length === 11) {
+                if (validateISO6346(clean)) return clean;
+            } else if (clean.length >= 6) {
+                return clean; // Retorna identificador numérico legado se não for container nominal
+            }
+        }
+    }
 
-    // Fallback para padrões específicos do projeto anterior caso o sugerido falhe
+    // Fallback para padrões específicos
     const containerMatch = text.match(/\b([A-Z0-9]{2,4}\s?[A-Z]{2}\s?\d{4,7})\b/i) || 
-                           text.match(/\b([A-Z0-9]{2,4}(?:[-][A-Z0-9]{1,4}){1,3}[-]?\d{2,7})\b/i) ||
-                           text.match(/\b([A-Z]{2,4}[-]?\d{2,7})\b/i);
+                           text.match(/\b([A-Z0-9]{2,4}(?:[-][A-Z0-9]{1,4}){1,3}[-]?\d{2,7})\b/i);
     if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').toUpperCase().trim();
 
     return undefined;
@@ -401,8 +437,8 @@ export class PDFExtractor {
      * PERF: O worker é recebido como parâmetro para evitar o custo de criação/destruição
      * a cada página — o custo de spawn de um Web Worker é muito alto.
      */
-    private static async ocrPage(page: any, worker: any, rotate90 = false): Promise<string> {
-        const scale = 2.0; // Renderiza em 2x para melhor precisão do OCR
+    private static async ocrPage(page: any, worker: any, rotate90 = false, advanced = true): Promise<string> {
+        const scale = 2.5; // Aumentado para 2.5x conforme Seção 3 (300 DPI aprox)
         const viewport = page.getViewport({ scale });
         
         let canvasWidth = viewport.width;
@@ -416,10 +452,9 @@ export class PDFExtractor {
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d')!;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
         
         if (rotate90) {
-            // Rotate 90 degrees clockwise
             ctx.translate(canvasWidth / 2, canvasHeight / 2);
             ctx.rotate(90 * Math.PI / 180);
             ctx.translate(-viewport.width / 2, -viewport.height / 2);
@@ -427,8 +462,17 @@ export class PDFExtractor {
         
         await page.render({ canvasContext: ctx, viewport }).promise;
         
-        const imageDataUrl = canvas.toDataURL('image/png');
+        let processedCanvas = canvas;
+        if (advanced) {
+            try {
+                processedCanvas = await imagePreprocessor.preprocess(canvas);
+                logger.info('Página pré-processada com OpenCV.js (AVA)');
+            } catch (err) {
+                logger.warn('Falha no AVA, utilizando renderização original', err instanceof Error ? err : undefined);
+            }
+        }
         
+        const imageDataUrl = processedCanvas.toDataURL('image/png');
         const { data: { text } } = await worker.recognize(imageDataUrl);
         return text;
     }
@@ -523,15 +567,15 @@ export class PDFExtractor {
 
                     for (let i = 2; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
-                        // Reutiliza o mesmo worker para todas as páginas
-                        const pageText = await PDFExtractor.ocrPage(page, worker, rotate90);
+                        // Ativa pré-processamento avançado OpenCV por padrão em PDFs escaneados
+                        const pageText = await PDFExtractor.ocrPage(page, worker, rotate90, true);
                         ocrFullText += '\n' + pageText;
 
                         if (onProgress) {
                             const globalPct = Math.round((i / pdf.numPages) * 100);
                             onProgress(globalPct);
                         }
-                        logger.info(`OCR página ${i}/${pdf.numPages} concluída.`);
+                        logger.info(`OCR (Advanced) página ${i}/${pdf.numPages} concluída.`);
                     }
 
                     console.log('=== OCR FULL TEXT START ===');
