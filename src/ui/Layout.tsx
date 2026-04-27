@@ -14,9 +14,9 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg text-text transition-colors duration-300 font-sans">
       <Header />
-      <div className="flex flex-1 overflow-hidden max-w-[1600px] w-full mx-auto shadow-high border-x border-subtle">
+      <div className="flex flex-1 overflow-hidden w-full mx-auto border-x border-subtle">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10 bg-main transition-colors duration-300 relative">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-main transition-colors duration-300 relative">
           {children}
         </main>
       </div>
