@@ -114,7 +114,7 @@ export function Header() {
           <div className="flex items-center gap-3">
              <img 
                src="/logo.png" 
-               alt="CargoDeck Pro" 
+               alt="CargoDeck Plan" 
                className="h-11 w-auto object-contain hover:scale-[1.02] transition-transform cursor-pointer active:scale-95" 
              />
           </div>
