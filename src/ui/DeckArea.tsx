@@ -36,7 +36,7 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
               "px-6 py-3 text-[11px] font-extrabold tracking-widest transition-all border rounded-2xl flex items-center gap-4 uppercase shadow-low hover:shadow-medium",
               isActive 
                 ? "bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20 scale-[1.02] z-10" 
-                : "bg-header/50 border-subtle text-muted hover:text-primary hover:border-strong bg-white/50 dark:bg-black/20"
+                : "bg-header/50 border-subtle text-primary hover:text-primary hover:border-strong bg-white/50 dark:bg-black/20"
             )}
           >
           <div className="flex items-center gap-2">
@@ -51,7 +51,7 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
               return totalCargoes > 0 && (
                 <span className={cn(
                   "text-[9px] px-2 py-0.5 rounded-lg font-black min-w-[20px] text-center",
-                  isActive ? "bg-white/20 text-white" : "bg-sidebar text-muted"
+                  isActive ? "bg-white/20 text-white" : "bg-sidebar text-primary"
                 )}>
                   {totalCargoes}
                 </span>
@@ -395,10 +395,10 @@ export function DeckArea() {
             <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-16 relative flex flex-col items-center overflow-auto shadow-high deck-grid">
                 <div className="w-fit min-w-full h-fit bg-sidebar/5 border border-subtle/30 rounded-t-[140px] rounded-b-[4rem] relative flex flex-col p-14 shadow-2xl glass">
                     {/* Orientações Globais */}
-                    <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 text-primary/80 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">PROA</div>
-                    <div className="absolute bottom-[-50px] left-1/2 -translate-x-1/2 text-primary/80 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">POPA</div>
-                    <div className="absolute left-[-90px] top-1/2 -translate-y-1/2 -rotate-90 text-primary/80 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">BOMBORDO</div>
-                    <div className="absolute right-[-90px] top-1/2 -translate-y-1/2 rotate-90 text-primary/80 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">BORESTE</div>
+                    <div className="absolute top-[30px] left-1/2 -translate-x-1/2 text-primary/40 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm z-0">PROA</div>
+                    <div className="absolute bottom-[30px] left-1/2 -translate-x-1/2 text-primary/40 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm z-0">POPA</div>
+                    <div className="absolute left-[20px] top-1/2 -translate-y-1/2 -rotate-90 text-primary/40 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm z-0">BOMBORDO</div>
+                    <div className="absolute right-[20px] top-1/2 -translate-y-1/2 rotate-90 text-primary/40 text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm z-0">BORESTE</div>
                     
                      <div className="flex-1 flex flex-col gap-8 relative z-10 w-full py-4">
                          {bays.map(bay => (

@@ -182,12 +182,12 @@ export function Header() {
               <Trash2 size={22} className="group-hover:scale-110 transition-transform" />
             </button>
 
-            <div className="flex items-center gap-2 p-1.5 glass rounded-2xl shadow-low">
+            <div className="flex items-center gap-2 p-1.5 bg-sidebar/20 border border-subtle rounded-2xl shadow-inner">
                <button 
                  onClick={handleExportCsv} 
                  disabled={!manifestsLoaded} 
                  title="Exportar CSV"
-                 className="flex items-center gap-2 bg-main border border-subtle text-secondary hover:bg-status-success/10 hover:text-status-success hover:border-status-success/40 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all hover:shadow-low group/csv"
+                 className="flex items-center gap-2 bg-main border border-subtle text-primary hover:bg-status-success/20 hover:text-status-success hover:border-status-success/50 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all hover:shadow-medium group/csv"
                >
                  <Download size={14} className="group-hover/csv:scale-110 transition-transform" /> CSV
                </button>
@@ -195,7 +195,7 @@ export function Header() {
                  onClick={handleExportPdf} 
                  disabled={!manifestsLoaded} 
                  title="Exportar PDF"
-                 className="flex items-center gap-2 bg-main border border-subtle text-secondary hover:bg-[#ef4444]/10 hover:text-[#ef4444] hover:border-[#ef4444]/40 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all hover:shadow-low group/pdf"
+                 className="flex items-center gap-2 bg-main border border-subtle text-primary hover:bg-[#ef4444]/20 hover:text-[#ef4444] hover:border-[#ef4444]/50 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest transition-all hover:shadow-medium group/pdf"
                >
                  <Download size={14} className="group-hover/pdf:scale-110 transition-transform" /> PDF
                </button>
@@ -244,8 +244,9 @@ export function Header() {
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
 
       {exportModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-header border border-subtle p-8 rounded-[2rem] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[#0f172a] border-2 border-subtle p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-primary to-status-success" />
             <div className="flex flex-col items-center text-center mb-8">
               <div className="p-4 bg-brand-primary/10 rounded-3xl mb-4">
                 <Download className="w-8 h-8 text-brand-primary" />
