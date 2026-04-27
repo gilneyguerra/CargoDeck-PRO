@@ -307,7 +307,7 @@ export function DeckArea() {
                             </div>
                             <div className="flex items-center gap-3 w-full">
                               <span className="text-[11px] font-mono font-black text-primary tabular-nums w-10 text-right">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
-                              <div className="flex-1 h-2 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
+                              <div className="flex-1 h-3 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
                                 <div className="flex-1 flex justify-end">
                                    <div className={cn(
                                      "h-full transition-all duration-700 rounded-l-sm",
