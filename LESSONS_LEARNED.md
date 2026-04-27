@@ -21,3 +21,8 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Causa**: Remoção de elementos da UI sem a limpeza correspondente dos objetos importados (ex: Lucide Icons após troca por imagens).
 - **Solução**: Sempre executar um "Cleanup" de imports após refatorar componentes JSX.
 - **Contexto**: Ocorrido durante a substituição da logo do Header por imagem em `Header.tsx`.
+## 6. Tipagem de Bibliotecas via CDN (OpenCV, Tesseract)
+- **Problema**: Erro `TS2339: Property 'runtimeInitialized' does not exist on type...`.
+- **Causa**: Ao substituir `any` por interfaces `declare const` manuais para satisfazer o Security Scan, omitimos propriedades cruciais de controle de carregamento da biblioteca.
+- **Solução**: Ao criar interfaces parciais para bibliotecas externas, sempre revise as propriedades de estado/inicialização (como `runtimeInitialized` ou `ready`) para evitar quebras no fluxo de carregamento assíncrono.
+- **Contexto**: Ocorrido durante a limpeza de tipos reportada pelo GitHub em `imagePreprocessor.ts`.

@@ -17,6 +17,7 @@ declare const cv: {
     Scalar: new (r: number, g: number, b: number, a: number) => any;
     imshow(c: HTMLCanvasElement, s: CvMat): void;
     COLOR_RGBA2GRAY: number; BORDER_DEFAULT: number; ADAPTIVE_THRESH_GAUSSIAN_C: number; THRESH_BINARY: number; CV_32F: number; INTER_LINEAR: number; BORDER_CONSTANT: number;
+    runtimeInitialized?: boolean;
 };
 
 class ImagePreprocessor {
