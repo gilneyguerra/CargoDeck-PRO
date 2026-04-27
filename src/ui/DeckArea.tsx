@@ -67,17 +67,17 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
           </div>
           </button>
           
-          <div className="flex items-center absolute -top-4 -right-3 opacity-0 group-hover:opacity-100 transition-all z-20 scale-[0.8] group-hover:scale-100 origin-bottom-left">
+          <div className="flex items-center gap-1.5 absolute -top-5 -right-3 opacity-0 group-hover:opacity-100 transition-all z-20 scale-[0.8] group-hover:scale-100 origin-bottom-left">
              <button 
                onClick={(e) => { e.stopPropagation(); onEdit(loc); }}
-               className="bg-brand-primary text-white p-2 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-all hover:bg-brand-primary/90"
+               className="bg-brand-primary text-white w-8 h-8 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-all hover:bg-brand-primary/90 flex items-center justify-center"
                title="Editar Local"
              >
                <Edit className="w-3.5 h-3.5" />
              </button>
              <button 
                onClick={(e) => { e.stopPropagation(); onDelete(loc.id); }}
-               className="bg-[#ef4444] dark:bg-status-error text-white p-2 rounded-xl shadow-high border border-white/20 ml-1.5 hover:scale-110 active:scale-95 transition-all hover:bg-[#dc2626] dark:hover:bg-status-error/90"
+               className="bg-[#ef4444] text-white w-8 h-8 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-all hover:bg-[#dc2626] flex items-center justify-center"
                title="Excluir Local"
              >
                <Trash2 className="w-3.5 h-3.5" />
@@ -225,7 +225,7 @@ export function DeckArea() {
     return (
         <div className="flex flex-col h-full w-full">
              {/* Local Tabs */}
-              <div className="flex items-center gap-2 mb-8 bg-sidebar/30 p-2 rounded-2xl border border-subtle/40 w-full overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 mb-8 bg-sidebar/30 p-2 pt-6 rounded-2xl border border-subtle/40 w-full overflow-x-auto no-scrollbar">
                   {locations.map(loc => (
                       <LocationTab 
                         key={loc.id} 
