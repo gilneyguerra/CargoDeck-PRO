@@ -20,7 +20,8 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   const [observations, setObservations] = useState('');
   const [isRemovable, setIsRemovable] = useState(false);
   const [color, setColor] = useState('#3b82f6');
-  const [format, setFormat] = useState<'Retangular' | 'Cilíndrica Vertical' | 'Cilíndrica Horizontal'>('Retangular');
+  // Ajustado para os tipos aceitos no domínio Cargo.ts
+  const [format, setFormat] = useState<'Retangular' | 'Quadrado' | 'Tubular'>('Retangular');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -106,7 +107,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                 <input
                   type="number"
                   value={quantity}
-                  onChange={e => setQuantity(e.target.value)}
+                  onChange={e => setQuantity(parseInt(e.target.value) || 1)}
                   className="w-full bg-main border-2 border-subtle rounded-2xl px-6 py-4.5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/5"
                   min="1"
                   required
@@ -159,8 +160,8 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                  className="w-full bg-main border-2 border-subtle rounded-2xl px-4 py-4.5 text-sm font-extrabold text-primary outline-none focus:border-brand-primary transition-all appearance-none"
                >
                  <option value="Retangular">Retangular</option>
-                 <option value="Cilíndrica Vertical">Cilíndrica Vertical</option>
-                 <option value="Cilíndrica Horizontal">Cilíndrica Horizontal</option>
+                 <option value="Quadrado">Quadrado</option>
+                 <option value="Tubular">Tubular (Cilíndrica)</option>
                </select>
             </div>
             <div className="space-y-2">
