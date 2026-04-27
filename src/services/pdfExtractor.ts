@@ -66,7 +66,7 @@ function normalizeNumber(raw: string): number {
     return parseFloat(s) || 0;
 }
 
-function kgToTonnes(kg: number): number { return kg / 1000; }
+
 
 function normalizeDimension(raw: string): number {
     let s = raw.trim()
@@ -224,22 +224,41 @@ function extractIdentifier(text: string): string | undefined {
 // ─── Parser Principal ────────────────────────────────────────────────────────
 
 async function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): Promise<CargoItem[]> {
-    const validCodes = new Set(header.roteiroPrevisto || []);
-    const sectionHeaderRegex = /\b([A-Z0-9]{2,8})\s+([A-Z\sÀ-ÿ0-9.-]{3,45}?)\s+([A-Z0-9]{2,8})\s+([A-Z\sÀ-ÿ0-9.-]{3,45})/g;
+    // Máquina de Estados para Contexto Logístico (Seção 3.3 do Guia Detalhado)
+    let currentOrigin = header.origemCarga || 'PACU';
+    let currentDestination = header.destinoCarga || header.nomeEmbarcacao || 'DESCONHECIDO';
+
+    // Regex para detecção de mudança de seção (Padrão Petrobras)
+    const originDelimiterRegex = /ORIGEM:\s*([A-Z0-9\s.-]{3,30})/gi;
+    const destDelimiterRegex = /DESTINO:\s*([A-Z0-9\s.-]{3,30})/gi;
+
+    // Mapear posições de mudança de seção
+    const sectionChanges: { pos: number, origem: string, destino: string }[] = [];
     
-    const sectionHeaders = [...text.matchAll(sectionHeaderRegex)]
-        .filter(sh => {
-            const origemAcronym = sh[1].trim().toUpperCase();
-            const destinoAcronym = sh[3].trim().toUpperCase();
-            if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) return false;
-            if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) return false;
-            return true;
-        })
-        .map(sh => ({ pos: sh.index ?? 0, origem: sh[1].trim(), destino: sh[3].trim() }));
+    let match;
+    while ((match = originDelimiterRegex.exec(text)) !== null) {
+        currentOrigin = match[1].trim().toUpperCase();
+        sectionChanges.push({ pos: match.index, origem: currentOrigin, destino: currentDestination });
+    }
+    
+    // Reset para busca de destino
+    destDelimiterRegex.lastIndex = 0;
+    while ((match = destDelimiterRegex.exec(text)) !== null) {
+        currentDestination = match[1].trim().toUpperCase();
+        // Tenta associar ao marker de origem mais próximo ou cria novo marker
+        const nearOrigin = sectionChanges.find(s => Math.abs(s.pos - (match?.index || 0)) < 150);
+        if (nearOrigin) {
+            nearOrigin.destino = currentDestination;
+        } else {
+            sectionChanges.push({ pos: match.index, origem: currentOrigin, destino: currentDestination });
+        }
+    }
+    
+    sectionChanges.sort((a, b) => a.pos - b.pos);
 
     function getSectionFor(pos: number) {
-        let best = { origem: header.origemCarga ?? '', destino: header.destinoCarga ?? '' };
-        for (const sec of sectionHeaders) {
+        let best = { origem: header.origemCarga || 'PACU', destino: header.destinoCarga || header.nomeEmbarcacao || '' };
+        for (const sec of sectionChanges) {
             if (sec.pos <= pos) best = sec;
             else break;
         }
@@ -461,28 +480,48 @@ export class PDFExtractor {
      * PERF: O worker é recebido como parâmetro para evitar o custo de criação/destruição
      * a cada página — o custo de spawn de um Web Worker é muito alto.
      */
-    private static async ocrPage(page: any, worker: any, rotate90 = false, advanced = true): Promise<string> {
-        const scale = 2.5; // Aumentado para 2.5x conforme Seção 3 (300 DPI aprox)
-        const viewport = page.getViewport({ scale });
-        
-        let canvasWidth = viewport.width;
-        let canvasHeight = viewport.height;
-        
-        if (rotate90) {
-            canvasWidth = viewport.height;
-            canvasHeight = viewport.width;
+    private static async ocrPageWithRetry(page: any, worker: any, advanced = true): Promise<string> {
+        const angles = [0, 90, 180, 270];
+        let bestText = '';
+        let bestConfidence = 0;
+
+        for (const angle of angles) {
+            const { text, confidence } = await PDFExtractor.ocrPage(page, worker, angle, advanced);
+            
+            if (confidence > bestConfidence) {
+                bestText = text;
+                bestConfidence = confidence;
+            }
+
+            // Checklist Final (Seção 8): Se atingir > 85%, para imediatamente
+            if (confidence > 85) {
+                logger.info(`OCR atingiu confiança ideal (${confidence}%) no ângulo ${angle}º.`);
+                break;
+            }
+
+            // Se no ângulo 0º a confiança for boa (> 60%), não tenta outros para poupar CPU
+            if (angle === 0 && confidence > 60) break;
+            
+            if (advanced && angle !== 270) {
+                logger.warn(`Baixa confiança (${confidence}%) detectada. Tentando próxima rotação...`);
+            }
         }
+
+        if (bestConfidence < 60) {
+            logger.error(`ALERTA: Página com baixa legibilidade (Confiança: ${bestConfidence}%).`);
+        }
+
+        return bestText;
+    }
+
+    private static async ocrPage(page: any, worker: any, rotationAngle = 0, advanced = true): Promise<{ text: string, confidence: number }> {
+        const scale = 2.5; 
+        const viewport = page.getViewport({ scale, rotation: rotationAngle });
         
         const canvas = document.createElement('canvas');
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-        
-        if (rotate90) {
-            ctx.translate(canvasWidth / 2, canvasHeight / 2);
-            ctx.rotate(90 * Math.PI / 180);
-            ctx.translate(-viewport.width / 2, -viewport.height / 2);
-        }
         
         await page.render({ canvasContext: ctx, viewport }).promise;
         
@@ -490,15 +529,14 @@ export class PDFExtractor {
         if (advanced) {
             try {
                 processedCanvas = await imagePreprocessor.preprocess(canvas);
-                logger.info('Página pré-processada com OpenCV.js (AVA)');
             } catch (err) {
-                logger.warn('Falha no AVA, utilizando renderização original', { error: err instanceof Error ? err.message : String(err) });
+                logger.warn('Falha no pré-processamento OpenCV', { error: err });
             }
         }
         
         const imageDataUrl = processedCanvas.toDataURL('image/png');
-        const { data: { text } } = await worker.recognize(imageDataUrl);
-        return text;
+        const { data: { text, confidence } } = await worker.recognize(imageDataUrl);
+        return { text, confidence };
     }
 
     static async extract(file: File, onProgress?: (p: number) => void, _signal?: AbortSignal): Promise<ExtractionResult> {
@@ -561,45 +599,20 @@ export class PDFExtractor {
 
                 try {
                     let ocrFullText = '';
-                    let rotate90 = false;
                     
                     if (pdf.numPages > 0) {
-                        // DETECÇÃO AUTOMÁTICA DE ORIENTAÇÃO
-                        // Documentos escaneados no modo retrato frequentemente são tabelas paisagem viradas.
-                        // Executa OCR na pág 1 para verificar se gerou texto válido.
-                        const page1 = await pdf.getPage(1);
-                        let testText = await PDFExtractor.ocrPage(page1, worker, false);
-                        
-                        // Palavras-chave comun na maioria dos manifestos:
-                        const hasKeywords = (t: string) => /MANIFESTO|TRANSPORTE|CARGA|ORIGEM|DESTINO|DESCRIÇÃO/i.test(t);
-                        
-                        if (!hasKeywords(testText) && page1.getViewport({ scale: 1 }).height > page1.getViewport({ scale: 1 }).width) {
-                            logger.info('Texto inicial com baixa correspondência com manifestos. Tentando rotacionar em 90 graus...');
-                            const rotatedText = await PDFExtractor.ocrPage(page1, worker, true);
-                            if (hasKeywords(rotatedText)) {
-                                logger.info('Rotação de 90 graus bem sucedida. O documento será lido rotacionado.');
-                                rotate90 = true;
-                                testText = rotatedText; // Usa o texto rotacionado para a página 1
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            // Utiliza o novo motor resiliente que gerencia rotação e confiança automaticamente
+                            const pageText = await PDFExtractor.ocrPageWithRetry(page, worker, true);
+                            ocrFullText += '\n' + pageText;
+
+                            if (onProgress) {
+                                const globalPct = Math.round((i / pdf.numPages) * 100);
+                                onProgress(globalPct);
                             }
+                            logger.info(`OCR concluído para página ${i}/${pdf.numPages}.`);
                         }
-                        
-                        ocrFullText += '\n' + testText;
-                        if (onProgress) {
-                            onProgress(Math.round((1 / pdf.numPages) * 100));
-                        }
-                    }
-
-                    for (let i = 2; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        // Ativa pré-processamento avançado OpenCV por padrão em PDFs escaneados
-                        const pageText = await PDFExtractor.ocrPage(page, worker, rotate90, true);
-                        ocrFullText += '\n' + pageText;
-
-                        if (onProgress) {
-                            const globalPct = Math.round((i / pdf.numPages) * 100);
-                            onProgress(globalPct);
-                        }
-                        logger.info(`OCR (Advanced) página ${i}/${pdf.numPages} concluída.`);
                     }
 
                     console.log('=== OCR FULL TEXT START ===');
