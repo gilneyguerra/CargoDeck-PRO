@@ -182,17 +182,17 @@ export function Header() {
         {/* Center Section: Stability Info */}
         {(totalPort > 0 || totalStarboard > 0) && (
             <div 
-              className="hidden xl:flex flex-1 max-w-2xl justify-center items-center gap-12 px-10 glass rounded-3xl py-3 order-2 shadow-medium"
+              className="hidden xl:flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/30 border border-subtle rounded-2xl py-2 order-2 shadow-inner"
               title="Indicador de Banda: Monitoramento de estabilidade transversal."
             >
-              <div className="flex flex-col items-center gap-2.5 flex-1 max-w-[340px]">
-                <div className="flex justify-between w-full text-[10px] font-extrabold tracking-[0.1em] uppercase">
-                   <span className={cn("transition-colors", totalPort > totalStarboard + 50 ? "text-status-error" : "text-muted")}>BOMBORDO</span>
-                   <span className={cn("transition-colors", totalStarboard > totalPort + 50 ? "text-status-error" : "text-muted")}>BORESTE</span>
+              <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[320px]">
+                <div className="flex justify-between w-full text-[9px] font-black tracking-[0.2em] uppercase">
+                   <span className={cn("transition-colors", totalPort > totalStarboard + 50 ? "text-status-error" : "text-secondary")}>BOMBORDO</span>
+                   <span className={cn("transition-colors", totalStarboard > totalPort + 50 ? "text-status-error" : "text-secondary")}>BORESTE</span>
                 </div>
-                <div className="flex items-center gap-4 w-full">
-                  <span className="text-xs font-mono font-black text-secondary tabular-nums w-14 text-right">{totalPort.toFixed(1)}t</span>
-                  <div className="flex-1 h-3.5 bg-main/50 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
+                <div className="flex items-center gap-3 w-full">
+                  <span className="text-[11px] font-mono font-black text-primary tabular-nums w-12 text-right">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
+                  <div className="flex-1 h-3 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
                     <div className="flex-1 flex justify-end">
                        <div className={cn(
                          "h-full transition-all duration-700 rounded-l-sm",
@@ -200,7 +200,7 @@ export function Header() {
                        )}
                        style={{ width: `${Math.min(100, (totalPort / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }}></div>
                     </div>
-                    <div className="w-0.5 bg-border-strong mx-0.5 z-10" />
+                    <div className="w-px bg-border-strong mx-0.5 z-10 opacity-30" />
                     <div className="flex-1">
                       <div className={cn(
                         "h-full transition-all duration-700 rounded-r-sm",
@@ -209,29 +209,29 @@ export function Header() {
                       style={{ width: `${Math.min(100, (totalStarboard / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }} />
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-black text-secondary tabular-nums w-14">{totalStarboard.toFixed(1)}t</span>
+                  <span className="text-[11px] font-mono font-black text-primary tabular-nums w-12">{totalStarboard.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
                 </div>
               </div>
 
-              <div className="h-10 w-px bg-border-subtle opacity-50" />
+              <div className="h-8 w-px bg-border-subtle opacity-30" />
 
               <div 
                 className="flex flex-col items-center min-w-32"
                 title="Estabilidade VCG"
               >
-                <span className="text-[10px] text-muted font-bold tracking-[0.15em] uppercase mb-1.5 opacity-70">Stability Index</span>
-                <div className="flex items-center gap-3">
+                <span className="text-[9px] text-secondary font-black tracking-[0.2em] uppercase mb-1 opacity-70">Stability Index</span>
+                <div className="flex items-center gap-2">
                    <div className={cn(
-                     "p-1.5 rounded-lg transition-colors",
+                     "p-1 rounded-lg transition-colors",
                      isTopHeavy ? "bg-status-error/10 text-status-error" : "bg-status-success/10 text-status-success"
                    )}>
-                     <Scale size={18} />
+                     <Scale size={14} />
                    </div>
                    <span className={cn(
-                     "text-lg font-black tracking-tighter tabular-nums",
+                     "text-base font-black tracking-tighter tabular-nums",
                      isTopHeavy ? "text-status-error" : "text-primary"
                    )}>
-                     {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] font-bold text-muted uppercase ml-1">tm</span>
+                     {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] font-bold text-muted uppercase">tm</span>
                    </span>
                 </div>
               </div>
