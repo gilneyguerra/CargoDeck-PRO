@@ -1,11 +1,12 @@
 import { useState, useRef, type ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { X, UploadCloud, FileText, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { loadPdfJs } from '../services/pdfLoader';
 
 interface FileProgress {
   name: string;
-  file: File; // Armazenamos o arquivo original para processamento
+  file: File;
   status: 'pending' | 'processing' | 'done' | 'error';
   progress: number;
   result?: string;
@@ -39,7 +40,6 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
         if (files[i].status !== 'pending') continue;
 
         const currentFile = files[i];
-        // @ts-ignore - access the stored file from initial selection
         const fileObj = currentFile.file as File;
 
         setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
@@ -61,15 +61,11 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const performOCR = async (file: File, onProgress: (p: number) => void): Promise<string> => {
-    // Carrega o motor PDF via injeção de script (mais resiliente que ESM)
     const pdfjsLib: any = await loadPdfJs();
-
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
-    // API Tesseract.js v5+ (consolidada)
-    // O idioma e o OEM são passados diretamente na criação
     const worker = await createWorker('por' as any, 1, {
         logger: m => {
             if (m.status === 'recognizing text') (onProgress as any)(m.progress);
@@ -92,7 +88,6 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
             }
         }
     } finally {
-        // Garante que o worker seja encerrado mesmo em caso de erro
         await worker.terminate();
     }
 
@@ -105,37 +100,47 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = file.name.replace('.pdf', '_OCR.txt');
-    document.body.appendChild(a);
+    a.download = `manifesto_${file.name.replace('.pdf', '')}_extracted.txt`;
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
   const downloadAll = () => {
-      files.filter(f => f.status === 'done').forEach(downloadResult);
+    const doneFiles = files.filter(f => f.status === 'done' && f.result);
+    if (doneFiles.length === 0) return;
+    
+    const combined = doneFiles.map(f => `FILE: ${f.name}\n${'='.repeat(20)}\n${f.result}\n\n`).join('\n');
+    const blob = new Blob([combined], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `all_manifests_extracted.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="bg-header border border-subtle rounded-[2.5rem] p-10 w-full max-w-3xl shadow-2xl relative max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 text-muted hover:text-primary hover:bg-sidebar rounded-full transition-all">
-          <X className="w-6 h-6" />
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div className="bg-header border border-subtle rounded-[3rem] p-12 w-full max-w-4xl shadow-high relative flex flex-col gap-8 max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-primary via-indigo-500 to-brand-primary" />
+        
+        <button onClick={onClose} className="absolute top-8 right-10 text-muted hover:text-primary p-2 hover:bg-main rounded-full transition-all">
+          <X className="w-8 h-8" />
         </button>
 
-        <div className="mb-8">
-            <h2 className="text-2xl font-black text-primary tracking-tight">Conversor OCR</h2>
-            <p className="text-xs text-muted font-bold uppercase tracking-widest mt-1">Digitalização de Manifestos Escaneados</p>
+        <div className="flex flex-col gap-2">
+            <h2 className="text-3xl font-extrabold text-primary tracking-tighter uppercase leading-none">Advanced OCR Hub</h2>
+            <p className="text-[11px] font-bold text-muted uppercase tracking-[0.4em] opacity-80">Artificial Intelligence Document Processing</p>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-8">
-            {!isProcessing && files.length === 0 && (
+        <div className="flex-1 overflow-hidden flex flex-col gap-6">
+            {files.length === 0 && (
                 <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 border-2 border-dashed border-strong/50 rounded-[3rem] flex flex-col items-center justify-center gap-6 bg-main/30 hover:bg-main hover:border-brand-primary transition-all cursor-pointer group shadow-inner"
+                    className="flex-1 border-4 border-dashed border-subtle/50 rounded-[2.5rem] flex flex-col items-center justify-center gap-6 hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all cursor-pointer group"
                 >
-                    <div className="p-8 bg-brand-primary/10 rounded-full group-hover:scale-110 transition-transform shadow-medium">
-                        <UploadCloud className="w-16 h-16 text-brand-primary" />
+                    <div className="p-8 bg-brand-primary/10 rounded-full text-brand-primary group-hover:scale-110 transition-transform shadow-low border border-brand-primary/20">
+                        <UploadCloud className="w-12 h-12" />
                     </div>
                     <div className="text-center">
                         <p className="text-xl font-extrabold text-primary uppercase tracking-tight">Select Manifests Source</p>
@@ -236,7 +241,8 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
             </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
