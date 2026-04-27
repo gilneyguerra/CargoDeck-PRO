@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   Shield, 
   Target, 
-  UploadCloud, 
   Cpu, 
   MousePointer2, 
-  FileCheck, 
   ArrowRight, 
   CheckCircle2,
   Menu,

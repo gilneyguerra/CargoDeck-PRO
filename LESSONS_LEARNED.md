@@ -18,9 +18,10 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 
 ## 5. Refs e Imports Órfãos (Regressão de Build)
 - **Problema**: Erro `TS6133: 'Variable' is declared but its value is never read`.
-- **Causa**: Remoção de elementos da UI sem a limpeza correspondente dos objetos importados (ex: Lucide Icons após troca por imagens).
-- **Solução**: Sempre executar um "Cleanup" de imports após refatorar componentes JSX.
-- **Contexto**: Ocorrido durante a substituição da logo do Header por imagem em `Header.tsx`.
+- **Causa**: Remoção de elementos da UI sem a limpeza correspondente dos objetos importados (ex: Lucide Icons após troca por imagens ou mudanças de layout). 
+- **Solução**: Sempre executar um "Cleanup" de imports manualmente ou via lint-fix antes da sincronização. Em ambientes CI estritos, como o Vercel, *warnings* são tratados como erros fatais.
+- **Protocolo**: Antes de cada push, revise exaustivamente o bloco de imports do arquivo modificado.
+- **Contexto**: Ocorrido durante a implementação das Fases 1 e 2 da `LandingPage.tsx`.
 ## 6. Tipagem de Bibliotecas via CDN (OpenCV, Tesseract)
 - **Problema**: Erro `TS2339: Property 'runtimeInitialized' does not exist on type...`.
 - **Causa**: Ao substituir `any` por interfaces `declare const` manuais para satisfazer o Security Scan, omitimos propriedades cruciais de controle de carregamento da biblioteca.
