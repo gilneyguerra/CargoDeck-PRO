@@ -67,20 +67,20 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
           </div>
           </button>
           
-          <div className="flex items-center absolute -top-3 -right-2 opacity-0 group-hover:opacity-100 transition-all z-20 scale-90 group-hover:scale-100">
+          <div className="flex items-center absolute -top-4 -right-3 opacity-0 group-hover:opacity-100 transition-all z-20 scale-[0.8] group-hover:scale-100 origin-bottom-left">
              <button 
                onClick={(e) => { e.stopPropagation(); onEdit(loc); }}
-               className="bg-brand-primary text-white p-1.5 rounded-lg shadow-lg hover:brightness-110 border border-white/20"
+               className="bg-brand-primary text-white p-2 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-all hover:bg-brand-primary/90"
                title="Editar Local"
              >
-               <Edit className="w-3 h-3" />
+               <Edit className="w-3.5 h-3.5" />
              </button>
              <button 
                onClick={(e) => { e.stopPropagation(); onDelete(loc.id); }}
-               className="bg-status-error text-white p-1.5 rounded-lg shadow-lg hover:brightness-110 ml-1 border border-white/20"
+               className="bg-[#ef4444] dark:bg-status-error text-white p-2 rounded-xl shadow-high border border-white/20 ml-1.5 hover:scale-110 active:scale-95 transition-all hover:bg-[#dc2626] dark:hover:bg-status-error/90"
                title="Excluir Local"
              >
-               <Trash2 className="w-3 h-3" />
+               <Trash2 className="w-3.5 h-3.5" />
              </button>
           </div>
         </div>
