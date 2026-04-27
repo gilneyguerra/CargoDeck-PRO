@@ -149,6 +149,17 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     return header;
 }
 
+/**
+ * Gera um ID único via SHA-256 baseado no identificador e contexto logístico.
+ */
+async function generateUniqueId(codigo: string, origem: string, destino: string): Promise<string> {
+    const base = `${codigo.toUpperCase().replace(/\s/g, '')}${origem.toUpperCase()}${destino.toUpperCase()}`;
+    const msgUint8 = new TextEncoder().encode(base);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function detectCargoType(text: string): string | undefined {
     const upper = text.toUpperCase();
     for (const [keyword, tipo] of Object.entries(CARGO_TYPES)) {
@@ -183,33 +194,36 @@ function validateISO6346(containerId: string): boolean {
 }
 
 function extractIdentifier(text: string): string | undefined {
-    // Novo Padrão Sugerido (Seção 7): Busca códigos de contêiner ou sequências numéricas
-    const suggestedPattern = /(\b[A-Z]{3,4}\s\d{6,7}[-]?\d?\b|\b\d{6,9}[-]?\d?\b)/gi;
-    const matches = text.match(suggestedPattern);
+    // 1. Regra de Exclusão Crítica (Seção 2): Eslingas
+    // Números que sucedem os termos "ESL." ou "ESLINGA" NÃO são códigos de carga.
+    const textWithoutEslingas = text.replace(/(?:ESL\.|ESLINGA)\s?\d+/gi, '');
+
+    // 2. Padrão Regex Recomendado (Seção 2): [A-Z]{1,4}[\s]?\d{4,6}
+    const suggestedPattern = /([A-Z]{1,4}\s?\d{4,6})/gi;
+    const matches = textWithoutEslingas.match(suggestedPattern);
     
     if (matches) {
         for (const match of matches) {
-            const clean = match.trim().toUpperCase();
-            // Se for padrão de container (letras+números), valida via ISO 6346
-            if (/[A-Z]{3,4}/.test(clean) && clean.replace(/\s/g, '').length === 11) {
+            const clean = match.trim().toUpperCase().replace(/\s/g, '');
+            // Se for padrão de container (letras+números), valida via ISO 6346 se tiver 11 caracteres
+            if (/[A-Z]{3,4}/.test(clean) && clean.length === 11) {
                 if (validateISO6346(clean)) return clean;
-            } else if (clean.length >= 6) {
-                return clean; // Retorna identificador numérico legado se não for container nominal
+            } else if (clean.length >= 4) {
+                return clean; // Retorna identificador alfanumérico normalizado
             }
         }
     }
 
-    // Fallback para padrões específicos
-    const containerMatch = text.match(/\b([A-Z0-9]{2,4}\s?[A-Z]{2}\s?\d{4,7})\b/i) || 
-                           text.match(/\b([A-Z0-9]{2,4}(?:[-][A-Z0-9]{1,4}){1,3}[-]?\d{2,7})\b/i);
-    if (containerMatch) return containerMatch[1].replace(/\s+/, ' ').toUpperCase().trim();
+    // Fallback para padrões numéricos de 6-9 dígitos (Seção 137)
+    const numericMatch = textWithoutEslingas.match(/\b(\d{6,9})\b/);
+    if (numericMatch) return numericMatch[1];
 
     return undefined;
 }
 
 // ─── Parser Principal ────────────────────────────────────────────────────────
 
-function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): CargoItem[] {
+async function parseManifesto(text: string, pageNumber: number, header: ManifestHeader): Promise<CargoItem[]> {
     const validCodes = new Set(header.roteiroPrevisto || []);
     const sectionHeaderRegex = /\b([A-Z0-9]{2,8})\s+([A-Z\sÀ-ÿ0-9.-]{3,45}?)\s+([A-Z0-9]{2,8})\s+([A-Z\sÀ-ÿ0-9.-]{3,45})/g;
     
@@ -239,22 +253,27 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
     let embMatch: RegExpExecArray | null;
     while ((embMatch = embalagemPattern.exec(text)) !== null) {
         try {
-            const identifier = embMatch[1].replace(/\s+/, ' ').trim();
+            const identifier = embMatch[1].replace(/\s+/, ' ').toUpperCase().trim();
             const rawDesc = `EMBALAGEM CADASTRADA ${identifier} ${embMatch[2].trim()}`;
             const length = normalizeDimension(embMatch[3]);
             const width = normalizeDimension(embMatch[4]);
             const height = normalizeDimension(embMatch[5]);
             const rawWeight = normalizeNumber(embMatch[6]);
             
+            const sec = getSectionFor(embMatch.index);
+            const finalId = await generateUniqueId(identifier, sec.origem, sec.destino || header.destinoCarga || '');
+
             allParsedItems.push({
                 index: embMatch.index,
                 isEmbalagem: true,
                 hasExplicitId: true,
                 rawDesc,
                 data: {
+                    id: finalId,
                     identifier,
                     description: rawDesc,
-                    weight: rawWeight, // Peso em KG por enquanto
+                    weight: Number((rawWeight / 1000).toFixed(2)), // Peso em TON
+                    weightKg: rawWeight,
                     length, width, height,
                 }
             });
@@ -290,7 +309,10 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
 
                 const rawWeight = normalizeNumber(isGeneric ? m[8] : m[8]);
                 const isTon = unit.includes('TON') || unit === 'TN';
-                const weightTonnes = isTon ? rawWeight : kgToTonnes(rawWeight);
+                
+                // Normalização de Peso (Seção 3.2): KG para TON (divisão por 1000)
+                const weightTonnes = isTon ? rawWeight : Number((rawWeight / 1000).toFixed(2));
+                const weightKg = isTon ? Number((rawWeight * 1000).toFixed(0)) : rawWeight;
 
                 const explicitId = extractIdentifier(rawDesc);
                 const identifierRaw = (explicitId ?? (isGeneric ? m[2] : m[2])).replace(/[\n\r]+/g, ' ').trim();
@@ -310,17 +332,20 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
                     continue;
                 }
 
+                const sec = getSectionFor(m.index);
+                const finalId = await generateUniqueId(identifier, sec.origem, sec.destino || header.destinoCarga || '');
+
                 allParsedItems.push({
                     index: m.index,
                     isEmbalagem: false,
                     hasExplicitId: !!explicitId,
                     rawDesc,
                     data: {
-                        id,
+                        id: finalId,
                         identifier,
                         description: rawDesc.substring(0, 120),
                         weight: weightTonnes,
-                        weightKg: isTon ? weightTonnes * 1000 : rawWeight,
+                        weightKg: weightKg,
                         volume: length * width * height,
                         length, width, height, bay: pageNumber
                     }
@@ -341,12 +366,11 @@ function parseManifesto(text: string, pageNumber: number, header: ManifestHeader
         if (item.isEmbalagem) {
             skipLooseItemsMode = true; // Ativa skipping, sub-itens serão ignorados
             const sec = getSectionFor(item.index);
-            const id = `${item.data.identifier}-EMB-${item.index}`;
+            const id = item.data.id!;
             
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                // rawWeight das cestas quase sempre vem em KG no manifesto
-                const weightTonnes = kgToTonnes(item.data.weight!);
+                const weightTonnes = item.data.weight!;
 
                 // Cálculo de tamanho físico (1m = 20px)
                 const escala = 20;
@@ -583,7 +607,7 @@ export class PDFExtractor {
                     console.log('=== OCR FULL TEXT END ===');
 
                     const header = parseHeaderInfo(ocrFullText);
-                    const items = parseManifesto(ocrFullText, 1, header);
+                    const items = await parseManifesto(ocrFullText, 1, header);
                     return {
                         success: true,
                         data: {
@@ -599,7 +623,7 @@ export class PDFExtractor {
             // ─── Extração Normal (PDF com texto) ─────────────────────────────
 
             const header = parseHeaderInfo(fullText);
-            const items = parseManifesto(fullText, 1, header);
+            const items = await parseManifesto(fullText, 1, header);
 
             return {
                 success: true,
