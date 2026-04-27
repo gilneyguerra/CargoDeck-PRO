@@ -254,13 +254,13 @@ export function Header() {
           {/* Action Group */}
           <div className="flex items-center gap-2">
             <button
-              className="p-3 text-muted hover:text-status-error hover:bg-status-error/10 rounded-2xl transition-all active:scale-90 hover:rotate-12"
+              className="p-3 text-muted hover:text-[#ef4444] hover:bg-red-500/10 rounded-2xl transition-all active:scale-95 hover:rotate-12 group"
               onClick={() => {
                 if (window.confirm('Limpar manifestos?')) useCargoStore.getState().clearAllCargoes();
               }}
               title="Zerar Plano de Carga"
             >
-              <Trash2 size={20} />
+              <Trash2 size={22} className="group-hover:scale-110 transition-transform" />
             </button>
 
             <div className="flex items-center gap-2 p-1.5 glass rounded-2xl shadow-low">

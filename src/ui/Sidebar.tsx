@@ -151,13 +151,15 @@ export default function Sidebar() {
                       }
                     }}
                     disabled={unallocatedCargoes.length === 0}
-                    title="Excluir Cargas: Remove as cargas selecionadas ou todas da lista do inventário."
+                    title="Excluir Cargas"
                     className={cn(
-                      "p-2 rounded-xl transition-all",
-                      selectedCargoIds.size > 0 ? "text-status-error bg-status-error/10" : "text-muted hover:text-status-error hover:bg-status-error/10 disabled:opacity-30"
+                      "p-2.5 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95",
+                      selectedCargoIds.size > 0 
+                       ? "text-white bg-[#ef4444] shadow-medium shadow-red-500/20" 
+                       : "text-muted hover:text-[#ef4444] hover:bg-red-500/10 disabled:opacity-30"
                     )}
                  >
-                    <Trash2 size={16} />
+                    <Trash2 size={20} />
                  </button>
                  <button 
                    onClick={() => setIsManualModalOpen(true)}
@@ -173,6 +175,10 @@ export default function Sidebar() {
               <FilterButton active={activeTab === 'all'} count={unallocatedCargoes.length} label="Todos" onClick={() => setActiveTab('all')} icon={<Box size={12}/>} />
               <FilterButton active={activeTab === 'container'} count={unallocatedCargoes.filter(c => (c.category||'').toLowerCase().includes('cont')).length} label="Cont" onClick={() => setActiveTab('container')} icon={<Package size={12}/>} />
               <FilterButton active={activeTab === 'equipment'} count={unallocatedCargoes.filter(c => (c.category||'').toLowerCase().includes('equi')).length} label="Equip" onClick={() => setActiveTab('equipment')} icon={<Truck size={12}/>} />
+              <FilterButton active={activeTab === 'tubular'} count={unallocatedCargoes.filter(c => {
+                const type = (c.category || '').toLowerCase();
+                return type.includes('tubular') || type.includes('riser') || type.includes('pipe') || type.includes('tubo');
+              }).length} label="Tub" onClick={() => setActiveTab('tubular')} icon={<Anchor size={12}/>} />
            </div>
         </div>
 
