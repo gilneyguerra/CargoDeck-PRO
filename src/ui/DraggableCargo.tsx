@@ -199,18 +199,20 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
           )}
         </div>
 
-          <div className="absolute -top-3 -right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0 z-[1100]">
+          <div className="absolute -top-4 -right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0 z-[1100]">
             <button
                onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-               className="bg-brand-primary text-white rounded-xl w-7 h-7 flex items-center justify-center hover:brightness-110 shadow-xl ring-2 ring-white/50 transition-all active:scale-90"
+               className="bg-brand-primary text-white rounded-xl w-8 h-8 flex items-center justify-center hover:scale-110 active:scale-95 shadow-high ring-2 ring-white/50 transition-all hover:bg-brand-primary/90"
+               title="Editar Carga"
             >
               <Edit size={14} />
             </button>
             <button
                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-               className="bg-status-error text-white rounded-xl w-7 h-7 flex items-center justify-center text-xs hover:brightness-110 shadow-xl ring-2 ring-white/50 transition-all active:scale-90 font-black"
+               className="bg-[#ef4444] text-white rounded-xl w-8 h-8 flex items-center justify-center hover:scale-110 active:scale-95 shadow-high ring-2 ring-white/50 transition-all hover:bg-[#dc2626]"
+               title="Excluir Carga"
             >
-               ✕
+               <Trash2 size={14} />
             </button>
           </div>
         </div>
@@ -239,16 +241,18 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
                     {cargo.identifier}
                   </span>
              </div>
-             <div className="flex items-center gap-1 shrink-0">
+             <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-                  className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
+                  className="p-2.5 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all hover:scale-110 active:scale-95"
+                  title="Editar Carga"
                 >
                   <Edit size={16} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-                  className="p-2 text-muted hover:text-status-error hover:bg-status-error/10 rounded-xl transition-all"
+                  className="p-2.5 text-muted hover:text-[#ef4444] hover:bg-red-500/10 rounded-xl transition-all hover:scale-110 active:scale-95"
+                  title="Excluir Carga"
                 >
                   <Trash2 size={16} />
                 </button>
