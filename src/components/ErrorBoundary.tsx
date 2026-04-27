@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     >
                         Recarregar Aplicação
                     </button>
-                    {(import.meta as any).env?.DEV && this.state.error && (
+                    {import.meta.env.DEV && this.state.error && (
                         <details className="mt-8 p-4 bg-red-100 rounded-lg text-left w-full max-w-lg">
                             <summary className="font-semibold cursor-pointer">Detalhes Técnicos (Apenas em Desenvolvimento)</summary>
                             <pre className="mt-2 whitespace-pre-wrap break-words text-sm">

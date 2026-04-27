@@ -4,7 +4,20 @@
  */
 import { logger } from '../utils/logger';
 
-declare const cv: any;
+interface CvMat { delete(): void; clone(): CvMat; cols: number; size(): { width: number; height: number }; }
+declare const cv: { 
+    imread(c: HTMLCanvasElement): CvMat; 
+    Mat: new () => CvMat;
+    cvtColor(s: CvMat, d: CvMat, c: number, x: number): void;
+    bilateralFilter(s: CvMat, d: CvMat, d2: number, sc: number, ss: number, b: number): void;
+    adaptiveThreshold(s: CvMat, d: CvMat, m: number, a: number, t: number, b: number, c: number): void;
+    moments(s: CvMat, b: boolean): { mu02: number; mu11: number };
+    matFromArray(r: number, c: number, t: number, d: number[]): CvMat;
+    warpAffine(s: CvMat, d: CvMat, m: CvMat, sz: any, i: number, b: number, sc: any): void;
+    Scalar: new (r: number, g: number, b: number, a: number) => any;
+    imshow(c: HTMLCanvasElement, s: CvMat): void;
+    COLOR_RGBA2GRAY: number; BORDER_DEFAULT: number; ADAPTIVE_THRESH_GAUSSIAN_C: number; THRESH_BINARY: number; CV_32F: number; INTER_LINEAR: number; BORDER_CONSTANT: number;
+};
 
 class ImagePreprocessor {
     private isLoaded = false;
@@ -99,7 +112,7 @@ class ImagePreprocessor {
     /**
      * Algoritmo de correção de inclinação baseado em momentos de imagem.
      */
-    private deskew(src: any): any {
+    private deskew(src: CvMat): CvMat {
         try {
             const moments = cv.moments(src, true);
             if (Math.abs(moments.mu02) < 0.01) return src.clone();

@@ -31,7 +31,7 @@ export const useDragStore = create<DragState>((set, get) => ({
       isDragging: true,
       draggedCargo: cargo,
       isRotated: cargo.isRotated ?? false,
-      ghostPosition: { x: (event as any).clientX, y: (event as any).clientY }
+      ghostPosition: { x: (event as unknown as MouseEvent).clientX, y: (event as unknown as MouseEvent).clientY }
     });
   },
 

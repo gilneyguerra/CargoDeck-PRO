@@ -715,7 +715,7 @@ export const useCargoStore = create<CargoState>()(
                             { side: 'starboard' as const, cargoes: starboardGroup }
                         ].filter(group => group.cargoes.length > 0);
 
-                        let newLocations = state.locations.map(loc => {
+                        const newLocations = state.locations.map(loc => {
                             if (loc.id !== targetLocationId) return loc;
 
                             const newBays = [...loc.bays.map(b => ({ ...b, allocatedCargoes: [...b.allocatedCargoes] }))];

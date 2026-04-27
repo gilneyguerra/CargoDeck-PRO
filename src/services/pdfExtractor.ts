@@ -98,13 +98,13 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     const header: ManifestHeader = {};
     
     // 1. Número do Atendimento (Circulado em preto no cabeçalho)
-    const atendimentoMatch = fullText.match(/ATENDIMENTO\s*[:\-]?\s*(\d{7,12})/i) || fullText.match(/\b(5\d{8,11})\b/);
+    const atendimentoMatch = fullText.match(/ATENDIMENTO\s*[:-]?\s*(\d{7,12})/i) || fullText.match(/\b(5\d{8,11})\b/);
     if (atendimentoMatch) header.numeroAtendimento = atendimentoMatch[1].trim();
 
     // 2. Nome da Embarcação (No cabeçalho, circulado em preto)
     // Busca por padrões comuns de nomes de navios ou prefixos
-    const embarcacaoMatch = fullText.match(/EMBARCAÇÃO\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/i) ||
-                            fullText.match(/NAVIO\s*[:\-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/i) ||
+    const embarcacaoMatch = fullText.match(/EMBARCAÇÃO\s*[:-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/i) ||
+                            fullText.match(/NAVIO\s*[:-]?\s*([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/i) ||
                             fullText.match(/EQUIPAMENTO\s+\d+\s+([A-ZÁÉÍÓÚÀÂÃÊÕÜ][A-ZÁÉÍÓÚÀÂÃÊÕÜ\s]{2,35})/m);
     if (embarcacaoMatch) {
         const candidate = embarcacaoMatch[1].trim();

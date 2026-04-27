@@ -32,7 +32,7 @@ export class CsvGeneratorService {
         // Adicionar cabeçalhos
         rows.push(headers);
 
-        const safeStr = (str: any) => {
+        const safeStr = (str: string | number | boolean | null | undefined) => {
             if (!str && str !== 0) return '';
             // Escape double quotes by doubling them
             const sanitized = String(str).replace(/"/g, '""');

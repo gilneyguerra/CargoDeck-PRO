@@ -54,7 +54,7 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCodes.U
         } else {
             message = JSON.stringify(error);
         }
-    } catch (e) {
+    } catch {
         message = String(error);
     }
 
