@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-// BUILD_VERSION: 1.13.0-Vercel-Sync-Trigger-V1
+// BUILD_VERSION: 1.14.0-OCR-FIX-V1
 import { Header } from './Header';
 import Sidebar from './Sidebar';
 
@@ -9,7 +9,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   // Removido appVersion da store, pois não existe no CargoState
-  const staticVersion = "1.13";
+  const staticVersion = "1.14";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg text-text transition-colors duration-300">

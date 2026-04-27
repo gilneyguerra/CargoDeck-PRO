@@ -5,6 +5,7 @@ import { loadPdfJs } from '../services/pdfLoader';
 
 interface FileProgress {
   name: string;
+  file: File; // Armazenamos o arquivo original para processamento
   status: 'pending' | 'processing' | 'done' | 'error';
   progress: number;
   result?: string;
@@ -49,14 +50,9 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
             });
 
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done', result: text, progress: 100 } : f));
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('OCR Processing Detail:', err);
-            // Captura propriedades não-enumeráveis como 'message' e 'stack'
-            const errorInfo = typeof err === 'object' && err !== null 
-              ? JSON.stringify(err, Object.getOwnPropertyNames(err)) 
-              : String(err);
-            
-            const errorMessage = err?.message || (errorInfo !== '{}' ? errorInfo : 'Erro desconhecido no processamento OCR');
+            const errorMessage = err instanceof Error ? err.message : String(err);
             setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: errorMessage } : f));
         }
     }
