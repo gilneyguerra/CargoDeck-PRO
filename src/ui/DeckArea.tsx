@@ -33,7 +33,7 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
             ref={setNodeRef}
             onClick={onClick}
             className={cn(
-              "px-5 py-2.5 text-[11px] font-black tracking-widest transition-all border rounded-xl flex items-center gap-3 uppercase",
+              "px-6 py-3 text-[11px] font-extrabold tracking-widest transition-all border rounded-2xl flex items-center gap-4 uppercase shadow-low hover:shadow-medium",
               isActive 
                 ? "bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20 scale-[1.02] z-10" 
                 : "bg-header/50 border-subtle text-muted hover:text-primary hover:border-strong bg-white/50 dark:bg-black/20"
@@ -143,13 +143,15 @@ const DroppableBay = memo(function DroppableBay({ bay, activeLocation, searchTer
 return (
    <div 
      className={cn(
-       "w-full border rounded-2xl relative flex flex-col items-center pt-12 pb-4 transition-all min-h-[120px] shadow-sm",
-       "bg-header/40 dark:bg-black/10 border-subtle"
+       "w-full border rounded-[16px] relative flex flex-col items-center pt-14 pb-6 transition-all min-h-[140px] shadow-medium",
+       "bg-white/50 dark:bg-black/20 border-subtle hover-glow group/bay overflow-hidden",
+       "before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.05),transparent)] pointer-events-auto"
      )}
    >
-      <div className="absolute top-3 left-4 flex items-center gap-2">
-        <div className="bg-main text-primary text-[10px] font-mono font-black px-3 py-1 rounded-xl border border-subtle shadow-sm flex items-center gap-2 uppercase tracking-widest">
-           <div className="w-1.5 h-1.5 rounded-full bg-brand-primary/40" />
+      <div className="absolute inset-0 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] pointer-events-none" />
+      <div className="absolute top-4 left-6 flex items-center gap-2 z-20">
+        <div className="bg-brand-primary text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-low flex items-center gap-2 uppercase tracking-[0.2em] group-hover/bay:scale-110 transition-transform">
+           <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
            Baia {String(bay.number).padStart(2, '0')}
         </div>
       </div>
@@ -254,8 +256,8 @@ export function DeckArea() {
 
             <div className="flex items-center justify-between mb-8 px-2">
                 <div className="flex flex-col">
-                  <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">{activeLocation.name}</h2>
-                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mt-1.5">Gerenciamento de Alocações no Deck</p>
+                  <h2 className="text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
+                  <p className="text-[11px] font-bold text-muted uppercase tracking-[0.4em] mt-3 opacity-80">Deck Allocation Management</p>
                 </div>
                 
                 <div className="flex items-center gap-5">
@@ -279,13 +281,13 @@ export function DeckArea() {
                     )}
 
                     <div className="relative group">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted group-focus-within:text-brand-primary transition-colors" />
+                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted group-focus-within:text-brand-primary transition-all group-focus-within:rotate-12" />
                       <input
                         type="text"
                         placeholder="BUSCAR NO DECK..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-80 pl-12 pr-4 py-4 text-[12px] font-black tracking-widest bg-main border-2 border-subtle rounded-[1.2rem] focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all placeholder:text-primary placeholder:font-black text-primary uppercase shadow-sm"
+                        className="w-96 pl-14 pr-6 py-4.5 text-xs font-extrabold tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/50 text-primary uppercase shadow-low h-[60px]"
                       />
                     </div>
                     
@@ -299,13 +301,13 @@ export function DeckArea() {
                 </div>
             </div>
             
-            <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-24 relative flex flex-col items-center overflow-auto shadow-inner">
-                <div className="w-fit min-w-full h-fit bg-sidebar/10 border border-subtle/50 rounded-t-[140px] rounded-b-[4rem] relative flex flex-col p-20 shadow-2xl">
-                    {/* Orientações Globais - Movidas para posições mais externas e com fonte preta conforme solicitado */}
-                    <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">PROA</div>
-                    <div className="absolute bottom-[-50px] left-1/2 -translate-x-1/2 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">POPA</div>
-                    <div className="absolute left-[-70px] top-1/2 -translate-y-1/2 -rotate-90 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">BOMBORDO</div>
-                    <div className="absolute right-[-70px] top-1/2 -translate-y-1/2 rotate-90 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none">BORESTE</div>
+            <div className="flex-1 bg-main border border-subtle rounded-[4rem] p-32 relative flex flex-col items-center overflow-auto shadow-high deck-grid">
+                <div className="w-fit min-w-full h-fit bg-sidebar/5 border border-subtle/30 rounded-t-[180px] rounded-b-[6rem] relative flex flex-col p-28 shadow-2xl glass">
+                    {/* Orientações Globais */}
+                    <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 text-primary/80 text-[16px] font-black tracking-[2em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">PROA</div>
+                    <div className="absolute bottom-[-80px] left-1/2 -translate-x-1/2 text-primary/80 text-[16px] font-black tracking-[2em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">POPA</div>
+                    <div className="absolute left-[-120px] top-1/2 -translate-y-1/2 -rotate-90 text-primary/80 text-[16px] font-black tracking-[2em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">BOMBORDO</div>
+                    <div className="absolute right-[-120px] top-1/2 -translate-y-1/2 rotate-90 text-primary/80 text-[16px] font-black tracking-[2em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">BORESTE</div>
                     
                      <div className="flex-1 flex flex-col gap-8 relative z-10 w-full py-4">
                          {bays.map(bay => (

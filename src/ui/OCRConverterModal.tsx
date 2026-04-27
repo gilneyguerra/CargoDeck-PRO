@@ -128,18 +128,18 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
             <p className="text-xs text-muted font-bold uppercase tracking-widest mt-1">Digitalização de Manifestos Escaneados</p>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-6">
+        <div className="flex-1 overflow-hidden flex flex-col gap-8">
             {!isProcessing && files.length === 0 && (
                 <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 border-4 border-dashed border-subtle rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all cursor-pointer group"
+                    className="flex-1 border-2 border-dashed border-strong/50 rounded-[3rem] flex flex-col items-center justify-center gap-6 bg-main/30 hover:bg-main hover:border-brand-primary transition-all cursor-pointer group shadow-inner"
                 >
-                    <div className="p-6 bg-brand-primary/10 rounded-[2rem] group-hover:scale-110 transition-transform">
-                        <UploadCloud className="w-12 h-12 text-brand-primary" />
+                    <div className="p-8 bg-brand-primary/10 rounded-full group-hover:scale-110 transition-transform shadow-medium">
+                        <UploadCloud className="w-16 h-16 text-brand-primary" />
                     </div>
                     <div className="text-center">
-                        <p className="text-lg font-black text-primary">Selecione seus arquivos PDF</p>
-                        <p className="text-sm text-muted font-bold uppercase tracking-wider mt-1">Clique para procurar ou arraste aqui</p>
+                        <p className="text-xl font-extrabold text-primary uppercase tracking-tight">Select Manifests Source</p>
+                        <p className="text-[11px] text-muted font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Click to browse or drag PDF files here</p>
                     </div>
                     <input type="file" multiple accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
                 </div>
@@ -148,33 +148,33 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
             {files.length > 0 && (
                 <div className="flex-1 overflow-auto space-y-3 pr-2 scroll-smooth no-scrollbar">
                     {files.map((file, idx) => (
-                        <div key={idx} className="bg-main border border-subtle rounded-3xl p-5 flex items-center gap-4 group">
-                            <div className="p-3 bg-header rounded-2xl shadow-sm border border-subtle">
-                                <FileText className="w-6 h-6 text-brand-primary" />
+                        <div key={idx} className="glass border border-subtle rounded-3xl p-6 flex items-center gap-5 group transition-all hover:border-brand-primary/50 hover:shadow-medium">
+                            <div className="p-4 bg-header rounded-2xl shadow-low border border-subtle group-hover:scale-110 transition-transform">
+                                <FileText className="w-7 h-7 text-brand-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start mb-1">
-                                    <h4 className="text-sm font-black text-primary truncate pr-4">{file.name}</h4>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="text-sm font-extrabold text-primary truncate pr-4">{file.name}</h4>
                                     <span className={cn(
-                                        "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
-                                        file.status === 'done' ? "text-status-success bg-status-success/10" :
-                                        file.status === 'processing' ? "text-brand-primary bg-brand-primary/10" :
-                                        file.status === 'error' ? "text-status-error bg-status-error/10" :
-                                        "text-muted bg-sidebar"
+                                        "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-low",
+                                        file.status === 'done' ? "text-white bg-status-success" :
+                                        file.status === 'processing' ? "text-white bg-brand-primary animate-pulse" :
+                                        file.status === 'error' ? "text-white bg-status-error" :
+                                        "text-muted bg-sidebar border border-subtle"
                                     )}>
                                         {file.status}
                                     </span>
                                 </div>
-                                <div className="w-full bg-sidebar/50 rounded-full h-2 overflow-hidden border border-subtle/50">
+                                <div className="w-full bg-sidebar rounded-full h-2.5 overflow-hidden border border-subtle shadow-inner">
                                     <div 
                                         className={cn(
-                                            "h-full transition-all duration-300",
-                                            file.status === 'error' ? "bg-status-error" : "bg-brand-primary"
+                                            "h-full transition-all duration-500 ease-out",
+                                            file.status === 'error' ? "bg-status-error" : "bg-gradient-to-r from-brand-primary to-indigo-400"
                                         )}
                                         style={{ width: `${file.progress}%` }}
                                     />
                                 </div>
-                                {file.error && <p className="text-[10px] font-bold text-status-error mt-2">{file.error}</p>}
+                                {file.error && <p className="text-[10px] font-bold text-status-error mt-2.5 flex items-center gap-1.5"><AlertCircle size={12}/> {file.error}</p>}
                             </div>
                             {file.status === 'done' && (
                                 <button 
@@ -196,34 +196,34 @@ export function OCRConverterModal({ isOpen, onClose }: { isOpen: boolean; onClos
                         setFiles([]);
                         setIsProcessing(false);
                     }}
-                    className="flex-1 py-4 border-2 border-subtle rounded-3xl text-[10px] font-black text-muted uppercase tracking-widest hover:border-strong transition-all"
+                    className="flex-1 py-5 text-[11px] font-extrabold text-muted uppercase tracking-[0.2em] hover:text-primary transition-all underline-offset-8 hover:underline"
                     disabled={isProcessing}
                 >
-                    Limpar Lista
+                    CLEAR LIST
                 </button>
                 {files.some(f => f.status === 'pending') ? (
                     <button 
                         onClick={processFiles}
                         disabled={isProcessing}
-                        className="flex-[2] py-4 bg-brand-primary text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-primary/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                        className="flex-[2] py-5 bg-brand-primary text-white rounded-2xl text-[11px] font-extrabold uppercase tracking-[0.2em] shadow-high shadow-brand-primary/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover-lift"
                     >
-                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        {isProcessing ? 'PROCESSANDO...' : 'INICIAR CONVERSÃO OCR'}
+                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                        {isProcessing ? 'PROCESSING AGENT...' : 'START INTELLIGENT OCR'}
                     </button>
                 ) : files.some(f => f.status === 'done') ? (
                     <button 
                         onClick={downloadAll}
-                        className="flex-[2] py-4 bg-status-success text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-status-success/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                        className="flex-[2] py-5 bg-gradient-to-br from-[#10b981] to-[#059669] text-white rounded-2xl text-[11px] font-extrabold uppercase tracking-[0.2em] shadow-high shadow-status-success/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover-lift"
                     >
-                        <Download className="w-4 h-4" />
-                        BAIXAR TODOS OS TXTs
+                        <Download className="w-5 h-5" />
+                        EXPORT ALL ANALYTICS
                     </button>
                 ) : (
                     <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex-[2] py-4 bg-brand-primary text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-primary/20 hover:brightness-110 active:scale-[0.98] transition-all"
+                        className="flex-[2] py-5 bg-brand-primary text-white rounded-2xl text-[11px] font-extrabold uppercase tracking-[0.2em] shadow-high shadow-brand-primary/20 hover:brightness-110 active:scale-[0.98] transition-all hover-lift"
                     >
-                        ADICIONAR MAIS ARQUIVOS
+                        QUEUE MORE MANIFESTS
                     </button>
                 )}
             </div>

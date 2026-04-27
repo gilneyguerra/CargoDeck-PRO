@@ -78,39 +78,39 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-[340px] border-r border-subtle bg-sidebar flex flex-col shrink-0 h-full shadow-lg z-20">
+    <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
         {/* Manifest Import Section */}
-        <div className="p-6 border-b border-subtle bg-header/30">
-            <h2 className="text-[10px] font-black text-muted mb-4 tracking-[0.15em] uppercase">Manifest Management</h2>
-            <div className="grid grid-cols-1 gap-3">
+        <div className="p-8 border-b border-subtle bg-header/20">
+            <h2 className="text-[11px] font-extrabold text-muted mb-5 tracking-[0.2em] uppercase opacity-80">Logistics Hub</h2>
+            <div className="grid grid-cols-1 gap-4">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isProcessing}
-                  title="Importar Manifesto: Selecione o arquivo PDF original para extração inteligente de dados."
+                  title="Importar Manifesto"
                   className={cn(
-                    "w-full border-2 border-dashed rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-3 transition-all duration-300",
+                    "w-full border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center gap-4 transition-all duration-300",
                     isProcessing 
                       ? "bg-brand-primary/5 border-brand-primary/30 cursor-not-allowed" 
-                      : "bg-main/50 border-subtle hover:bg-main hover:border-brand-primary cursor-pointer group"
+                      : "bg-main/30 border-strong/50 hover:bg-main hover:border-brand-primary cursor-pointer group shadow-low hover:shadow-medium"
                   )}
                 >
-                    <div className="p-4 bg-brand-primary/10 rounded-3xl text-brand-primary group-hover:scale-110 transition-transform">
-                      {isProcessing ? <Zap className="w-6 h-6 animate-pulse" /> : <Upload className="w-6 h-6" />}
+                    <div className="p-5 bg-brand-primary/10 rounded-full text-brand-primary group-hover:scale-110 transition-transform shadow-low">
+                      {isProcessing ? <Zap className="w-7 h-7 animate-pulse" /> : <Upload className="w-7 h-7" />}
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-[11px] font-black text-primary uppercase tracking-widest leading-none mb-1">
-                        {isProcessing ? 'Processando...' : 'Importar Manifesto'}
+                      <span className="text-xs font-black text-primary uppercase tracking-[0.1em] mb-1.5">
+                        {isProcessing ? 'SCANNING DATA...' : 'UPLOAD MANIFEST'}
                       </span>
-                      <span className="text-[9px] font-medium text-muted">Apenas arquivos .PDF</span>
+                      <span className="text-[10px] font-bold text-muted/60">Surgical PDF Processing</span>
                     </div>
                 </button>
                 
                 <button 
                   onClick={() => setIsOCRModalOpen(true)}
-                  title="Ferramenta OCR: Utilize para converter imagens ou PDFs escaneados em texto se a extração padrão falhar."
-                  className="w-full mt-2 flex items-center justify-center gap-3 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all active:scale-[0.98] border border-brand-primary/20 shadow-sm"
+                  title="Ferramenta OCR"
+                  className="w-full mt-2 flex items-center justify-center gap-3 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary px-6 py-4 rounded-2xl text-[10px] font-extrabold uppercase tracking-[0.15em] transition-all active:scale-[0.98] shadow-low hover:shadow-medium"
                 >
-                  <Zap className="w-5 h-5" /> FERRAMENTA DE CONVERSÃO OCR
+                  <Zap className="w-5 h-5" /> ADVANCED OCR CONVERTER
                 </button>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
@@ -119,15 +119,18 @@ export default function Sidebar() {
         {/* Filters and List */}
         <div className="p-4 border-b border-subtle">
            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Package size={16} />
-                </div>
-                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Inventory</span>
-                <span className="bg-brand-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded-full ml-1">
-                  {unallocatedCargoes.length}
-                </span>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-brand-primary shadow-low flex items-center justify-center text-white">
+                <Package size={18} />
               </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black text-primary uppercase tracking-widest">Inventory</span>
+                <span className="text-[9px] font-bold text-muted uppercase">Ready for Loading</span>
+              </div>
+              <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ml-auto shadow-medium">
+                {unallocatedCargoes.length}
+              </span>
+            </div>
               <div className="flex items-center gap-1">
                  {selectedCargoIds.size > 0 && (
                    <button 
@@ -230,15 +233,15 @@ function FilterButton({ active, count, label, onClick, icon }: any) {
     <button 
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border",
+        "flex items-center gap-2 px-4 py-2 rounded-2xl text-[11px] font-extrabold uppercase tracking-tight whitespace-nowrap transition-all border shadow-low",
         active 
-          ? "bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20" 
-          : "bg-sidebar text-muted border-subtle hover:bg-main hover:text-primary"
+          ? "bg-brand-primary text-white border-brand-primary scale-105 z-10" 
+          : "bg-main border-subtle text-muted hover:text-primary hover:border-brand-primary"
       )}
     >
       {icon}
       {label}
-      <span className={cn("ml-1 font-bold", active ? "text-white/60" : "text-muted")}>{count}</span>
+      <span className={cn("ml-1 font-black px-1.5 py-px rounded-md bg-black/10", active ? "text-white" : "text-brand-primary")}>{count}</span>
     </button>
   );
 }

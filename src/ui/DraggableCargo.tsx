@@ -129,11 +129,11 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 
-          ? "p-0 rounded-sm hover:-translate-y-0.5 shadow-xl border border-black/10 dark:border-white/5 shadow-black/40"
-          : "border border-subtle rounded-2xl p-3 gap-2 bg-card w-full shadow-sm hover:shadow-md",
-        !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:border-brand-primary/50" : "",
+          ? "p-0 rounded-sm hover:-translate-y-1 shadow-high border border-black/20 dark:border-white/10 shadow-black/50 transition-all hover-glow"
+          : "glass rounded-2xl p-4 gap-4 w-full shadow-medium hover:shadow-high hover:border-brand-primary active:scale-[0.98] transition-all",
+        !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:scale-[1.02]" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-status-warning/40 bg-status-warning/5" : "",
-        isHighlight ? "ring-4 ring-status-warning shadow-[0_0_25px_rgba(251,191,36,0.6)] z-50 transform scale-[1.03]" : "",
+        isHighlight ? "ring-4 ring-status-warning shadow-glow z-50 transform scale-[1.05]" : "",
         requiresWeightFix ? "border-status-error bg-status-error/10" : ""
       )}
     >
@@ -147,11 +147,11 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             transform: `translate(${tooltipAlign === 'center' ? '-50%' : tooltipAlign === 'right' ? '-100%' : '0'}, ${tooltipPlacement === 'top' ? '-100%' : '0'})`,
             zIndex: 9999
           }}
-          className="w-64 p-4 bg-slate-950/95 backdrop-blur-md text-white text-xs rounded-2xl shadow-2xl pointer-events-none flex flex-col gap-2 border border-white/10 animate-in fade-in zoom-in-95 duration-200"
+          className="w-72 p-5 bg-slate-950/80 backdrop-blur-xl text-white text-xs rounded-3xl shadow-high pointer-events-none flex flex-col gap-3 border border-white/20 animate-in fade-in zoom-in-95 duration-200"
         >
-          <div className="font-black border-b border-white/10 pb-2 mb-1 truncate text-brand-primary uppercase tracking-widest">{cargo.identifier}</div>
-          <div className="text-[10px] font-medium text-slate-300 leading-relaxed">{cargo.description}</div>
-          <div className="grid grid-cols-2 gap-3 mt-1 bg-white/5 p-2 rounded-xl border border-white/5">
+          <div className="font-extrabold border-b border-white/10 pb-3 mb-1 truncate text-brand-primary uppercase tracking-[0.2em]">{cargo.identifier}</div>
+          <div className="text-[11px] font-bold text-slate-300 leading-relaxed opacity-90">{cargo.description}</div>
+          <div className="grid grid-cols-2 gap-4 mt-2 bg-white/5 p-3 rounded-2xl border border-white/5 shadow-inner">
             <div>
               <span className="text-slate-500 block text-[9px] font-black uppercase tracking-tighter">Dimensões</span>
               <span className="font-mono font-bold">{cargo.lengthMeters}x{cargo.widthMeters}{cargo.heightMeters ? `x${cargo.heightMeters}` : ''}m</span>
@@ -231,11 +231,11 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
                       className="w-4 h-4 rounded-md border-strong text-brand-primary focus:ring-brand-primary cursor-pointer pointer-events-none"
                     />
                   )}
-                  <span className="text-[9px] font-black text-brand-primary uppercase tracking-[0.1em] truncate">
-                    {cargo.category || 'FREIGHT'}
+                  <span className="text-[10px] font-extrabold text-brand-primary uppercase tracking-[0.2em] mb-1.5 opacity-80">
+                    {cargo.category || 'GENERAL CARGO'}
                   </span>
                 </div>
-                  <span className="font-black text-sm text-primary truncate block" title={cargo.identifier}>
+                  <span className="font-extrabold text-base text-primary truncate block tracking-tight" title={cargo.identifier}>
                     {cargo.identifier}
                   </span>
              </div>

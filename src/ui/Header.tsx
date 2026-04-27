@@ -1,6 +1,6 @@
 import { 
   Trash2, Download, CloudUpload, UserCircle, LogIn,
-  Sun, Moon, Weight, Ship, Plus
+  Sun, Moon, Weight, Ship, Plus, Scale
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
@@ -128,17 +128,17 @@ export function Header() {
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between min-h-[4.5rem] px-4 lg:px-8 border-b border-subtle bg-header shrink-0 gap-4 shadow-sm z-30">
+      <header className="flex flex-wrap items-center justify-between min-h-[5rem] px-6 lg:px-10 border-b border-subtle bg-header shrink-0 gap-6 shadow-medium z-30 font-sans">
         
         {/* Left Section: Logo & Navio */}
         <div className="flex items-center gap-6 order-1">
           <div className="flex items-center gap-3">
-            <div className="brand-bg p-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+            <div className="bg-brand-primary p-3 rounded-2xl shadow-high shadow-brand-primary/20 hover:scale-105 transition-transform">
               <Ship className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
-               <h1 className="font-bold text-lg leading-tight text-primary tracking-tight">CargoDeck Pro</h1>
-               <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Maritime Logistics</span>
+               <h1 className="font-extrabold text-xl leading-none text-primary tracking-tight">CargoDeck Pro</h1>
+               <span className="text-[11px] font-bold text-muted uppercase tracking-[0.2em] mt-1 opacity-80">Maritime Hub</span>
             </div>
           </div>
           
@@ -162,18 +162,18 @@ export function Header() {
               <button
                 onClick={() => setIsEditingShip(true)}
                 title="Identificar Embarcação: Clique para editar o nome do navio ou unidade offshore."
-                className="flex items-center gap-3 px-4 py-2 rounded-xl bg-sidebar hover:bg-main transition-all border border-subtle group/btn shadow-sm"
+                className="flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-sidebar/50 hover:bg-main transition-all border border-subtle group/btn shadow-low hover:shadow-medium"
               >
-                <div className="flex flex-col items-start translate-y-0.5">
-                   <span className="text-[9px] font-black text-muted uppercase tracking-tighter leading-none mb-0.5">Vessel Name</span>
+                <div className="flex flex-col items-start">
+                   <span className="text-[10px] font-black text-muted uppercase tracking-wider leading-none mb-1">Vessel Identification</span>
                    <span className={cn(
-                     "text-sm font-bold transition-colors leading-tight",
+                     "text-sm font-extrabold transition-colors leading-tight",
                      manifestShipName ? "text-primary" : "text-muted italic"
                    )}>
-                     {manifestShipName || 'IDENTIFICAR...'}
+                     {manifestShipName || 'M/V DISCOVERY...'}
                    </span>
                 </div>
-                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+                <div className="w-2.5 h-2.5 rounded-full bg-status-success shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
               </button>
             )}
           </div>
@@ -182,42 +182,56 @@ export function Header() {
         {/* Center Section: Stability Info */}
         {(totalPort > 0 || totalStarboard > 0) && (
             <div 
-              className="flex flex-1 max-w-2xl justify-center items-center gap-10 px-8 bg-sidebar/40 backdrop-blur-md border border-subtle rounded-2xl py-2.5 order-2"
-              title="Indicador de Banda (Equilíbrio Lateral): Mostra a distribuição de peso entre os lados Bombordo e Boreste para evitar inclinação lateral."
+              className="hidden xl:flex flex-1 max-w-2xl justify-center items-center gap-12 px-10 glass rounded-3xl py-3 order-2 shadow-medium"
+              title="Indicador de Banda: Monitoramento de estabilidade transversal."
             >
-              <div className="flex flex-col items-center gap-2 flex-1 max-w-[320px]">
-                <div className="flex justify-between w-full text-[10px] font-black text-muted tracking-wide uppercase opacity-70">
-                   <span className={totalPort > totalStarboard + 50 ? "text-status-error" : ""}>BOMBORDO</span>
-                   <span className={totalStarboard > totalPort + 50 ? "text-status-error" : ""}>BORESTE</span>
+              <div className="flex flex-col items-center gap-2.5 flex-1 max-w-[340px]">
+                <div className="flex justify-between w-full text-[10px] font-extrabold tracking-[0.1em] uppercase">
+                   <span className={cn("transition-colors", totalPort > totalStarboard + 50 ? "text-status-error" : "text-muted")}>BOMBORDO</span>
+                   <span className={cn("transition-colors", totalStarboard > totalPort + 50 ? "text-status-error" : "text-muted")}>BORESTE</span>
                 </div>
                 <div className="flex items-center gap-4 w-full">
-                  <span className="text-xs font-mono font-black text-secondary tabular-nums">{totalPort.toFixed(1)}t</span>
-                  <div className="flex-1 h-3 bg-main border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5">
+                  <span className="text-xs font-mono font-black text-secondary tabular-nums w-14 text-right">{totalPort.toFixed(1)}t</span>
+                  <div className="flex-1 h-3.5 bg-main/50 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
                     <div className="flex-1 flex justify-end">
-                       <div className={`h-full transition-all duration-700 rounded-l-sm ${isListing && totalPort > totalStarboard ? "bg-status-error" : "bg-brand-primary"}`}
-                           style={{ width: `${Math.min(100, (totalPort / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }}></div>
+                       <div className={cn(
+                         "h-full transition-all duration-700 rounded-l-sm",
+                         isListing && totalPort > totalStarboard ? "bg-status-error" : "bg-brand-primary"
+                       )}
+                       style={{ width: `${Math.min(100, (totalPort / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }}></div>
                     </div>
-                    <div className="w-0.5 bg-border-strong mx-0.5" />
+                    <div className="w-0.5 bg-border-strong mx-0.5 z-10" />
                     <div className="flex-1">
-                      <div className={`h-full transition-all duration-700 rounded-r-sm ${isListing && totalStarboard > totalPort ? "bg-status-error" : "bg-brand-primary"}`}
-                          style={{ width: `${Math.min(100, (totalStarboard / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }} />
+                      <div className={cn(
+                        "h-full transition-all duration-700 rounded-r-sm",
+                        isListing && totalStarboard > totalPort ? "bg-status-error" : "bg-brand-primary"
+                      )}
+                      style={{ width: `${Math.min(100, (totalStarboard / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }} />
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-black text-secondary tabular-nums">{totalStarboard.toFixed(1)}t</span>
+                  <span className="text-xs font-mono font-black text-secondary tabular-nums w-14">{totalStarboard.toFixed(1)}t</span>
                 </div>
               </div>
 
-              <div className="h-10 w-px bg-border-subtle" />
+              <div className="h-10 w-px bg-border-subtle opacity-50" />
 
               <div 
-                className="flex flex-col items-center"
-                title="Centro de Gravidade Vertical (VCG): Medida crítica de estabilidade. Valores muito altos podem indicar risco de tombamento."
+                className="flex flex-col items-center min-w-32"
+                title="Estabilidade VCG"
               >
-                <span className="text-[9px] text-muted font-bold tracking-widest uppercase mb-1">Stability VCG</span>
-                <div className="flex items-center gap-2">
-                   <Weight size={18} className={isTopHeavy ? "text-status-error" : "text-status-success"} />
-                   <span className={`text-base font-black tracking-tight tabular-nums ${isTopHeavy ? "text-status-error" : "text-primary"}`}>
-                     {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-muted font-bold text-xs uppercase ml-0.5">tm</span>
+                <span className="text-[10px] text-muted font-bold tracking-[0.15em] uppercase mb-1.5 opacity-70">Stability Index</span>
+                <div className="flex items-center gap-3">
+                   <div className={cn(
+                     "p-1.5 rounded-lg transition-colors",
+                     isTopHeavy ? "bg-status-error/10 text-status-error" : "bg-status-success/10 text-status-success"
+                   )}>
+                     <Scale size={18} />
+                   </div>
+                   <span className={cn(
+                     "text-lg font-black tracking-tighter tabular-nums",
+                     isTopHeavy ? "text-status-error" : "text-primary"
+                   )}>
+                     {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] font-bold text-muted uppercase ml-1">tm</span>
                    </span>
                 </div>
               </div>
@@ -228,11 +242,11 @@ export function Header() {
         <div className="flex items-center gap-4 order-3 ml-auto">
           {/* Peso Plano */}
           <div 
-            className="hidden xl:flex flex-col items-end px-5 py-2 bg-brand-primary/5 border border-brand-primary/10 rounded-2xl"
-            title="Carga Útil Total: Soma do peso de todas as cargas alocadas em todos os decks."
+            className="hidden xxl:flex flex-col items-end px-6 py-2.5 bg-brand-primary/5 border border-brand-primary/20 rounded-2xl shadow-low"
+            title="Carga Útil Total"
           >
-            <span className="text-[9px] text-brand-primary font-black uppercase tracking-widest mb-0.5">Carga Total</span>
-            <span className="text-primary font-black text-lg tabular-nums leading-none">{currentTotalWeight.toFixed(1)} <sub className="text-[10px] font-bold bottom-0 uppercase ml-1 opacity-60">Ton</sub></span>
+            <span className="text-[10px] text-brand-primary font-black uppercase tracking-[0.2em] mb-1 opacity-80">Payload Total</span>
+            <span className="text-primary font-black text-xl tabular-nums leading-none">{currentTotalWeight.toFixed(1)} <sub className="text-[11px] font-bold bottom-0 uppercase ml-1 opacity-50">Ton</sub></span>
           </div>
 
           <div className="h-10 w-px bg-border-subtle hidden lg:block" />
@@ -240,29 +254,29 @@ export function Header() {
           {/* Action Group */}
           <div className="flex items-center gap-2">
             <button
-              className="p-3 text-secondary hover:text-status-error hover:bg-status-error/10 rounded-2xl transition-all active:scale-90"
+              className="p-3 text-muted hover:text-status-error hover:bg-status-error/10 rounded-2xl transition-all active:scale-90 hover:rotate-12"
               onClick={() => {
                 if (window.confirm('Limpar manifestos?')) useCargoStore.getState().clearAllCargoes();
               }}
-              title="Zerar Plano de Carga: Remove instantaneamente todas as cargas e limpa o inventário."
+              title="Zerar Plano de Carga"
             >
               <Trash2 size={20} />
             </button>
 
-            <div className="flex items-center gap-2 p-1.5 bg-sidebar/50 border border-subtle rounded-2xl">
+            <div className="flex items-center gap-2 p-1.5 glass rounded-2xl shadow-low">
                <button 
                  onClick={handleExportCsv} 
                  disabled={!manifestsLoaded} 
-                 title="Exportar Dados (CSV): Gera uma planilha com a lista completa de cargas e suas coordenadas."
-                 className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all"
+                 title="Exportar CSV"
+                 className="flex items-center gap-2 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all hover:shadow-low"
                >
                  <Download size={14} /> CSV
                </button>
                <button 
                  onClick={handleExportPdf} 
                  disabled={!manifestsLoaded} 
-                 title="Exportar Relatório (PDF): Gera o mapa visual do deck e o manifesto de carga consolidado."
-                 className="flex items-center gap-2 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-black transition-all"
+                 title="Exportar PDF"
+                 className="flex items-center gap-2 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary disabled:opacity-40 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all hover:shadow-low"
                >
                  <Download size={14} /> PDF
                </button>
@@ -271,11 +285,11 @@ export function Header() {
             <button
               onClick={handleSaveToCloud}
               disabled={saving}
-              title="Sincronizar: Salva o estado atual do deck no servidor para acesso remoto."
-              className="flex items-center gap-3 bg-status-success text-white hover:brightness-110 disabled:opacity-40 px-6 py-3 rounded-2xl text-xs font-black shadow-xl shadow-status-success/20 active:scale-95 transition-all"
+              title="Sincronizar"
+              className="flex items-center gap-3 bg-gradient-to-br from-[#10b981] to-[#059669] text-white hover:brightness-110 disabled:opacity-40 px-7 py-3.5 rounded-2xl text-xs font-extrabold shadow-high shadow-status-success/30 active:scale-95 transition-all hover-lift"
             >
               <CloudUpload size={18} /> 
-              <span>{saving ? 'SALVANDO...' : 'SALVAR'}</span>
+              <span className="tracking-widest">{saving ? 'PROCESSANDO...' : 'SALVAR'}</span>
             </button>
           </div>
 

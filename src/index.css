@@ -12,14 +12,14 @@
   --color-muted: var(--text-muted);
 
   --color-subtle: var(--border-subtle);
-  --color-strong: var(--border-strong);
+  --color-strong: #cbd5e1;
 
   --color-brand-primary: var(--brand-primary);
   --color-brand-hover: var(--brand-hover);
 
   --color-status-success: var(--status-success);
   --color-status-warning: var(--status-warning);
-  --color-status-error: var(--status-error);
+  --status-error: var(--status-error);
   --color-status-info: var(--status-info);
 
   --radius-xs: var(--radius-xs);
@@ -28,66 +28,75 @@
   --radius-lg: var(--radius-lg);
   --radius-full: var(--radius-full);
 
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
+  --shadow-low: var(--shadow-low);
+  --shadow-medium: var(--shadow-medium);
+  --shadow-high: var(--shadow-high);
+  --shadow-glow: var(--shadow-glow);
+
+  --font-sans: var(--font-main);
 }
 
 /* CSS Variables for Light and Dark Themes - Refined Design System */
 :root {
+  /* Nova Paleta Vibrante */
   --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --bg-sidebar: #f1f5f9;
-  --bg-header: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.7); /* Para Glassmorphism */
+  --bg-sidebar: linear-gradient(180deg, #f8fafc 0%, #eef2f5 100%);
+  --bg-header: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
   
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
   
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
   
-  --brand-primary: #4f46e5;
-  --brand-hover: #4338ca;
+  --brand-primary: #2563eb;
+  --brand-hover: #1d4ed8;
   
   --status-success: #10b981;
   --status-warning: #f59e0b;
   --status-error: #ef4444;
   --status-info: #3b82f6;
 
-  --radius-xs: 0.25rem;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  /* Sombras Naturais */
+  --shadow-low: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-medium: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-high: 0 20px 25px rgba(0,0,0,0.15);
+  --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.3);
+
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Dark Theme Overrides - High Contrast & Depth */
 .dark {
-  --bg-main: #09090b;
-  --bg-card: #18181b;
-  --bg-sidebar: #101014;
-  --bg-header: #121216;
+  --bg-main: #0f172a;
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-sidebar: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  --bg-header: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   
-  --border-subtle: #27272a;
-  --border-strong: #3f3f46;
+  --border-subtle: #334155;
+  --border-strong: #475569;
   
-  --brand-primary: #6366f1;
-  --brand-hover: #818cf8;
+  --brand-primary: #3b82f6;
+  --brand-hover: #60a5fa;
   
   --status-success: #34d399;
   --status-warning: #fbbf24;
   --status-error: #f87171;
   --status-info: #60a5fa;
 
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
-  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.6);
+  --shadow-low: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-medium: 0 10px 15px -3px rgba(0,0,0,0.6);
 }
 
 /* Apply Variables to Base Elements */
@@ -129,9 +138,33 @@ html, body {
   background: var(--text-muted);
 }
 
+/* Glassmorphism */
+.glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Deck Grid Pattern */
+.deck-grid {
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+}
+
 /* Transitions */
 * {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, transform, filter, opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
+  transition-duration: 300ms;
 }
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
