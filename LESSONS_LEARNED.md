@@ -16,6 +16,8 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Problema**: Alto consumo de memória ao reinicializar Workers Tesseract.
 - **Solução**: Manter instâncias de Worker (Singleton) e inicializar dinamicamente apenas quando necessário para PDFs escaneados.
 
-## 4. Manipulação de Canvas (WASM)
-- **Problema**: Falhas no `willReadFrequently` ao manipular pixels em loops rápidos.
-- **Solução**: Habilitar a flag explicitamente no contexto 2D para otimizar a transferência de dados entre JS e o motor WASM do OpenCV.
+## 5. Refs e Imports Órfãos (Regressão de Build)
+- **Problema**: Erro `TS6133: 'Variable' is declared but its value is never read`.
+- **Causa**: Remoção de elementos da UI sem a limpeza correspondente dos objetos importados (ex: Lucide Icons após troca por imagens).
+- **Solução**: Sempre executar um "Cleanup" de imports após refatorar componentes JSX.
+- **Contexto**: Ocorrido durante a substituição da logo do Header por imagem em `Header.tsx`.
