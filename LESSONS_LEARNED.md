@@ -26,3 +26,8 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Causa**: Ao substituir `any` por interfaces `declare const` manuais para satisfazer o Security Scan, omitimos propriedades cruciais de controle de carregamento da biblioteca.
 - **Solução**: Ao criar interfaces parciais para bibliotecas externas, sempre revise as propriedades de estado/inicialização (como `runtimeInitialized` ou `ready`) para evitar quebras no fluxo de carregamento assíncrono.
 - **Contexto**: Ocorrido durante a limpeza de tipos reportada pelo GitHub em `imagePreprocessor.ts`.
+## 7. Imports Redundantes de React (Modern JSX)
+- **Problema**: Erro `TS6133: 'React' is declared but its value is never read`.
+- **Causa**: Em projetos com React 17+, o compilador não exige o import global do `React` para processar JSX. Mantê-lo no topo do arquivo sem chamadas explícitas (como `React.useState`) gera um alerta de variável não utilizada.
+- **Solução**: Remova o `import React from 'react'` e utilize apenas os hooks necessários (`import { useState } from 'react'`). 
+- **Contexto**: Ocorrido durante o deploy da `LandingPage.tsx` no Vercel.
