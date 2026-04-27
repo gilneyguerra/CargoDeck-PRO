@@ -112,7 +112,7 @@ const DroppableBaySide = memo(function DroppableBaySide({ bay, side, isLast, dec
         >
       {/* Rótulos internos removidos para evitar redundância com a orientação global */}
       <div className="w-full flex justify-end items-center mb-2 px-1 border-b border-subtle/50 pb-2">
-         <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-sidebar text-primary border border-subtle uppercase">
+         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-sidebar text-primary border border-subtle uppercase">
             {cargoes.length} {cargoes.length === 1 ? 'ITEM' : 'ITENS'}
          </span>
       </div>
@@ -301,12 +301,12 @@ export function DeckArea() {
                           title="Indicador de Banda e Estabilidade Longitudinal/Transversal."
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 min-w-[200px]">
-                            <div className="flex justify-between w-full text-[8px] font-black tracking-[0.2em] uppercase">
+                            <div className="flex justify-between w-full text-[9px] font-black tracking-[0.2em] uppercase">
                                <span className={cn("transition-colors", totalPort > totalStarboard + 50 ? "text-status-error" : "text-secondary")}>BOMBORDO</span>
                                <span className={cn("transition-colors", totalStarboard > totalPort + 50 ? "text-status-error" : "text-secondary")}>BORESTE</span>
                             </div>
                             <div className="flex items-center gap-3 w-full">
-                              <span className="text-[10px] font-mono font-black text-primary tabular-nums w-10 text-right">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
+                              <span className="text-[11px] font-mono font-black text-primary tabular-nums w-10 text-right">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
                               <div className="flex-1 h-2 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
                                 <div className="flex-1 flex justify-end">
                                    <div className={cn(
@@ -324,14 +324,14 @@ export function DeckArea() {
                                    style={{ width: `${Math.min(100, (totalStarboard / (Math.max(totalPort, totalStarboard) || 1)) * 100)}%` }} />
                                 </div>
                               </div>
-                              <span className="text-[10px] font-mono font-black text-primary tabular-nums w-10">{totalStarboard.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
+                              <span className="text-[11px] font-mono font-black text-primary tabular-nums w-10">{totalStarboard.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
                             </div>
                           </div>
 
                           <div className="h-6 w-px bg-border-subtle opacity-30" />
 
                           <div className="flex flex-col items-center min-w-24">
-                            <span className="text-[8px] text-secondary font-black tracking-[0.2em] uppercase mb-0.5 opacity-70">Stability</span>
+                            <span className="text-[9px] text-secondary font-black tracking-[0.2em] uppercase mb-0.5 opacity-70">Stability</span>
                             <div className="flex items-center gap-1.5">
                                <div className={cn(
                                  "p-1 rounded-md transition-colors",
@@ -343,7 +343,7 @@ export function DeckArea() {
                                  "text-sm font-black tracking-tighter tabular-nums",
                                  isTopHeavy ? "text-status-error" : "text-primary"
                                )}>
-                                 {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[8px] font-bold text-muted uppercase">tm</span>
+                                 {totalTopHeavyMoment.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] font-bold text-muted uppercase">tm</span>
                                </span>
                             </div>
                           </div>
