@@ -63,8 +63,14 @@ export function LandingPage({ onEnterApp }: LandingPageProps) {
             <a href="#pricing" className={`text-xs font-bold uppercase tracking-widest transition-all relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-0.5 after:bg-action after:transition-all hover:after:w-full ${isScrolled ? 'text-maritime/70 hover:text-maritime' : 'text-white/70 hover:text-white'}`}>Licenciamento</a>
             <button 
               onClick={onEnterApp}
-              className={`px-8 py-3 rounded-lg font-bold uppercase tracking-widest transition-all duration-300 shadow-md transform hover:-translate-y-1 ${isScrolled ? 'bg-action text-white hover:bg-action-dark' : 'bg-cyan-neon text-maritime hover:bg-white'}`}
+              className={cn(
+                "px-9 py-3.5 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all duration-500 shadow-xl transform hover:-translate-y-1.5 active:scale-95 flex items-center gap-3",
+                isScrolled 
+                  ? "bg-gradient-to-r from-brand-primary to-blue-600 text-white shadow-brand-primary/25 hover:shadow-brand-primary/40" 
+                  : "bg-gradient-to-r from-cyan-neon to-blue-400 text-maritime shadow-cyan-neon/20 hover:shadow-cyan-neon/40 border border-white/20"
+              )}
             >
+              <Zap size={14} className={isScrolled ? "text-cyan-200" : "text-maritime"} />
               Acessar Módulo
             </button>
           </div>
