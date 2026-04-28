@@ -392,7 +392,7 @@ export function DeckArea() {
                 </div>
             </div>
             
-            <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-16 relative flex flex-col items-center overflow-auto shadow-high deck-grid">
+            <div className="flex-1 bg-main border border-subtle rounded-[3rem] p-5 relative flex flex-col items-center overflow-auto shadow-high deck-grid">
                 <div className="w-fit min-w-full h-fit bg-sidebar/5 border border-subtle/30 rounded-t-[140px] rounded-b-[4rem] relative flex flex-col p-14 shadow-2xl glass">
                     {/* Orientações Globais */}
                     <div className="absolute top-8 left-1/2 -translate-x-1/2 text-primary text-[14px] font-black tracking-[1.5em] uppercase whitespace-nowrap pointer-events-none drop-shadow-sm">PROA</div>
