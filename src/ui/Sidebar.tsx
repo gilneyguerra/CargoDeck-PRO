@@ -118,7 +118,6 @@ export default function Sidebar() {
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
         {/* Manifest Import Section */}
         <div className="p-0 border-b border-subtle bg-header/20">
-            <h2 className="text-[11px] font-black text-secondary mb-5 tracking-[0.2em] uppercase opacity-90">Logistics Hub</h2>
             <div className="grid grid-cols-1 gap-4">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
