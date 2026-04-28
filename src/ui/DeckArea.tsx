@@ -258,7 +258,7 @@ export function DeckArea() {
     return (
         <div className="flex flex-col h-full w-full">
              {/* Local Tabs */}
-              <div className="flex items-center gap-2 mb-8 bg-sidebar/30 p-2 pt-6 rounded-2xl border border-subtle/40 w-full overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-3 mb-10 bg-sidebar/40 p-3 px-4 rounded-3xl border border-subtle/50 w-full overflow-x-auto no-scrollbar shadow-inner">
                   {locations.map(loc => (
                       <LocationTab 
                         key={loc.id} 
@@ -287,7 +287,7 @@ export function DeckArea() {
                   </button>
               </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-6 mb-8 px-2">
+            <div className="flex flex-wrap items-center justify-between gap-8 mb-10 px-2">
                 <div className="flex items-center gap-8 flex-1 min-w-fit">
                     <div className="flex flex-col">
                       <h2 className="deck-title text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
@@ -297,7 +297,7 @@ export function DeckArea() {
                     {/* Stability Info (Migrated from Header) */}
                     {(totalPort > 0 || totalStarboard > 0) && (
                         <div 
-                          className="hidden md:flex items-center gap-8 px-6 bg-sidebar/20 border border-subtle rounded-2xl py-2 shadow-inner h-[60px]"
+                          className="hidden md:flex items-center gap-8 px-8 bg-sidebar/20 border border-subtle/60 rounded-2xl py-2 shadow-inner h-16"
                           title="Indicador de Banda e Estabilidade Longitudinal/Transversal."
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 min-w-[200px]">
@@ -355,7 +355,7 @@ export function DeckArea() {
                     {/* Contador de Resultados da Busca GLOBAL */}
                     {searchTerm && (
                       <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                         <div className="bg-status-warning/10 border border-status-warning/30 px-5 py-2 rounded-[1.2rem] flex items-center gap-4 shadow-low h-[60px]">
+                         <div className="bg-status-warning/10 border border-status-warning/30 px-6 py-2 rounded-2xl flex items-center gap-4 shadow-low h-16">
                             <CheckCircle2 className="w-5 h-5 text-status-warning" />
                             <div className="flex flex-col items-start justify-center leading-none">
                               <span className="text-[10px] font-black text-status-warning uppercase tracking-widest mb-1">
@@ -378,13 +378,13 @@ export function DeckArea() {
                         placeholder="BUSCAR NO DECK..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-80 pl-14 pr-6 py-4.5 text-xs font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/60 text-primary uppercase shadow-low h-[60px]"
+                        className="w-80 pl-14 pr-6 py-4.5 text-xs font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/60 text-primary uppercase shadow-low h-16"
                       />
                     </div>
                     
                     <button 
                       onClick={() => setIsSettingsOpen(true)}
-                      className="flex items-center gap-3 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-6 py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 h-[60px]"
+                      className="flex items-center gap-3 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 h-16"
                     >
                       <Settings className="w-4 h-4" />
                       CONFIGURAR DECK
