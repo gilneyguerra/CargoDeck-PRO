@@ -287,8 +287,8 @@ export function DeckArea() {
                   </button>
               </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-8 mb-0 px-2">
-                <div className="flex items-center gap-8 flex-1 min-w-fit mb-8">
+            <div className="flex flex-wrap items-center justify-between gap-8 mb-8 px-2">
+                <div className="flex items-center gap-8 flex-1 min-w-fit">
                     <div className="flex flex-col">
                       <h2 className="deck-title text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
                     </div>
