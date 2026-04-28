@@ -156,7 +156,7 @@ export default function Sidebar() {
                       "p-2.5 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95",
                       selectedCargoIds.size > 0 
                        ? "text-white bg-[#ef4444] shadow-medium shadow-red-500/20" 
-                       : "text-muted hover:text-[#ef4444] hover:bg-red-500/10 disabled:opacity-30"
+                       : "text-secondary hover:text-[#ef4444] hover:bg-red-500/10 disabled:opacity-30"
                     )}
                  >
                     <Trash2 size={20} />
@@ -164,7 +164,7 @@ export default function Sidebar() {
                  <button 
                    onClick={() => setIsManualModalOpen(true)}
                    title="Adicionar Manualmente: Crie uma nova carga personalizada preenchendo as dimensões e pesos."
-                   className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
+                   className="p-2 text-secondary hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
                  >
                    <Plus size={16} />
                  </button>
@@ -209,9 +209,9 @@ export default function Sidebar() {
              </div>
            ))}
            {filteredCargoes.length === 0 && (
-             <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+             <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
                 <div className="p-6 bg-sidebar rounded-full mb-4">
-                  <Anchor size={32} className="text-muted" />
+                  <Anchor size={32} className="text-secondary" />
                 </div>
                 <p className="text-xs font-black text-secondary uppercase tracking-widest">Nenhuma carga no inventário</p>
              </div>
@@ -242,12 +242,12 @@ function FilterButton({ active, count, label, onClick, icon }: any) {
         "flex items-center gap-2 px-4 py-2 rounded-2xl text-[11px] font-extrabold uppercase tracking-tight whitespace-nowrap transition-all border shadow-low",
         active 
           ? "bg-brand-primary text-white border-brand-primary scale-105 z-10" 
-          : "bg-main border-subtle text-black hover:text-brand-primary hover:border-brand-primary"
+          : "bg-main border-subtle text-primary hover:text-brand-primary hover:border-brand-primary"
       )}
     >
       {icon}
       {label}
-      <span className={cn("ml-1 font-black px-1.5 py-px rounded-md bg-black/10", active ? "text-white" : "text-brand-primary")}>{count}</span>
+      <span className={cn("ml-1 font-black px-1.5 py-px rounded-md bg-sidebar/50", active ? "text-white" : "text-brand-primary")}>{count}</span>
     </button>
   );
 }
