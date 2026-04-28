@@ -117,7 +117,7 @@ export function Header() {
                 <img 
                   src="/logo-premium.png" 
                   alt="CargoDeck Plan" 
-                  className="relative h-16 w-16 object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 rounded-2xl" 
+                  className="relative h-16 w-16 object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 rounded-2xl mix-blend-multiply dark:invert dark:hue-rotate-180 dark:brightness-150" 
                 />
              </div>
              <div className="flex items-center gap-2.5">
