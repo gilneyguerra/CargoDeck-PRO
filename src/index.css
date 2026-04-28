@@ -21,7 +21,7 @@
 
   --color-status-success: var(--status-success);
   --color-status-warning: var(--status-warning);
-  --status-error: var(--status-error);
+  --color-status-error: var(--status-error);
   --color-status-info: var(--status-info);
 
   --radius-xs: var(--radius-xs);
