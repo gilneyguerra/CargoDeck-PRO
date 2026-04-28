@@ -64,13 +64,13 @@ export function LandingPage({ onEnterApp }: LandingPageProps) {
             <button 
               onClick={onEnterApp}
               className={cn(
-                "px-9 py-3.5 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all duration-500 shadow-xl transform hover:-translate-y-1.5 active:scale-95 flex items-center gap-3",
+                "px-9 py-3.5 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all duration-500 shadow-xl transform hover:-translate-y-1.5 active:scale-95 flex items-center gap-3 text-white",
                 isScrolled 
-                  ? "bg-gradient-to-r from-brand-primary to-blue-600 text-white shadow-brand-primary/25 hover:shadow-brand-primary/40" 
-                  : "bg-gradient-to-r from-cyan-neon to-blue-400 text-maritime shadow-cyan-neon/20 hover:shadow-cyan-neon/40 border border-white/20"
+                  ? "bg-gradient-to-r from-brand-primary to-blue-600 shadow-brand-primary/25 hover:shadow-brand-primary/40" 
+                  : "bg-gradient-to-r from-action to-cyan-500 shadow-cyan-neon/20 hover:shadow-cyan-neon/40 border border-white/20"
               )}
             >
-              <Zap size={14} className={isScrolled ? "text-cyan-200" : "text-maritime"} />
+              <Zap size={14} className="text-cyan-200" />
               Acessar Módulo
             </button>
           </div>
