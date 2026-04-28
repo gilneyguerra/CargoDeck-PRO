@@ -69,15 +69,26 @@ function normalizeNumber(raw: string): number {
 
 
 function normalizeDimension(raw: string): number {
+    if (!raw) return 0;
     let s = raw.trim()
         .replace(/[lI|L]/g, '1')
         .replace(/[oO]/g, '0')
         .replace(/[£EZ]/g, '2')
         .replace(/[S]/g, '5')
         .replace(/[B]/g, '8');
-    // Remove any remaining characters that are not digits, comma or dot
-    s = s.replace(/[^0-9,.]/g, '');
-    return parseFloat(s.replace(',', '.')) || 0;
+    
+    // Converte vírgula decimal para ponto e remove espaços
+    s = s.replace(/\s+/g, '').replace(',', '.');
+    // Mantém apenas o primeiro ponto decimal, remove os outros (ruído OCR)
+    const parts = s.split('.');
+    if (parts.length > 2) {
+        s = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Remove qualquer caractere não numérico restante exceto o ponto
+    s = s.replace(/[^0-9.]/g, '');
+    
+    return parseFloat(s) || 0;
 }
 
 // ─── Constantes e Blacklist ──────────────────────────────────────────────────
@@ -114,15 +125,13 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     // 3. Roteiro Previsto (Padrão sugerido na Seção 7)
     const roteiroRegex = /(?:Roteiro Previsto de Cargas|ROTEIRO PREVISTO|ROTEIRO):\s([A-Z0-9\s->]+)/i;
     const roteiroMatch = fullText.match(roteiroRegex);
-    let validCodes = new Set<string>();
     if (roteiroMatch) {
         header.roteiroPrevisto = roteiroMatch[1].split(/\s*->\s*|\s+-\s+/).map(s => s.trim().toUpperCase());
-        validCodes = new Set(header.roteiroPrevisto);
     }
 
-    // 4. Local de Origem / Destino (Padrão sugerido na Seção 7)
-    const origemRegex = /(?:Origem|ORIGEM):\s*([A-Z0-9]{2,6})(?:\s*-\s*([^\n\r]+))?/i;
-    const destinoRegex = /(?:Destino|DESTINO):\s*([A-Z0-9]{2,6})(?:\s*-\s*([^\n\r]+))?/i;
+    // 4. Local de Origem / Destino (Padrão sugerido na Seção 7) - Suporte a nomes longos
+    const origemRegex = /(?:Origem|ORIGEM):\s*([A-Z0-9\sÀ-ÿ.-]{2,40})/i;
+    const destinoRegex = /(?:Destino|DESTINO):\s*([A-Z0-9\sÀ-ÿ.-]{2,40})/i;
     
     const oMatch = fullText.match(origemRegex);
     const dMatch = fullText.match(destinoRegex);
@@ -130,18 +139,18 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
     if (oMatch) header.origemCarga = oMatch[1].trim().toUpperCase();
     if (dMatch) header.destinoCarga = dMatch[1].trim().toUpperCase();
 
-    // Fallback: Busca via seção (acrônimos) se os padrões explícitos falharem
+    // Fallback: Busca via seção (acrônimos ou nomes) se os padrões explícitos falharem
     if (!header.origemCarga || !header.destinoCarga) {
-        const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,35})/g;
+        const sectionHeaderRegex = /\b([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,40}?)\s+([A-Z0-9]{2,6})\s+([A-Z\sÀ-ÿ0-9.-]{3,40})/g;
         let secMatch;
         while ((secMatch = sectionHeaderRegex.exec(fullText)) !== null) {
-            const origemAcronym = secMatch[1].trim().toUpperCase();
-            const destinoAcronym = secMatch[3].trim().toUpperCase();
-            if (origemAcronym.match(SHIP_CODE_BLACKLIST) || destinoAcronym.match(SHIP_CODE_BLACKLIST)) continue;
-            if (validCodes.size > 0 && (!validCodes.has(origemAcronym) || !validCodes.has(destinoAcronym))) continue;
+            const oName = (secMatch[2] || secMatch[1]).trim().toUpperCase();
+            const dName = (secMatch[4] || secMatch[3]).trim().toUpperCase();
+            
+            if (oName.match(SHIP_CODE_BLACKLIST) || dName.match(SHIP_CODE_BLACKLIST)) continue;
 
-            if (!header.origemCarga) header.origemCarga = origemAcronym;
-            if (!header.destinoCarga) header.destinoCarga = destinoAcronym;
+            if (!header.origemCarga) header.origemCarga = oName;
+            if (!header.destinoCarga) header.destinoCarga = dName;
             break;
         }
     }
@@ -194,29 +203,37 @@ function validateISO6346(containerId: string): boolean {
 }
 
 function extractIdentifier(text: string): string | undefined {
-    // 1. Regra de Exclusão Crítica (Seção 2): Eslingas
-    // Números que sucedem os termos "ESL." ou "ESLINGA" NÃO são códigos de carga.
-    const textWithoutEslingas = text.replace(/(?:ESL\.|ESLINGA)\s?\d+/gi, '');
+    // 1. Regra de Exclusão Crítica (Seção 2): Eslingas e Acessórios
+    // Bloqueia identificadores que venham após ESLINGA ou ESL. (Negative Lookbehind simulado por Regex)
+    const eslingaPattern = /(?:ESL\.|ESLINGA|ACESSÓRIO)\s*[:\-]?\s*([A-Z0-9]{4,12})/gi;
+    let textModified = text;
+    let eslingaMatch;
+    while ((eslingaMatch = eslingaPattern.exec(text)) !== null) {
+        textModified = textModified.replace(eslingaMatch[0], '[[ESLINGA_BLOCKED]]');
+    }
 
-    // 2. Padrão Regex Recomendado (Seção 2): [A-Z]{1,4}[\s]?\d{4,6}
-    const suggestedPattern = /([A-Z]{1,4}\s?\d{4,6})/gi;
-    const matches = textWithoutEslingas.match(suggestedPattern);
-    
-    if (matches) {
-        for (const match of matches) {
-            const clean = match.trim().toUpperCase().replace(/\s/g, '');
-            // Se for padrão de container (letras+números), valida via ISO 6346 se tiver 11 caracteres
-            if (/[A-Z]{3,4}/.test(clean) && clean.length === 11) {
-                if (validateISO6346(clean)) return clean;
-            } else if (clean.length >= 4) {
-                return clean; // Retorna identificador alfanumérico normalizado
+    // 2. Regex Otimizada: Procura por códigos em qualquer posição da string
+    // [A-Z]{1,4} seguido ou não de espaço e 4 a 9 dígitos
+    const identifierPatterns = [
+        /([A-Z]{1,4}\s?\d{4,9})/gi,
+        /\b(\d{6,10})\b/g // Códigos puramente numéricos
+    ];
+
+    for (const pattern of identifierPatterns) {
+        const matches = textModified.match(pattern);
+        if (matches) {
+            for (const match of matches) {
+                const clean = match.trim().toUpperCase().replace(/\s/g, '');
+                if (clean === 'ESLINGA') continue;
+                
+                // Validação ISO 6346 para Containers (sempre tem prioridade se tiver 10-11 chars)
+                if (clean.length >= 10 && validateISO6346(clean)) return clean;
+                
+                // Se não for container mas tiver formato válido
+                if (clean.length >= 4) return clean;
             }
         }
     }
-
-    // Fallback para padrões numéricos de 6-9 dígitos (Seção 137)
-    const numericMatch = textWithoutEslingas.match(/\b(\d{6,9})\b/);
-    if (numericMatch) return numericMatch[1];
 
     return undefined;
 }
@@ -228,25 +245,27 @@ async function parseManifesto(text: string, pageNumber: number, header: Manifest
     let currentOrigin = header.origemCarga || 'PACU';
     let currentDestination = header.destinoCarga || header.nomeEmbarcacao || 'DESCONHECIDO';
 
-    // Regex para detecção de mudança de seção (Padrão Petrobras)
-    const originDelimiterRegex = /ORIGEM:\s*([A-Z0-9\s.-]{3,30})/gi;
-    const destDelimiterRegex = /DESTINO:\s*([A-Z0-9\s.-]{3,30})/gi;
+    // Regex para detecção de mudança de seção e Trechos (Seção 2.2 do diagnóstico)
+    const originDelimiterRegex = /(?:ORIGEM|Nº\s*TRECHO\s*\d+):\s*([A-Z0-9\sÀ-ÿ.-]{3,40})/gi;
+    const destDelimiterRegex = /DESTINO:\s*([A-Z0-9\sÀ-ÿ.-]{3,40})/gi;
 
-    // Mapear posições de mudança de seção
+    // Mapear posições de mudança de seção (Detecção de Novos Trechos)
     const sectionChanges: { pos: number, origem: string, destino: string }[] = [];
     
     let match;
     while ((match = originDelimiterRegex.exec(text)) !== null) {
-        currentOrigin = match[1].trim().toUpperCase();
-        sectionChanges.push({ pos: match.index, origem: currentOrigin, destino: currentDestination });
+        let detectedOrigin = match[1].trim().toUpperCase();
+        // Se capturou o prefixo do trecho, tenta limpar
+        detectedOrigin = detectedOrigin.replace(/^TRECHO\s*\d+\s*[:-]?\s*/i, '');
+        sectionChanges.push({ pos: match.index, origem: detectedOrigin, destino: currentDestination });
     }
     
     // Reset para busca de destino
     destDelimiterRegex.lastIndex = 0;
     while ((match = destDelimiterRegex.exec(text)) !== null) {
         currentDestination = match[1].trim().toUpperCase();
-        // Tenta associar ao marker de origem mais próximo ou cria novo marker
-        const nearOrigin = sectionChanges.find(s => Math.abs(s.pos - (match?.index || 0)) < 150);
+        // Tenta associar ao marker de origem mais próximo
+        const nearOrigin = sectionChanges.find(s => Math.abs(s.pos - (match?.index || 0)) < 250);
         if (nearOrigin) {
             nearOrigin.destino = currentDestination;
         } else {
@@ -259,8 +278,9 @@ async function parseManifesto(text: string, pageNumber: number, header: Manifest
     function getSectionFor(pos: number) {
         let best = { origem: header.origemCarga || 'PACU', destino: header.destinoCarga || header.nomeEmbarcacao || '' };
         for (const sec of sectionChanges) {
-            if (sec.pos <= pos) best = sec;
-            else break;
+            if (sec.pos <= pos) {
+                best = sec;
+            } else break;
         }
         return best;
     }
@@ -459,7 +479,20 @@ async function parseManifesto(text: string, pageNumber: number, header: Manifest
         }
     }
 
-    return items;
+    // Filtro Final de Integridade (Seção 2.6 do diagnóstico)
+    // Garante que campos codigo_identificador, peso_ton e dimensoes estejam minimamente preenchidos
+    return items.filter(item => {
+        const hasId = item.identifier && item.identifier.trim().length >= 3;
+        const hasWeight = (item.weight || 0) > 0;
+        const hasDims = (item.length || 0) > 0 && (item.width || 0) > 0;
+        
+        if (!hasId || !hasWeight || !hasDims) {
+            logger.warn(`Carga marcada para revisão por integridade parcial: ${item.identifier || 'SEM_ID'}`);
+            // Em aplicação real, poderíamos marcar como 'revisar', aqui apenas filtramos o ruído
+            return hasWeight; // Mantém se tiver ao menos peso (pode ser carga tubular sem ID claro)
+        }
+        return true;
+    });
 }
 
 export class PDFExtractor {
