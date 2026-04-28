@@ -38,7 +38,7 @@
 
 /* CSS Variables for Light and Dark Themes - Refined Design System */
 :root {
-  /* Nova Paleta Vibrante */
+  /* Nova Paleta Vibrante - Refined Industrial */
   --bg-main: #f8fafc;
   --bg-card: rgba(255, 255, 255, 0.7); /* Para Glassmorphism */
   --bg-sidebar: linear-gradient(180deg, #f8fafc 0%, #eef2f5 100%);
@@ -72,6 +72,20 @@
   --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.3);
 
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Guia de Correções de Design - CargoDeckPlan.com */
+  --color-primary-maritime: #003366;
+  --color-action-blue: #0056B3;
+  --color-text-main: #1A1A1A;
+  --color-text-secondary: #555555;
+  --color-bg-light: #F8F9FA;
+  --color-bg-dark: #0A192F;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+  --transition-default: all 0.3s ease-in-out;
+  --font-size-h1: 3.5rem;
+  --font-size-h2: 2.5rem;
+  --border-radius-lg: 12px;
 }
 
 .dark {
@@ -158,6 +172,17 @@ html, body {
   transition-property: background-color, border-color, color, fill, stroke, box-shadow, transform, filter, opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
+}
+
+/* Interatividade e Acessibilidade Global */
+*:focus-visible {
+  outline: 3px solid var(--color-action-blue);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--color-action-blue);
+  color: #FFFFFF;
 }
 
 .hover-lift:hover {

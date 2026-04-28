@@ -8,6 +8,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        maritime: {
+          DEFAULT: '#003366',
+          dark: '#001A33',
+        },
+        action: {
+          DEFAULT: '#0056B3',
+          dark: '#003D8F',
+        },
+        'orange-dest': '#FF8C00',
         navy: {
           DEFAULT: '#0F1B2E',
           deep: '#1E3A8A',
