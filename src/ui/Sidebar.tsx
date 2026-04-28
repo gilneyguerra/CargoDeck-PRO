@@ -3,6 +3,7 @@ import {
   Zap, MoveRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
+import { usePDFUpload } from '../hooks/usePDFUpload';
 import { useRef, useState, useMemo, type ChangeEvent } from 'react';
 import DraggableCargo from './DraggableCargo';
 import { useNotificationStore } from '@/features/notificationStore';
@@ -15,9 +16,11 @@ import { BatchMoveModal } from './BatchMoveModal';
 export default function Sidebar() {
   const { 
     unallocatedCargoes, clearUnallocatedCargoes,
-    deleteMultipleCargoes, setEditingCargo, searchTerm
+    deleteMultipleCargoes, setEditingCargo, searchTerm,
+    setExtractedCargoes 
   } = useCargoStore();
 
+  const { upload, loading: isProcessing } = usePDFUpload();
   const notify = useNotificationStore(state => state.notify);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
@@ -25,7 +28,6 @@ export default function Sidebar() {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
   const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: 'inventory-sidebar',
@@ -62,12 +64,47 @@ export default function Sidebar() {
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsProcessing(true);
-    notify('Iniciando processamento do arquivo...', 'info');
-    setTimeout(() => {
-      setIsProcessing(false);
-      notify('Manifesto processado!', 'success');
-    }, 1500);
+
+    notify('Iniciando processamento cirúrgico do manifesto...', 'info');
+    
+    try {
+      const items = await upload(file);
+      
+      if (items && items.length > 0) {
+        // Mapeamento de CargoItem (Serviço) para Cargo (Domínio)
+        const domainCargoes = items.map(item => ({
+          id: item.id,
+          identifier: item.identifier,
+          description: item.description,
+          weightTonnes: item.weight,
+          widthMeters: item.width || 0,
+          lengthMeters: item.length || 0,
+          heightMeters: item.height || 2,
+          quantity: 1,
+          category: (item.tipoDetectado as any) || 'GENERAL',
+          status: 'UNALLOCATED' as const,
+          isBackload: item.isBackload,
+          nomeEmbarcacao: item.nomeEmbarcacao,
+          numeroAtendimento: item.numeroAtendimento,
+          origemCarga: item.origemCarga,
+          destinoCarga: item.destinoCarga,
+          roteiroPrevisto: item.roteiroPrevisto,
+          dataExtracao: item.dataExtracao,
+          tamanhoFisico: item.tamanhoFisico,
+          color: item.isBackload ? '#fca311' : '#3b82f6', // Amarelo para backload, azul para normal
+          format: 'Retangular'
+        }));
+
+        setExtractedCargoes(domainCargoes as any);
+        notify(`Manifesto processado! ${items.length} cargas carregadas no inventário.`, 'success');
+      } else {
+        notify('Manifesto processado, mas nenhuma carga válida foi identificada.', 'warning');
+      }
+    } catch (err) {
+      notify('Falha crítica no processamento do manifesto.', 'error');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const toggleSelectCargo = (id: string) => {
