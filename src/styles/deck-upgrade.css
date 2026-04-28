@@ -58,7 +58,20 @@ main.deck-container {
 .item:hover {
   filter: brightness(1.1);
   box-shadow: 0 8px 20px rgba(0, 86, 179, 0.3) !important;
-  transform: scale(1.02);
+  z-index: 1000 !important;
+}
+
+/* Hitbox estabilizadora para itens pequenos */
+.cargo-hitbox::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  background: transparent;
+  z-index: -1;
+  pointer-events: auto;
 }
 
 /* Cargas no Inventário */
