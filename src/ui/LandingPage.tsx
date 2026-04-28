@@ -14,6 +14,7 @@ import {
   BarChart3,
   Search
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -41,8 +42,17 @@ export function LandingPage({ onEnterApp }: LandingPageProps) {
       <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 ${isScrolled ? 'bg-white/90 backdrop-blur-md border-b border-black/5 py-3 shadow-sm' : 'bg-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-             <div className="w-11 h-11 bg-maritime rounded-xl shadow-md flex items-center justify-center group-hover:rotate-12 transition-transform duration-500">
-                <Plus className="text-white w-7 h-7 font-black" />
+             <div className="relative">
+                <img 
+                  src="/logo-premium.png" 
+                  alt="CargoDeck Plan" 
+                  className={cn(
+                    "w-12 h-12 object-contain transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 rounded-xl",
+                    isScrolled 
+                      ? "mix-blend-multiply shadow-none" 
+                      : "invert hue-rotate-180 brightness-150 drop-shadow-[0_0_15px_rgba(0,217,255,0.4)]"
+                  )} 
+                />
              </div>
              <span className={`text-2xl font-montserrat font-black tracking-tighter uppercase italic transition-colors ${isScrolled ? 'text-maritime' : 'text-white'}`}>CargoDeck <span className={isScrolled ? 'text-action' : 'text-cyan-neon'}>Plan</span></span>
           </div>
