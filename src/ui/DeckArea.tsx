@@ -291,7 +291,6 @@ export function DeckArea() {
                 <div className="flex items-center gap-8 flex-1 min-w-fit mb-8">
                     <div className="flex flex-col">
                       <h2 className="deck-title text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
-                      <p className="text-[11px] font-bold text-muted uppercase tracking-[0.4em] mt-3 opacity-80">Deck Allocation Management</p>
                     </div>
 
                     {/* Stability Info (Migrated from Header) */}

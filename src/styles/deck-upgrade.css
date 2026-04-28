@@ -28,19 +28,8 @@ main.deck-container {
   color: var(--maritime-primary);
   font-weight: 800;
   position: relative;
-  padding-bottom: 12px;
 }
 
-.deck-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 40px;
-  height: 4px;
-  background: linear-gradient(90deg, var(--maritime-action), #FF8C00);
-  border-radius: 2px;
-}
 
 /* 3.3 Cards e Baias de Alocação */
 .baia {
