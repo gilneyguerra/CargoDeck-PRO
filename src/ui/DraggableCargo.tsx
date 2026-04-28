@@ -126,6 +126,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "group relative flex flex-col transition-all duration-300 select-none",
+        cargo.status === 'ALLOCATED' ? "item" : "container-item",
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
         cargo.status === 'ALLOCATED' 

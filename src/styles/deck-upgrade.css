@@ -1,0 +1,160 @@
+/* 
+ * DECK-UPGRADE.CSS
+ * Design System Marítimo para o Convés Principal 
+ */
+
+:root {
+  --color-primary-maritime: #003366;
+  --color-action-blue: #0056B3;
+  --color-orange-dest: #FF8C00;
+  --color-text-main: #1A1A1A;
+  --color-text-secondary: #555555;
+  --color-bg-light: #F8F9FA;
+  --color-bg-dark: #0A192F;
+}
+
+/* 3.1 Header e Navegação */
+header.navbar {
+  position: sticky !important;
+  top: 0;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+  z-index: 100;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 3.2 Container do Convés */
+main.deck-container {
+  background-color: var(--color-bg-light) !important;
+  transition: background-color 0.4s ease;
+}
+
+.deck-title {
+  color: var(--color-primary-maritime);
+  font-weight: 800;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.deck-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-action-blue), var(--color-orange-dest));
+  border-radius: 2px;
+}
+
+/* 3.3 Cards e Baias de Alocação */
+.baia {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(0, 51, 102, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+}
+
+.baia:hover {
+  background: #FFFFFF !important;
+  box-shadow: 0 15px 35px rgba(0, 51, 102, 0.08) !important;
+  border-color: rgba(0, 86, 179, 0.2) !important;
+  transform: translateY(-2px);
+}
+
+/* 3.4 Itens de Carga (Allocated) */
+.item {
+  background: linear-gradient(135deg, var(--color-primary-maritime), var(--color-action-blue)) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 10px rgba(0, 51, 102, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.item:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 8px 20px rgba(0, 86, 179, 0.3) !important;
+  transform: scale(1.02);
+}
+
+/* Cargas no Inventário */
+.container-item {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.3s ease !important;
+}
+
+.container-item:hover {
+  border-color: var(--color-action-blue) !important;
+  box-shadow: 0 10px 25px rgba(0, 86, 179, 0.1) !important;
+}
+
+/* 3.5 Botões Operacionais */
+button.btn-primary {
+  background-color: var(--color-action-blue) !important;
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+}
+
+button.btn-primary:hover {
+  background-color: #004494 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.2) !important;
+}
+
+/* Estilos de Tipografia */
+.text-maritime {
+  color: var(--color-primary-maritime) !important;
+}
+
+.dark header.navbar {
+  background: rgba(10, 25, 47, 0.9) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark main.deck-container {
+  background-color: #020617 !important;
+}
+
+.dark .baia {
+  background: rgba(30, 41, 59, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 4. Tipografia Global (Escopo do Convés) */
+.deck-container h1 { 
+  color: var(--color-primary-maritime) !important; 
+  font-size: 3.5rem !important; 
+  font-weight: 800 !important; 
+  letter-spacing: -0.03em !important; 
+}
+
+.deck-container h2 { 
+  color: var(--color-primary-maritime) !important; 
+  font-size: 2.5rem !important; 
+  font-weight: 800 !important; 
+}
+
+.deck-container h3 { 
+  color: var(--color-text-main) !important; 
+  font-size: 1.5rem !important; 
+  font-weight: 700 !important; 
+}
+
+.deck-container p { 
+  color: var(--color-text-secondary) !important; 
+  font-size: 1rem !important; 
+  line-height: 1.6 !important; 
+}
+
+/* Ajustes de Responsividade */
+@media (max-width: 768px) {
+  .deck-container { padding: 40px 20px !important; }
+  .deck-title { font-size: 1.75rem !important; }
+}

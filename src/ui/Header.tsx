@@ -107,7 +107,7 @@ export function Header() {
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between min-h-[5rem] px-6 lg:px-10 border-b border-subtle bg-header shrink-0 gap-6 shadow-medium z-30 font-sans">
+      <header className="navbar flex flex-wrap items-center justify-between min-h-[5rem] px-6 lg:px-10 border-b border-subtle bg-header shrink-0 gap-6 shadow-medium z-30 font-sans">
         
         {/* Left Section: Logo & Navio */}
         <div className="flex items-center gap-6 order-1">

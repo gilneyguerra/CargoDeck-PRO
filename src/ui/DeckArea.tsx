@@ -143,7 +143,7 @@ const DroppableBay = memo(function DroppableBay({ bay, activeLocation, searchTer
 return (
    <div 
      className={cn(
-       "w-full border rounded-[16px] relative flex flex-col items-center pt-14 pb-6 transition-all min-h-[140px] shadow-medium",
+       "baia w-full border rounded-[16px] relative flex flex-col items-center pt-14 pb-6 transition-all min-h-[140px] shadow-medium",
        "bg-white/50 dark:bg-black/20 border-subtle hover-glow group/bay overflow-hidden",
        "before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.05),transparent)] pointer-events-auto"
      )}
@@ -290,7 +290,7 @@ export function DeckArea() {
             <div className="flex flex-wrap items-center justify-between gap-6 mb-8 px-2">
                 <div className="flex items-center gap-8 flex-1 min-w-fit">
                     <div className="flex flex-col">
-                      <h2 className="text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
+                      <h2 className="deck-title text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
                       <p className="text-[11px] font-bold text-muted uppercase tracking-[0.4em] mt-3 opacity-80">Deck Allocation Management</p>
                     </div>
 
