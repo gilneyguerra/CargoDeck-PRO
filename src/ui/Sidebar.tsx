@@ -164,9 +164,29 @@ export default function Sidebar() {
                 <span className="text-[11px] font-black text-primary uppercase tracking-widest">Inventory</span>
                 <span className="text-[9px] font-black text-secondary uppercase">Ready for Loading</span>
               </div>
-              <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ml-auto shadow-medium">
-                {unallocatedCargoes.length}
-              </span>
+              <div className="ml-auto flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    if (selectedCargoIds.size === unallocatedCargoes.length) {
+                      setSelectedCargoIds(new Set());
+                    } else {
+                      setSelectedCargoIds(new Set(unallocatedCargoes.map(c => c.id)));
+                    }
+                  }}
+                  title={selectedCargoIds.size === unallocatedCargoes.length ? "Desmarcar Tudo" : "Selecionar Tudo"}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border-2",
+                    selectedCargoIds.size === unallocatedCargoes.length 
+                      ? "bg-brand-primary border-brand-primary text-white shadow-low" 
+                      : "bg-sidebar border-subtle text-secondary hover:border-brand-primary/40"
+                  )}
+                >
+                  {selectedCargoIds.size === unallocatedCargoes.length ? 'DESMARCAR' : 'SELEC. TUDO'}
+                </button>
+                <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-medium">
+                  {unallocatedCargoes.length}
+                </span>
+              </div>
             </div>
               <div className="flex items-center gap-1">
                  {selectedCargoIds.size > 0 && (
