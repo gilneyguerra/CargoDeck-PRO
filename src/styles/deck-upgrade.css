@@ -3,15 +3,7 @@
  * Design System Marítimo para o Convés Principal 
  */
 
-:root {
-  --color-primary-maritime: #003366;
-  --color-action-blue: #0056B3;
-  --color-orange-dest: #FF8C00;
-  --color-text-main: #1A1A1A;
-  --color-text-secondary: #555555;
-  --color-bg-light: #F8F9FA;
-  --color-bg-dark: #0A192F;
-}
+/* Variáveis herdadas do index.css com suporte dinâmico a dark mode */
 
 /* 3.1 Header e Navegação */
 header.navbar {
@@ -28,12 +20,12 @@ header.navbar {
 
 /* 3.2 Container do Convés */
 main.deck-container {
-  background-color: var(--color-bg-light) !important;
+  background-color: var(--maritime-bg) !important;
   transition: background-color 0.4s ease;
 }
 
 .deck-title {
-  color: var(--color-primary-maritime);
+  color: var(--maritime-primary);
   font-weight: 800;
   position: relative;
   padding-bottom: 12px;
@@ -46,7 +38,7 @@ main.deck-container {
   left: 0;
   width: 40px;
   height: 4px;
-  background: linear-gradient(90deg, var(--color-action-blue), var(--color-orange-dest));
+  background: linear-gradient(90deg, var(--maritime-action), #FF8C00);
   border-radius: 2px;
 }
 
@@ -68,7 +60,7 @@ main.deck-container {
 
 /* 3.4 Itens de Carga (Allocated) */
 .item {
-  background: linear-gradient(135deg, var(--color-primary-maritime), var(--color-action-blue)) !important;
+  background: linear-gradient(135deg, var(--maritime-primary), var(--maritime-action)) !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 10px rgba(0, 51, 102, 0.2) !important;
   transition: all 0.3s ease !important;
@@ -89,13 +81,13 @@ main.deck-container {
 }
 
 .container-item:hover {
-  border-color: var(--color-action-blue) !important;
+  border-color: var(--maritime-action) !important;
   box-shadow: 0 10px 25px rgba(0, 86, 179, 0.1) !important;
 }
 
 /* 3.5 Botões Operacionais */
 button.btn-primary {
-  background-color: var(--color-action-blue) !important;
+  background-color: var(--maritime-action) !important;
   color: #FFFFFF !important;
   border-radius: 10px !important;
   font-weight: 700 !important;
@@ -110,7 +102,7 @@ button.btn-primary:hover {
 
 /* Estilos de Tipografia */
 .text-maritime {
-  color: var(--color-primary-maritime) !important;
+  color: var(--maritime-primary) !important;
 }
 
 .dark header.navbar {
@@ -129,26 +121,26 @@ button.btn-primary:hover {
 
 /* 4. Tipografia Global (Escopo do Convés) */
 .deck-container h1 { 
-  color: var(--color-primary-maritime) !important; 
+  color: var(--maritime-primary) !important; 
   font-size: 3.5rem !important; 
   font-weight: 800 !important; 
   letter-spacing: -0.03em !important; 
 }
 
 .deck-container h2 { 
-  color: var(--color-primary-maritime) !important; 
+  color: var(--maritime-primary) !important; 
   font-size: 2.5rem !important; 
   font-weight: 800 !important; 
 }
 
 .deck-container h3 { 
-  color: var(--color-text-main) !important; 
+  color: var(--maritime-text) !important; 
   font-size: 1.5rem !important; 
   font-weight: 700 !important; 
 }
 
 .deck-container p { 
-  color: var(--color-text-secondary) !important; 
+  color: var(--maritime-text-secondary) !important; 
   font-size: 1rem !important; 
   line-height: 1.6 !important; 
 }

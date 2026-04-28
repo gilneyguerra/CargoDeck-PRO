@@ -195,14 +195,14 @@ export function Header() {
                <button 
                  onClick={handleExportCsv} 
                  disabled={!manifestsLoaded} 
-                 className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-black hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
+                 className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
                >
                  <Download size={14} /> CSV
                </button>
                <button 
                  onClick={handleExportPdf} 
                  disabled={!manifestsLoaded} 
-                 className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-black hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
+                 className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
                >
                  <Download size={14} /> PDF
                </button>
@@ -319,7 +319,7 @@ export function Header() {
 
               <button 
                 onClick={() => { setExportModalOpen(false); setDirHandle(null); } } 
-                className="w-full py-4 text-xs font-black text-black hover:bg-main border-2 border-transparent hover:border-subtle rounded-2xl transition-all text-center uppercase tracking-[0.25em]"
+                className="w-full py-4 text-xs font-black text-primary hover:bg-main border-2 border-transparent hover:border-subtle rounded-2xl transition-all text-center uppercase tracking-[0.25em]"
               >
                 CANCELAR
               </button>

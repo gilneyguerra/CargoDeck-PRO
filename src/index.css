@@ -74,12 +74,12 @@
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 
   /* Guia de Correções de Design - CargoDeckPlan.com */
-  --color-primary-maritime: #003366;
-  --color-action-blue: #0056B3;
-  --color-text-main: #1A1A1A;
-  --color-text-secondary: #555555;
-  --color-bg-light: #F8F9FA;
-  --color-bg-dark: #0A192F;
+  --maritime-primary: #003366;
+  --maritime-action: #0056B3;
+  --maritime-text: #1A1A1A;
+  --maritime-text-secondary: #555555;
+  --maritime-bg: #F8F9FA;
+  
   --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
   --transition-default: all 0.3s ease-in-out;
@@ -111,6 +111,12 @@
 
   --shadow-low: 0 1px 3px rgba(0,0,0,0.4);
   --shadow-medium: 0 10px 15px -3px rgba(0,0,0,0.6);
+
+  /* Overrides para Marítimo em Dark Mode */
+  --maritime-primary: #60a5fa; /* Azul mais claro para visibilidade */
+  --maritime-text: #f8fafc;
+  --maritime-text-secondary: #94a3b8;
+  --maritime-bg: #020617;
 }
 
 /* Apply Variables to Base Elements */
