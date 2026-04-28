@@ -3,11 +3,13 @@
 
 @theme {
   --color-main: var(--bg-main);
+  --color-bg: var(--bg-main);
   --color-sidebar: var(--bg-sidebar);
   --color-header: var(--bg-header);
   --color-card: var(--bg-card);
 
   --color-primary: var(--text-primary);
+  --color-text: var(--text-primary);
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
 
@@ -36,22 +38,29 @@
   --font-sans: var(--font-main);
 }
 
-/* CSS Variables for Light and Dark Themes - Refined Design System */
+/* CSS Variables for Light and Dark Themes - Refined Maritime Design System */
 :root {
-  /* Nova Paleta Vibrante - Refined Industrial */
-  --bg-main: #f8fafc;
-  --bg-card: rgba(255, 255, 255, 0.7); /* Para Glassmorphism */
-  --bg-sidebar: linear-gradient(180deg, #f8fafc 0%, #eef2f5 100%);
+  /* Maritime Palette Integration */
+  --maritime-primary: #003366;
+  --maritime-action: #0056B3;
+  --maritime-text: #1A1A1A;
+  --maritime-text-secondary: #555555;
+  --maritime-bg: #F8F9FA;
+
+  /* Semantic Mapping */
+  --bg-main: var(--maritime-bg);
+  --bg-card: rgba(255, 255, 255, 0.7); 
+  --bg-sidebar: linear-gradient(180deg, var(--maritime-bg) 0%, #eef2f5 100%);
   --bg-header: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
   
-  --text-primary: #1f2937;
-  --text-secondary: #4b5563;
+  --text-primary: var(--maritime-text);
+  --text-secondary: var(--maritime-text-secondary);
   --text-muted: #9ca3af;
   
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
   
-  --brand-primary: #2563eb;
+  --brand-primary: var(--maritime-action);
   --brand-hover: #1d4ed8;
   
   --status-success: #10b981;
@@ -69,17 +78,10 @@
   --shadow-low: 0 1px 3px rgba(0,0,0,0.1);
   --shadow-medium: 0 4px 12px rgba(0,0,0,0.08);
   --shadow-high: 0 20px 25px rgba(0,0,0,0.15);
-  --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.3);
+  --shadow-glow: 0 0 20px rgba(0, 86, 179, 0.3);
 
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 
-  /* Guia de Correções de Design - CargoDeckPlan.com */
-  --maritime-primary: #003366;
-  --maritime-action: #0056B3;
-  --maritime-text: #1A1A1A;
-  --maritime-text-secondary: #555555;
-  --maritime-bg: #F8F9FA;
-  
   --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
   --transition-default: all 0.3s ease-in-out;
@@ -89,19 +91,26 @@
 }
 
 .dark {
-  --bg-main: #0f172a;
+  /* Maritime Dark Palette Integration */
+  --maritime-primary: #60a5fa; 
+  --maritime-text: #f8fafc;
+  --maritime-text-secondary: #94a3b8;
+  --maritime-bg: #020617;
+
+  /* Semantic Mapping */
+  --bg-main: var(--maritime-bg);
   --bg-card: rgba(30, 41, 59, 0.7);
-  --bg-sidebar: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-  --bg-header: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --bg-sidebar: linear-gradient(180deg, var(--maritime-bg) 0%, #1e293b 100%);
+  --bg-header: linear-gradient(135deg, var(--maritime-bg) 0%, #1e293b 100%);
   
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-primary: var(--maritime-text);
+  --text-secondary: var(--maritime-text-secondary);
   --text-muted: #64748b;
   
   --border-subtle: #334155;
   --border-strong: #475569;
   
-  --brand-primary: #3b82f6;
+  --brand-primary: var(--maritime-primary);
   --brand-hover: #60a5fa;
   
   --status-success: #34d399;
@@ -111,12 +120,6 @@
 
   --shadow-low: 0 1px 3px rgba(0,0,0,0.4);
   --shadow-medium: 0 10px 15px -3px rgba(0,0,0,0.6);
-
-  /* Overrides para Marítimo em Dark Mode */
-  --maritime-primary: #60a5fa; /* Azul mais claro para visibilidade */
-  --maritime-text: #f8fafc;
-  --maritime-text-secondary: #94a3b8;
-  --maritime-bg: #020617;
 }
 
 /* Apply Variables to Base Elements */
