@@ -153,29 +153,43 @@ export default function Sidebar() {
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
         </div>
 
-        {/* Filters and List */}
-        <div className="p-4 border-b border-subtle">
-           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-brand-primary shadow-low flex items-center justify-center text-white">
-                <Package size={18} />
+        {/* Filters and List - Refactored for Containment */}
+        <div className="p-4 border-b border-subtle flex flex-col gap-4 overflow-hidden min-w-0">
+           {/* Section Identity: Row 1 */}
+           <div className="flex items-center justify-between gap-2 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-brand-primary/10 shadow-sm flex items-center justify-center text-brand-primary shrink-0 border border-brand-primary/20">
+                  <Package size={20} />
+                </div>
+                <div className="flex flex-col truncate">
+                  <span className="text-[11px] font-black text-primary uppercase tracking-widest truncate">Inventory</span>
+                  <span className="text-[9px] font-bold text-secondary uppercase opacity-70">Ready for Loading</span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-black text-primary uppercase tracking-widest">Inventory</span>
-                <span className="text-[9px] font-black text-secondary uppercase">Ready for Loading</span>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border border-indigo-500/20 text-indigo-600 text-[10px] font-extrabold px-2.5 py-1 rounded-lg">
+                  {unallocatedCargoes.length}
+                </span>
+                <button 
+                  onClick={() => setIsManualModalOpen(true)}
+                  title="Novo Item"
+                  className="p-2 text-secondary hover:text-brand-primary hover:bg-brand-primary/5 rounded-xl transition-all border border-transparent hover:border-brand-primary/20"
+                >
+                  <Plus size={18} />
+                </button>
               </div>
-              <div className="ml-auto flex items-center gap-3">
+           </div>
+
+           {/* Operational Controls: Row 2 */}
+           <div className="flex items-center justify-between bg-main/40 p-2.5 rounded-2xl border border-subtle/50 gap-2 shadow-inner">
                 <button 
                   onClick={() => {
-                    if (selectedCargoIds.size === unallocatedCargoes.length) {
-                      setSelectedCargoIds(new Set());
-                    } else {
-                      setSelectedCargoIds(new Set(unallocatedCargoes.map(c => c.id)));
-                    }
+                    if (selectedCargoIds.size === unallocatedCargoes.length) setSelectedCargoIds(new Set());
+                    else setSelectedCargoIds(new Set(unallocatedCargoes.map(c => c.id)));
                   }}
-                  title={selectedCargoIds.size === unallocatedCargoes.length ? "Desmarcar Tudo" : "Selecionar Tudo"}
                   className={cn(
-                    "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border-2",
+                    "px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border shrink-0",
                     selectedCargoIds.size === unallocatedCargoes.length 
                       ? "bg-brand-primary border-brand-primary text-white shadow-low" 
                       : "bg-sidebar border-subtle text-secondary hover:border-brand-primary/40"
@@ -183,49 +197,37 @@ export default function Sidebar() {
                 >
                   {selectedCargoIds.size === unallocatedCargoes.length ? 'DESMARCAR' : 'SELEC. TUDO'}
                 </button>
-                <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-medium">
-                  {unallocatedCargoes.length}
-                </span>
-              </div>
-            </div>
-              <div className="flex items-center gap-1">
-                 {selectedCargoIds.size > 0 && (
-                   <button 
-                     onClick={() => setIsBatchMoveOpen(true)}
-                     title="Mover em Lote: Alocar todas as cargas selecionadas para um destino comum."
-                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black text-white bg-brand-primary hover:brightness-110 shadow-lg shadow-brand-primary/20 transition-all"
-                   >
-                     <MoveRight className="w-3 h-3" /> MOVER
-                   </button>
-                 )}
-                 <button 
-                    onClick={() => {
-                      if (selectedCargoIds.size > 0) {
-                        deleteMultipleCargoes(Array.from(selectedCargoIds));
-                        setSelectedCargoIds(new Set());
-                      } else if (window.confirm('Excluir todas as cargas não alocadas?')) {
-                        clearUnallocatedCargoes();
-                      }
-                    }}
-                    disabled={unallocatedCargoes.length === 0}
-                    title="Excluir Cargas"
-                    className={cn(
-                      "p-2.5 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95",
-                      selectedCargoIds.size > 0 
-                       ? "text-white bg-[#ef4444] shadow-medium shadow-red-500/20" 
-                       : "text-secondary hover:text-[#ef4444] hover:bg-red-500/10 disabled:opacity-30"
+
+                <div className="flex items-center gap-1.5 ml-auto">
+                    {selectedCargoIds.size > 0 && (
+                      <button 
+                        onClick={() => setIsBatchMoveOpen(true)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black text-white bg-indigo-600 hover:brightness-110 shadow-md shadow-indigo-500/20 transition-all shrink-0"
+                      >
+                        <MoveRight size={12} /> MOVER
+                      </button>
                     )}
-                 >
-                    <Trash2 size={20} />
-                 </button>
-                 <button 
-                   onClick={() => setIsManualModalOpen(true)}
-                   title="Adicionar Manualmente: Crie uma nova carga personalizada preenchendo as dimensões e pesos."
-                   className="p-2 text-secondary hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
-                 >
-                   <Plus size={16} />
-                 </button>
-              </div>
+                    
+                    <button 
+                       onClick={() => {
+                         if (selectedCargoIds.size > 0) {
+                           deleteMultipleCargoes(Array.from(selectedCargoIds));
+                           setSelectedCargoIds(new Set());
+                         } else if (window.confirm('Excluir todas as cargas não alocadas?')) {
+                           clearUnallocatedCargoes();
+                         }
+                       }}
+                       disabled={unallocatedCargoes.length === 0}
+                       className={cn(
+                         "p-2 rounded-xl transition-all duration-300",
+                         selectedCargoIds.size > 0 
+                          ? "text-white bg-status-error shadow-md shadow-red-500/20" 
+                          : "text-secondary hover:text-status-error hover:bg-status-error/10 disabled:opacity-30"
+                       )}
+                    >
+                       <Trash2 size={18} />
+                    </button>
+                </div>
            </div>
 
            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2">
