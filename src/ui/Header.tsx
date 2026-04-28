@@ -115,9 +115,9 @@ export function Header() {
              <div className="relative">
                 <div className="absolute -inset-1.5 bg-brand-primary/15 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-all duration-300" />
                 <img 
-                  src="/logo-icon.png" 
+                  src="/logo-premium.png" 
                   alt="CargoDeck Plan" 
-                  className="relative h-12 w-12 object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" 
+                  className="relative h-16 w-16 object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 rounded-2xl" 
                 />
              </div>
              <div className="flex items-center gap-2.5">
