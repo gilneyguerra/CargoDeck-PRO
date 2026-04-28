@@ -7,7 +7,6 @@ import { usePDFUpload } from '../hooks/usePDFUpload';
 import { useRef, useState, useMemo, type ChangeEvent } from 'react';
 import DraggableCargo from './DraggableCargo';
 import { useNotificationStore } from '@/features/notificationStore';
-import { OCRConverterModal } from './OCRConverterModal';
 import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/core';
 import { ManualCargoModal } from './ManualCargoModal';
@@ -23,7 +22,6 @@ export default function Sidebar() {
   const { upload, loading: isProcessing } = usePDFUpload();
   const notify = useNotificationStore(state => state.notify);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'container' | 'equipment' | 'tubular' | 'basket'>('all');
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
@@ -141,13 +139,6 @@ export default function Sidebar() {
                     </div>
                 </button>
                 
-                <button 
-                  onClick={() => setIsOCRModalOpen(true)}
-                  title="Ferramenta OCR"
-                  className="w-full mt-2 flex items-center justify-center gap-3 bg-main border border-subtle hover:border-brand-primary text-secondary hover:text-brand-primary px-6 py-4 rounded-2xl text-[10px] font-extrabold uppercase tracking-[0.15em] transition-all active:scale-[0.98] shadow-low hover:shadow-medium"
-                >
-                  <Zap className="w-5 h-5" /> <span className="text-primary">ADVANCED OCR CONVERTER</span>
-                </button>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
         </div>
@@ -276,7 +267,6 @@ export default function Sidebar() {
            )}
         </div>
 
-        <OCRConverterModal isOpen={isOCRModalOpen} onClose={() => setIsOCRModalOpen(false)} />
         <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
         <BatchMoveModal 
           isOpen={isBatchMoveOpen} 
