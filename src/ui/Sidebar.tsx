@@ -20,7 +20,9 @@ export default function Sidebar() {
   } = useCargoStore();
 
   const { upload, loading: isProcessing } = usePDFUpload();
-  const notify = useNotificationStore(state => state.notify);
+  const { 
+    notify, setBanner, hideBanner, ask 
+  } = useNotificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'container' | 'equipment' | 'tubular' | 'basket'>('all');
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -63,13 +65,14 @@ export default function Sidebar() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    notify('Iniciando processamento cirúrgico do manifesto...', 'info');
+    setBanner('Iniciando processamento cirúrgico do manifesto...', 0);
     
     try {
+      setBanner('Lendo dados do PDF...', 30);
       const items = await upload(file);
+      setBanner('Validando cargas extraídas...', 70);
       
       if (items && items.length > 0) {
-        // Mapeamento de CargoItem (Serviço) para Cargo (Domínio)
         const domainCargoes = items.map(item => ({
           id: item.id,
           identifier: item.identifier,
@@ -89,18 +92,20 @@ export default function Sidebar() {
           roteiroPrevisto: item.roteiroPrevisto,
           dataExtracao: item.dataExtracao,
           tamanhoFisico: item.tamanhoFisico,
-          color: item.isBackload ? '#fca311' : '#3b82f6', // Amarelo para backload, azul para normal
+          color: item.isBackload ? '#fca311' : '#3b82f6',
           format: 'Retangular'
         }));
 
+        setBanner('Finalizando integração...', 90);
         setExtractedCargoes(domainCargoes as any);
-        notify(`Manifesto processado! ${items.length} cargas carregadas no inventário.`, 'success');
+        notify(`Manifesto processado! ${items.length} cargas carregadas.`, 'success');
       } else {
-        notify('Manifesto processado, mas nenhuma carga válida foi identificada.', 'warning');
+        notify('Nenhuma carga válida identificada no manifesto.', 'warning');
       }
     } catch (err) {
       notify('Falha crítica no processamento do manifesto.', 'error');
     } finally {
+      hideBanner();
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -199,12 +204,18 @@ export default function Sidebar() {
                     )}
                     
                     <button 
-                       onClick={() => {
+                       onClick={async () => {
                          if (selectedCargoIds.size > 0) {
-                           deleteMultipleCargoes(Array.from(selectedCargoIds));
-                           setSelectedCargoIds(new Set());
-                         } else if (window.confirm('Excluir todas as cargas não alocadas?')) {
-                           clearUnallocatedCargoes();
+                           if (await ask('Confirmar Exclusão', `Deseja excluir as ${selectedCargoIds.size} cargas selecionadas?`)) {
+                             deleteMultipleCargoes(Array.from(selectedCargoIds));
+                             setSelectedCargoIds(new Set());
+                             notify('Cargas excluídas com sucesso.', 'success');
+                           }
+                         } else if (unallocatedCargoes.length > 0) {
+                           if (await ask('Limpar Inventário', 'Deseja excluir TODAS as cargas não alocadas? Esta ação é irreversível.')) {
+                             clearUnallocatedCargoes();
+                             notify('Inventário limpo.', 'info');
+                           }
                          }
                        }}
                        disabled={unallocatedCargoes.length === 0}
