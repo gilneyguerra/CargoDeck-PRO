@@ -220,7 +220,6 @@ interface RowProps {
 
 function GridRow({ row, rowIdx, onChange, onDelete, onTab }: RowProps) {
   const hasError = Object.keys(row.errors).length > 0;
-  const catMeta = row.category ? CATEGORY_MAP[row.category as CargoCategory] : null;
 
   return (
     <tr
@@ -251,32 +250,32 @@ function GridRow({ row, rowIdx, onChange, onDelete, onTab }: RowProps) {
 
       {/* Descrição */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 220, minWidth: 180 }}>
-        <TextCell value={row.description} field="description" rowIdx={rowIdx} colIdx={2} error={row.errors.description}onChange={onChange} onTab={onTab} />
+        <TextCell value={row.description} field="description" rowIdx={rowIdx} colIdx={2} error={row.errors.description} onChange={onChange} onTab={onTab} />
       </td>
 
       {/* Comprimento */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 88, minWidth: 72 }}>
-        <TextCell value={row.lengthMeters} field="lengthMeters" rowIdx={rowIdx} colIdx={3} error={row.errors.lengthMeters} numericonChange={onChange} onTab={onTab} />
+        <TextCell value={row.lengthMeters} field="lengthMeters" rowIdx={rowIdx} colIdx={3} error={row.errors.lengthMeters} numeric onChange={onChange} onTab={onTab} />
       </td>
 
       {/* Largura */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 88, minWidth: 72 }}>
-        <TextCell value={row.widthMeters} field="widthMeters" rowIdx={rowIdx} colIdx={4} error={row.errors.widthMeters} numericonChange={onChange} onTab={onTab} />
+        <TextCell value={row.widthMeters} field="widthMeters" rowIdx={rowIdx} colIdx={4} error={row.errors.widthMeters} numeric onChange={onChange} onTab={onTab} />
       </td>
 
       {/* Altura */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 88, minWidth: 72 }}>
-        <TextCell value={row.heightMeters} field="heightMeters" rowIdx={rowIdx} colIdx={5} error={row.errors.heightMeters} numericonChange={onChange} onTab={onTab} />
+        <TextCell value={row.heightMeters} field="heightMeters" rowIdx={rowIdx} colIdx={5} error={row.errors.heightMeters} numeric onChange={onChange} onTab={onTab} />
       </td>
 
       {/* Peso */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 96, minWidth: 80 }}>
-        <TextCell value={row.weightTonnes} field="weightTonnes" rowIdx={rowIdx} colIdx={6} error={row.errors.weightTonnes} numericonChange={onChange} onTab={onTab} />
+        <TextCell value={row.weightTonnes} field="weightTonnes" rowIdx={rowIdx} colIdx={6} error={row.errors.weightTonnes} numeric onChange={onChange} onTab={onTab} />
       </td>
 
       {/* Origem */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 120, minWidth: 100 }}>
-        <TextCell value={row.origin} field="origin" rowIdx={rowIdx} colIdx={7}onChange={onChange} onTab={onTab} />
+        <TextCell value={row.origin} field="origin" rowIdx={rowIdx} colIdx={7} onChange={onChange} onTab={onTab} />
       </td>
 
       {/* Destino */}
