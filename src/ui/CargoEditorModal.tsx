@@ -177,11 +177,12 @@ function parseCsvToRows(text: string): EditorRow[] {
 async function inflateRaw(compressed: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream('deflate-raw');
   const writer = ds.writable.getWriter();
-  // Garante ArrayBuffer puro (não SharedArrayBuffer) para compatibilidade com DecompressionStream
-  const plainBuffer = compressed.buffer instanceof ArrayBuffer
-    ? compressed
-    : new Uint8Array(compressed);
-  writer.write(plainBuffer);
+  // new ArrayBuffer() garante tipo ArrayBuffer (nunca ArrayBufferLike/SharedArrayBuffer).
+  // TypeScript não estreita o generic <T> de Uint8Array via instanceof em .buffer,
+  // portanto a única forma segura é copiar para um ArrayBuffer explicitamente tipado.
+  const ab = new ArrayBuffer(compressed.byteLength);
+  new Uint8Array(ab).set(compressed);
+  writer.write(ab);
   writer.close();
   const chunks: Uint8Array[] = [];
   const reader = ds.readable.getReader();

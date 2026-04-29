@@ -49,14 +49,16 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 
 ## 11. `Uint8Array<ArrayBufferLike>` Incompatível com APIs de Browser (TS2345)
 - **Problema**: Erro `TS2345: Type 'Uint8Array<ArrayBufferLike>' is not assignable to 'ArrayBufferView<ArrayBuffer>'`. O TypeScript strict distingue `ArrayBuffer` de `SharedArrayBuffer` — `ArrayBufferLike` é a união dos dois, mas APIs como `DecompressionStream.writer.write()` exigem especificamente `ArrayBuffer`.
-- **Causa**: Ao declarar `compressed: Uint8Array` sem qualificar o generic, o tipo inferido é `Uint8Array<ArrayBufferLike>`. Mesmo que em runtime nunca seja um `SharedArrayBuffer`, o compilador trata como possível.
-- **Solução**: Antes de passar o `Uint8Array` para APIs que exigem `ArrayBuffer` puro, fazer a guarda:
+- **Causa**: Declarar `compressed: Uint8Array` sem qualificar o generic produz `Uint8Array<ArrayBufferLike>`. TypeScript **não estreita o generic `<T>` de `Uint8Array<T>` via `instanceof` em `.buffer`** — logo, `const safe = arr.buffer instanceof ArrayBuffer ? arr : new Uint8Array(arr)` continua tipado como `Uint8Array<ArrayBufferLike>` nos dois branches. O compilador do Vercel rejeita.
+- **Solução correta e definitiva**: Criar um `ArrayBuffer` explicitamente com `new ArrayBuffer()` e copiar os bytes. `new ArrayBuffer()` é sempre tipado como `ArrayBuffer` — nunca como `ArrayBufferLike`:
   ```typescript
-  const safe = arr.buffer instanceof ArrayBuffer ? arr : new Uint8Array(arr);
-  writer.write(safe);
+  const ab = new ArrayBuffer(compressed.byteLength);
+  new Uint8Array(ab).set(compressed);
+  writer.write(ab); // ab: ArrayBuffer ✓
   ```
-  Ou declarar o parâmetro como `Uint8Array<ArrayBuffer>` quando o contexto garantir isso.
-- **Contexto**: Ocorrido em `inflateRaw()` do parser XLSX nativo em `CargoEditorModal.tsx`.
+- **Armadilha a evitar**: `new Uint8Array(existingUint8Array)` ainda retorna `Uint8Array<ArrayBufferLike>`. A cópia via `new ArrayBuffer` + `.set()` é o único caminho sem casts inseguros.
+- **Consultar antes de usar**: Toda vez que passar `Uint8Array` para uma Web API que declare `BufferSource` ou `ArrayBufferView<ArrayBuffer>`, aplicar este padrão.
+- **Contexto**: Ocorrido em `inflateRaw()` do parser XLSX nativo em `CargoEditorModal.tsx` — primeira tentativa de fix (instanceof guard) falhou pois TypeScript não estreita generics via instanceof.
 
 ## 12. Condição Sempre Verdadeira em Cast de Interface (TS2774)
 - **Problema**: Erro `TS2774: This condition will always return true since this function is always defined`.
