@@ -57,8 +57,8 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Modify Element</h2>
-                <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] opacity-90 leading-relaxed">System Cargo Configuration Update</p>
+                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Editar Carga</h2>
+                <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] opacity-90 leading-relaxed">Atualização de Configuração da Carga</p>
             </div>
         </div>
 
@@ -68,7 +68,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="md:col-span-2 space-y-3">
                         <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
-                            <Box size={14} className="text-brand-primary" /> Item Description
+                            <Box size={14} className="text-brand-primary" /> Descrição Comercial
                         </label>
                         <input
                             type="text" value={description} onChange={e => setDescription(e.target.value)}
@@ -77,7 +77,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                         />
                     </div>
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Unique Identifier</label>
+                        <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Identificador Único</label>
                         <input
                             type="text" value={identifier} onChange={e => setIdentifier(e.target.value)}
                             className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all shadow-inner"
@@ -88,11 +88,11 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
 
                 <div className="bg-main/50 p-8 rounded-[2rem] border-2 border-subtle shadow-inner space-y-6">
                     <label className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-widest border-b border-subtle pb-3">
-                        <Settings size={16} className="text-brand-primary" /> Physical Element Specification
+                        <Settings size={16} className="text-brand-primary" /> Especificações Físicas
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Weight (t)</label>
+                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Peso (t)</label>
                             <input
                                 type="number" step="0.001" value={weightTonnes} onChange={e => setWeightTonnes(e.target.value)}
                                 className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
@@ -100,7 +100,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Length (m)</label>
+                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Comprimento (m)</label>
                             <input
                                 type="number" step="0.01" value={lengthMeters} onChange={e => setLengthMeters(e.target.value)}
                                 className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
@@ -108,7 +108,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Width (m)</label>
+                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Largura (m)</label>
                             <input
                                 type="number" step="0.01" value={widthMeters} onChange={e => setWidthMeters(e.target.value)}
                                 className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
@@ -116,7 +116,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Height (m)</label>
+                            <label className="block text-[9px] font-black text-primary uppercase tracking-tighter ml-1">Altura (m)</label>
                             <input
                                 type="number" step="0.01" value={heightMeters} onChange={e => setHeightMeters(e.target.value)}
                                 className="w-full bg-header border-2 border-subtle rounded-xl px-4 py-3 text-xs font-mono font-black text-primary outline-none focus:border-brand-primary"
@@ -127,7 +127,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
 
                 <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3">
-                        <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Batch Quantity</label>
+                        <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Quantidade</label>
                         <input
                             type="number" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)}
                             className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all shadow-inner"
@@ -135,21 +135,21 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                         />
                     </div>
                     <div className="space-y-3">
-                        <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">System Shape</label>
+                        <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Geometria</label>
                         <select
                             value={format} onChange={e => setFormat(e.target.value as any)}
                             className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-black text-primary outline-none focus:border-brand-primary appearance-none transition-all shadow-inner"
                         >
-                            <option value="Retangular">Retangular Architecture</option>
-                            <option value="Quadrado">Quadrado (Box)</option>
-                            <option value="Tubular">Tubular (Cylinder)</option>
+                            <option value="Retangular">Retangular</option>
+                            <option value="Quadrado">Quadrado (Caixa)</option>
+                            <option value="Tubular">Tubular (Cilindro)</option>
                         </select>
                     </div>
                 </div>
 
                 <div className="bg-main/70 p-10 rounded-[2.5rem] border-2 border-dashed border-subtle flex flex-col items-center justify-center min-h-[140px] shadow-inner relative overflow-hidden group">
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-brand-primary/10 text-brand-primary rounded-full text-[8px] font-black uppercase tracking-[0.3em] border border-brand-primary/20">
-                        Modified Dimensional Preview
+                        Pré-visualização Dimensional
                     </div>
                     <div className="scale-100 transition-transform duration-500 group-hover:scale-110 mt-4">
                         <CargoPreview format={format} length={Number(lengthMeters) || 1} width={Number(widthMeters) || 1} height={Number(heightMeters) || 1} color={color} quantity={Number(quantity)} dynamicScale={true} />
@@ -159,30 +159,30 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                     <div className="space-y-3">
                         <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
-                           <Palette size={14} className="text-brand-primary" /> Adjusted ID Color
+                           <Palette size={14} className="text-brand-primary" /> Cor de Identificação
                         </label>
                         <div className="relative">
                             <select
                                 value={color} onChange={e => setColor(e.target.value)}
                                 className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-black text-primary appearance-none focus:border-brand-primary cursor-pointer transition-all shadow-inner"
                             >
-                                <option value="#3b82f6">Maritime Blue</option>
-                                <option value="#10b981">Safety Green</option>
-                                <option value="#f59e0b">Warning Amber</option>
-                                <option value="#ef4444">Critical Red</option>
-                                <option value="#8b5cf6">Logistics Purple</option>
-                                <option value="#6b7280">Industrial Grey</option>
+                                <option value="#3b82f6">Azul Marítimo (Padrão)</option>
+                                <option value="#10b981">Verde Segurança</option>
+                                <option value="#f59e0b">Âmbar Atenção</option>
+                                <option value="#ef4444">Vermelho Crítico</option>
+                                <option value="#8b5cf6">Roxo Especial</option>
+                                <option value="#6b7280">Cinza Industrial</option>
                             </select>
                             <div className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white/30 shadow-medium" style={{ backgroundColor: color }} />
                         </div>
                     </div>
                     <div className="space-y-3">
                         <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
-                           <Info size={14} className="text-brand-primary" /> Operational Remarks
+                           <Info size={14} className="text-brand-primary" /> Observações do Operador
                         </label>
                         <input
                             type="text" value={observations} onChange={e => setObservations(e.target.value)}
-                            placeholder="Update handling requirements..."
+                            placeholder="Instruções especiais de manuseio..."
                             className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-bold text-primary outline-none focus:border-brand-primary shadow-inner"
                         />
                     </div>
@@ -190,8 +190,8 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
 
                 <div className="flex items-center justify-between p-6 bg-sidebar border-2 border-subtle rounded-3xl group cursor-pointer hover:border-brand-primary/40 transition-all shadow-low" onClick={() => setIsRemovable(!isRemovable)}>
                     <div className="flex flex-col gap-1">
-                        <span className="text-xs font-black text-primary uppercase tracking-widest leading-none">Operational Removal Protocol</span>
-                        <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter opacity-80">Cargo is authorized for mid-voyage discharge</span>
+                        <span className="text-xs font-black text-primary uppercase tracking-widest leading-none">Carga Removível / Subsea</span>
+                        <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter opacity-80">Item pode ser removido durante a operação</span>
                     </div>
                     <div className={cn(
                         "w-14 h-7 rounded-full transition-all duration-500 relative shadow-inner",
@@ -207,10 +207,10 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
         </div>
 
         {/* Footer Section */}
-        <div className="px-10 py-10 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-8">
+        <div className="px-10 py-6 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-8">
             <button
                 type="button" onClick={onClose}
-                className="px-8 py-4 rounded-2xl text-xs font-black text-black bg-main border-2 border-subtle hover:bg-sidebar transition-all active:scale-95 uppercase tracking-[0.2em]"
+                className="px-8 py-4 rounded-2xl text-xs font-black text-primary bg-main border-2 border-subtle hover:bg-sidebar transition-all active:scale-95 uppercase tracking-[0.2em]"
             >
                 CANCELAR
             </button>
@@ -218,7 +218,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                 type="submit" form="edit-cargo-form"
                 className="flex-1 bg-brand-primary text-white py-5 rounded-2xl text-xs font-black uppercase tracking-[0.25em] shadow-xl shadow-brand-primary/20 hover:brightness-110 active:scale-95 transition-all"
             >
-                Synchronize Element Update
+                SALVAR ALTERAÇÕES
             </button>
         </div>
       </div>

@@ -61,10 +61,10 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Backload Reconciliation</h2>
+                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Reconciliação de Backload</h2>
                 <div className="flex items-center gap-3">
                     <span className="px-4 py-1.5 bg-amber-500/10 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-amber-500/20">
-                       Discharge Manifest: {extractedBackloads.length} Analyzed Items
+                       Manifesto de Desembarque: {extractedBackloads.length} Itens
                     </span>
                 </div>
             </div>
@@ -78,16 +78,16 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                         <div className="flex justify-between items-end px-1">
                             <div>
                                 <h3 className="text-xs font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <CheckCircle size={14} /> On-Board Confirmed Synchrony
+                                    <CheckCircle size={14} /> Cargas Confirmadas a Bordo
                                 </h3>
-                                <p className="text-[10px] font-bold text-secondary uppercase tracking-tight mt-2 opacity-80 leading-none">Verified manifest units found in current vessel inventory</p>
+                                <p className="text-[10px] font-bold text-secondary uppercase tracking-tight mt-2 opacity-80 leading-none">Cargas do manifesto localizadas no inventário da embarcação</p>
                             </div>
                             <button 
                                 onClick={handleDeleteAllMatches}
                                 disabled={isProcessing}
                                 className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black px-6 py-3 rounded-2xl shadow-xl shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-3 transition-all active:scale-95 uppercase tracking-widest"
                             >
-                                <Trash2 size={16} /> Bulk Discharge Protocol
+                                <Trash2 size={16} /> DESEMBARCAR TODAS
                             </button>
                         </div>
 
@@ -97,14 +97,14 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-4">
                                             <span className="font-mono text-sm font-black text-primary">{item.backload.identifier}</span>
-                                            <span className="text-[9px] font-black bg-sidebar px-3 py-1 rounded-lg text-primary border-2 border-subtle uppercase tracking-widest shadow-low">{item.backload.weightTonnes.toFixed(2)}t Package</span>
+                                            <span className="text-[9px] font-black bg-sidebar px-3 py-1 rounded-lg text-primary border-2 border-subtle uppercase tracking-widest shadow-low">{item.backload.weightTonnes.toFixed(2)}t</span>
                                         </div>
                                         <div className="text-xs font-bold text-secondary uppercase tracking-tight truncate mt-2 leading-none opacity-90">{item.backload.description}</div>
                                     </div>
                                     <button 
                                         onClick={() => handleManualDelete(item.onboardMatch!.id)}
                                         className="text-status-error p-3 bg-status-error/5 hover:bg-status-error/10 border-2 border-status-error/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-all shadow-low"
-                                        title="Execute Unit Removal"
+                                        title="Remover Carga"
                                     >
                                         <Trash2 size={18} />
                                     </button>
@@ -117,14 +117,14 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                 {missingCount > 0 && (
                     <div className="space-y-6">
                         <h3 className="text-xs font-black text-amber-600 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                            <Search size={14} /> Manifest Discrepancy Log
+                            <Search size={14} /> Discrepâncias no Manifesto
                         </h3>
                         <div className="bg-amber-500/5 border-2 border-amber-500/30 rounded-[2.5rem] p-8 flex gap-6 shadow-inner">
                             <AlertCircle className="text-amber-500 shrink-0" size={32} />
                             <div className="space-y-2">
-                                <p className="text-[11px] text-amber-900 font-black uppercase leading-relaxed tracking-widest">Identification Anomaly Detected</p>
+                                <p className="text-[11px] text-amber-900 font-black uppercase leading-relaxed tracking-widest">Anomalia de Identificação Detectada</p>
                                 <p className="text-[10px] text-amber-800/80 font-bold uppercase leading-relaxed tracking-tight">
-                                    Items below are present in the discharge manifest but not indexed in the current onboard inventory. Critical check required on identifier strings or historical storage logs.
+                                    Itens abaixo presentes no manifesto não foram localizados no inventário atual. Verifique os identificadores ou os registros históricos de armazenagem.
                                 </p>
                             </div>
                         </div>
@@ -134,7 +134,7 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-3">
                                             <span className="font-mono text-xs font-black text-primary/70">{item.backload.identifier}</span>
-                                            <span className="text-[8px] font-black bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-lg border border-amber-500/20 uppercase tracking-[0.2em]">Pending Reconciliation</span>
+                                            <span className="text-[8px] font-black bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-lg border border-amber-500/20 uppercase tracking-[0.2em]">Pendente</span>
                                         </div>
                                         <div className="text-[10px] font-bold text-secondary uppercase tracking-tight truncate mt-1 opacity-60">{item.backload.description}</div>
                                     </div>
@@ -150,8 +150,8 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                             <CheckCircle className="text-emerald-500" size={64} />
                         </div>
                         <div className="space-y-3">
-                            <h3 className="text-4xl font-black text-primary uppercase tracking-tighter">Inventory Reconciled</h3>
-                            <p className="text-[11px] font-bold text-secondary uppercase tracking-[0.4em] max-w-sm opacity-80">All discharge protocols have been successfully synchronized with the maritime database.</p>
+                            <h3 className="text-4xl font-black text-primary uppercase tracking-tighter">Inventário Reconciliado</h3>
+                            <p className="text-[11px] font-bold text-secondary uppercase tracking-[0.4em] max-w-sm opacity-80">Todos os protocolos de desembarque foram sincronizados com sucesso.</p>
                         </div>
                     </div>
                 )}
@@ -159,14 +159,14 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
         </div>
 
         {/* Footer Section */}
-        <div className="px-10 py-10 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-10">
+        <div className="px-10 py-6 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-10">
             <div className="flex gap-12">
                 <div className="flex flex-col gap-1">
-                    <span className="text-[9px] text-secondary font-black uppercase tracking-[0.2em] opacity-80">Processed</span>
+                    <span className="text-[9px] text-secondary font-black uppercase tracking-[0.2em] opacity-80">Processadas</span>
                     <span className="text-4xl font-black text-emerald-600 leading-none tracking-tighter">{resolvedCount}</span>
                 </div>
                 <div className="flex flex-col gap-1">
-                    <span className="text-[9px] text-secondary font-black uppercase tracking-[0.2em] opacity-80">Unresolved</span>
+                    <span className="text-[9px] text-secondary font-black uppercase tracking-[0.2em] opacity-80">Não Localizadas</span>
                     <span className="text-4xl font-black text-amber-500 leading-none tracking-tighter">{missingCount}</span>
                 </div>
             </div>
@@ -174,7 +174,7 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                 onClick={onClose}
                 className="flex-1 bg-brand-primary text-white py-6 rounded-2xl text-xs font-black uppercase tracking-[0.25em] shadow-xl shadow-brand-primary/25 hover:brightness-110 active:scale-95 transition-all"
             >
-                Finalize Reconciliation Session
+                CONCLUIR
             </button>
         </div>
       </div>

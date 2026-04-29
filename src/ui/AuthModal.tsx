@@ -51,10 +51,10 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                 <ShieldCheck size={48} className="text-brand-primary" />
             </div>
             <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">
-                {isLogin ? 'Operator Access' : 'Create Credential'}
+                {isLogin ? 'Acesso ao Sistema' : 'Criar Conta'}
             </h2>
             <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] mt-5 opacity-90 leading-relaxed">
-                Offshore Terminal Intelligence Portal
+                Portal de Operações Marítimas
             </p>
         </div>
 
@@ -69,7 +69,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
 
             <form onSubmit={handleEmailAuth} className="space-y-8">
                 <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Operator E-mail</label>
+                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">E-mail do Operador</label>
                     <input 
                         type="email" required value={email} onChange={e=>setEmail(e.target.value)} 
                         className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-5.5 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/40" 
@@ -77,7 +77,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                     />
                 </div>
                 <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Access Token</label>
+                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Senha de Acesso</label>
                     <input 
                         type="password" required value={password} onChange={e=>setPassword(e.target.value)} 
                         className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-5.5 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/40" 
@@ -88,18 +88,18 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                     disabled={loading} type="submit" 
                     className="w-full bg-brand-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-black py-6 rounded-[2rem] transition-all shadow-xl shadow-brand-primary/25 flex justify-center items-center gap-4 active:scale-95 uppercase tracking-[0.25em]"
                 >
-                    {loading ? 'AUTHENTICATING ENCRYPTED DATA...' : isLogin ? 'GRANT ACCESS' : 'INITIALIZE OPERATOR'}
+                    {loading ? 'AUTENTICANDO...' : isLogin ? 'ENTRAR' : 'CRIAR CONTA'}
                 </button>
             </form>
 
             <div className="text-center mt-10">
                 <p className="text-[10px] text-secondary font-black tracking-widest uppercase opacity-80">
-                    {isLogin ? "Unauthorized Operator? " : "Existing Agent? "}
-                    <button 
-                        onClick={() => setIsLogin(!isLogin)} 
+                    {isLogin ? "Sem cadastro? " : "Já tem conta? "}
+                    <button
+                        onClick={() => setIsLogin(!isLogin)}
                         className="text-brand-primary hover:underline underline-offset-4 font-black outline-none tracking-tighter ml-1"
                     >
-                        {isLogin ? 'REQUEST ENTRY' : 'RETURN TO TERMINAL'}
+                        {isLogin ? 'CRIAR CONTA' : 'ENTRAR'}
                     </button>
                 </p>
             </div>

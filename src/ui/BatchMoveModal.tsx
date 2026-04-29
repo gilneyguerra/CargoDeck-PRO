@@ -84,10 +84,10 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Transfer Hub</h2>
+                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Mover em Lote</h2>
                 <div className="flex items-center gap-3">
                     <span className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-brand-primary/20">
-                       {selectedCount} units for reallocation
+                       {selectedCount} unidade(s) selecionada(s)
                     </span>
                 </div>
             </div>
@@ -99,14 +99,14 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 {/* Destination Section */}
                 <div className="space-y-4">
                     <label className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-widest ml-1">
-                        <Ship size={16} className="text-brand-primary" /> 1. Operational Destination
+                        <Ship size={16} className="text-brand-primary" /> 1. Destino
                     </label>
                     <select
                         value={targetLocationId} onChange={e => setTargetLocationId(e.target.value)}
                         className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all appearance-none shadow-inner"
                     >
                         {locations.map(loc => (
-                            <option key={loc.id} value={loc.id}>{loc.name} ({loc.bays.length} active bays)</option>
+                            <option key={loc.id} value={loc.id}>{loc.name} ({loc.bays.length} baias)</option>
                         ))}
                     </select>
                 </div>
@@ -115,7 +115,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 <div className="space-y-5">
                     <div className="flex items-center justify-between px-1">
                         <label className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-widest">
-                            <Layers size={16} className="text-brand-primary" /> 2. Stowage Orientation
+                            <Layers size={16} className="text-brand-primary" /> 2. Orientação de Estiva
                         </label>
                         {selectedCount > 1 && (
                             <button 
@@ -125,7 +125,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                                     isDistributingSides ? "bg-indigo-600 border-indigo-600 text-white shadow-medium" : "bg-sidebar border-subtle text-primary hover:border-brand-primary"
                                 )}
                             >
-                                {isDistributingSides ? 'Balance Board' : 'Locked Side'}
+                                {isDistributingSides ? 'Distribuição Personalizada' : 'Bordo Fixo'}
                             </button>
                         )}
                     </div>
@@ -162,9 +162,9 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                             <div className="flex items-center justify-between pt-2 border-t border-subtle/30">
                                 <div className="flex items-center gap-3">
                                     <div className={cn("w-3 h-3 rounded-full border-2 border-white/20", totalDistributed === selectedCount ? "bg-emerald-500 shadow-glow animate-pulse" : "bg-amber-500")} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{totalDistributed} / {selectedCount} Units Balanced</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{totalDistributed} / {selectedCount} Unidades Distribuídas</span>
                                 </div>
-                                <button onClick={splitEvenly} className="text-[10px] font-black text-brand-primary hover:underline underline-offset-4 uppercase tracking-tighter">Automatic Split</button>
+                                <button onClick={splitEvenly} className="text-[10px] font-black text-brand-primary hover:underline underline-offset-4 uppercase tracking-tighter">Divisão Automática</button>
                             </div>
                         </div>
                     )}
@@ -173,7 +173,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 {/* Strategy Section */}
                 <div className="space-y-4">
                     <label className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-widest ml-1">
-                        <Shuffle size={16} className="text-brand-primary" /> 3. Layout Strategy
+                        <Shuffle size={16} className="text-brand-primary" /> 3. Estratégia de Alocação
                     </label>
                     <div className="flex flex-col gap-4">
                         <button
@@ -187,8 +187,8 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                                 {distributionMode === 'single-bay' && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-glow" />}
                             </div>
                             <div className="flex flex-col gap-1">
-                                <p className="text-sm font-black text-primary uppercase tracking-tight leading-none">Concentrated Point</p>
-                                <p className="text-[10px] font-bold text-secondary uppercase tracking-tighter opacity-80 leading-none">Mandatory allocation in a specific physical bay</p>
+                                <p className="text-sm font-black text-primary uppercase tracking-tight leading-none">Baia Específica</p>
+                                <p className="text-[10px] font-bold text-secondary uppercase tracking-tighter opacity-80 leading-none">Alocar todas as cargas em uma baia específica</p>
                             </div>
                         </button>
 
@@ -198,7 +198,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                                 className="ml-10 bg-sidebar border-2 border-brand-primary/20 rounded-xl px-5 py-3 text-xs font-black text-primary outline-none focus:border-brand-primary appearance-none transition-all shadow-inner"
                             >
                                 {activeLoc.bays.map(bay => (
-                                    <option key={bay.id} value={bay.id}>BAY ARCHITECTURE {String(bay.number).padStart(2, '0')}</option>
+                                    <option key={bay.id} value={bay.id}>BAIA {String(bay.number).padStart(2, '0')}</option>
                                 ))}
                             </select>
                         )}
@@ -214,8 +214,8 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                                 {distributionMode === 'distribute' && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-glow" />}
                             </div>
                             <div className="flex flex-col gap-1">
-                                <p className="text-sm font-black text-primary uppercase tracking-tight leading-none">Sequential Loading</p>
-                                <p className="text-[10px] font-bold text-secondary uppercase tracking-tighter opacity-80 leading-none">Automatic distribution spread across regional bays</p>
+                                <p className="text-sm font-black text-primary uppercase tracking-tight leading-none">Distribuição Sequencial</p>
+                                <p className="text-[10px] font-bold text-secondary uppercase tracking-tighter opacity-80 leading-none">Distribuição automática entre as baias disponíveis</p>
                             </div>
                         </button>
                     </div>
@@ -224,10 +224,10 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
         </div>
 
         {/* Footer Section */}
-        <div className="px-10 py-10 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-8">
+        <div className="px-10 py-6 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-8">
             <button
                 type="button" onClick={onClose}
-                className="px-8 py-4 rounded-2xl text-xs font-black text-black bg-main border-2 border-subtle hover:bg-sidebar transition-all active:scale-95 uppercase tracking-[0.2em]"
+                className="px-8 py-4 rounded-2xl text-xs font-black text-primary bg-main border-2 border-subtle hover:bg-sidebar transition-all active:scale-95 uppercase tracking-[0.2em]"
             >
                 CANCELAR
             </button>
@@ -236,7 +236,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 disabled={!targetLocationId || (distributionMode === 'single-bay' && !targetBayId) || !isDistributionValid}
                 className="flex-1 bg-brand-primary text-white py-5 rounded-2xl text-xs font-black uppercase tracking-[0.25em] shadow-xl shadow-brand-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-4"
             >
-                <ArrowRight size={18} /> Execute Spatial Transfer
+                <ArrowRight size={18} /> EXECUTAR MOVIMENTAÇÃO
             </button>
         </div>
       </div>
