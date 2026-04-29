@@ -59,12 +59,20 @@ export function CargoPreview({ format, length, width, height, color, quantity = 
     // Scale up uniformly so the smallest dimension reaches MIN_DISPLAY_PX
     const minDim = Math.min(rawDisplayWidth, rawDisplayHeight);
     const minBoost = minDim < MIN_DISPLAY_PX ? MIN_DISPLAY_PX / minDim : 1;
+
+    // Cap máximo: nenhuma dimensão ultrapassa 300px no deck (evita cargos tubulares enormes)
+    const MAX_DISPLAY_PX = 300;
+    const boostedW = rawDisplayWidth  * minBoost;
+    const boostedH = rawDisplayHeight * minBoost;
+    const maxSide  = Math.max(boostedW, boostedH);
+    const capScale = maxSide > MAX_DISPLAY_PX ? MAX_DISPLAY_PX / maxSide : 1;
+
     const displayWidth = dynamicScale
-        ? Math.min(rawDisplayWidth * minBoost, 80)
-        : rawDisplayWidth * minBoost;
+        ? Math.min(boostedW * capScale, 80)
+        : boostedW * capScale;
     const displayHeight = dynamicScale
-        ? Math.min(rawDisplayHeight * minBoost, 80)
-        : rawDisplayHeight * minBoost;
+        ? Math.min(boostedH * capScale, 80)
+        : boostedH * capScale;
 
     return (
         <svg 

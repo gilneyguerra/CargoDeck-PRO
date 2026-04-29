@@ -172,20 +172,112 @@ function parseCsvToRows(text: string): EditorRow[] {
   return sheetDataToRows(data);
 }
 
-// ─── Parser Excel (SheetJS via CDN) ──────────────────────────────────────────
+// ─── Parser XLSX nativo (ZIP + XML, sem CDN, sem npm) ────────────────────────
 
-// Interface mínima do SheetJS — evita `import('xlsx')` que exige o pacote instalado.
-// SheetJS é carregado em runtime via CDN e exposto em window.XLSX.
+async function inflateRaw(compressed: Uint8Array): Promise<Uint8Array> {
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(compressed);
+  writer.close();
+  const chunks: Uint8Array[] = [];
+  const reader = ds.readable.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.length; }
+  return out;
+}
+
+async function readZipEntry(buf: ArrayBuffer, target: string): Promise<string | null> {
+  const bytes = new Uint8Array(buf);
+  const dv = new DataView(buf);
+  const dec = new TextDecoder();
+
+  // Localizar EOCD (End of Central Directory)
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65_556); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) return null;
+
+  const cdOffset = dv.getUint32(eocd + 16, true);
+  const cdCount  = dv.getUint16(eocd + 8,  true);
+  let pos = cdOffset;
+
+  for (let e = 0; e < cdCount; e++) {
+    if (dv.getUint32(pos, true) !== 0x02014b50) break;
+    const method     = dv.getUint16(pos + 10, true);
+    const compSize   = dv.getUint32(pos + 20, true);
+    const nameLen    = dv.getUint16(pos + 28, true);
+    const extraLen   = dv.getUint16(pos + 30, true);
+    const commentLen = dv.getUint16(pos + 32, true);
+    const localOff   = dv.getUint32(pos + 42, true);
+    const name       = dec.decode(bytes.slice(pos + 46, pos + 46 + nameLen));
+    pos += 46 + nameLen + extraLen + commentLen;
+
+    if (name !== target) continue;
+
+    const lnLen = dv.getUint16(localOff + 26, true);
+    const leLen = dv.getUint16(localOff + 28, true);
+    const data  = bytes.slice(localOff + 30 + lnLen + leLen, localOff + 30 + lnLen + leLen + compSize);
+
+    if (method === 0) return dec.decode(data);
+    if (method === 8) return dec.decode(await inflateRaw(data));
+    return null;
+  }
+  return null;
+}
+
+function colIndex(letters: string): number {
+  let n = 0;
+  for (const ch of letters) n = n * 26 + ch.charCodeAt(0) - 64;
+  return n - 1;
+}
+
+function xlsxSharedStrings(xml: string): string[] {
+  return Array.from(new DOMParser().parseFromString(xml, 'text/xml').querySelectorAll('si'))
+    .map(si => Array.from(si.querySelectorAll('t')).map(t => t.textContent ?? '').join(''));
+}
+
+function xlsxSheet(xml: string, strings: string[]): string[][] {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  const result: string[][] = [];
+  for (const row of Array.from(doc.querySelectorAll('row'))) {
+    const cells: string[] = [];
+    for (const c of Array.from(row.querySelectorAll('c'))) {
+      const ref = c.getAttribute('r') ?? '';
+      const idx = colIndex(ref.replace(/\d/g, ''));
+      while (cells.length <= idx) cells.push('');
+      const t = c.getAttribute('t');
+      const v = c.querySelector('v')?.textContent ?? '';
+      if (t === 's') cells[idx] = strings[parseInt(v)] ?? '';
+      else if (t === 'inlineStr') cells[idx] = c.querySelector('t')?.textContent ?? '';
+      else cells[idx] = v;
+    }
+    result.push(cells);
+  }
+  return result;
+}
+
+async function parseExcelNative(buffer: ArrayBuffer): Promise<EditorRow[]> {
+  const ssXml = await readZipEntry(buffer, 'xl/sharedStrings.xml');
+  const shXml  = await readZipEntry(buffer, 'xl/worksheets/sheet1.xml');
+  if (!shXml) throw new Error('Planilha não encontrada no arquivo XLSX.');
+  const strings = ssXml ? xlsxSharedStrings(ssXml) : [];
+  return sheetDataToRows(xlsxSheet(shXml, strings));
+}
+
+// ─── SheetJS via CDN (fallback caso o parser nativo falhe) ───────────────────
+
 interface XlsxSheet {
   '!cols'?: { wch: number }[];
   [key: string]: unknown;
 }
-
-interface XlsxWorkbook {
-  SheetNames: string[];
-  Sheets: Record<string, XlsxSheet>;
-}
-
+interface XlsxWorkbook { SheetNames: string[]; Sheets: Record<string, XlsxSheet> }
 interface XlsxLib {
   read: (data: ArrayBuffer, opts: { type: 'array' }) => XlsxWorkbook;
   writeFile: (wb: XlsxWorkbook, filename: string) => void;
@@ -198,64 +290,42 @@ interface XlsxLib {
 }
 
 let xlsxLib: XlsxLib | null = null;
-
-// Múltiplos CDNs em ordem de prioridade — tenta o próximo se o anterior falhar
 const XLSX_CDN_URLS = [
   'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
 ];
-
-function loadScript(url: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Remover script anterior com a mesma src se falhou
-    const existing = document.querySelector(`script[data-xlsx]`);
-    if (existing) existing.remove();
-
-    const script = document.createElement('script');
-    script.src = url;
-    script.setAttribute('data-xlsx', '1');
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`CDN indisponível: ${url}`));
-    document.head.appendChild(script);
-  });
-}
 
 async function loadXlsx(): Promise<XlsxLib> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (xlsxLib || (window as any).XLSX) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    xlsxLib = xlsxLib ?? ((window as any).XLSX as XlsxLib);
-    return xlsxLib!;
-  }
-
-  let lastError: Error = new Error('Nenhum CDN disponível');
+  if (xlsxLib || (window as any).XLSX) { xlsxLib = xlsxLib ?? (window as any).XLSX; return xlsxLib!; }
   for (const url of XLSX_CDN_URLS) {
     try {
-      await loadScript(url);
+      await new Promise<void>((res, rej) => {
+        const s = document.createElement('script'); s.src = url;
+        s.onload = () => res(); s.onerror = () => rej();
+        document.head.appendChild(s);
+      });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lib = (window as any).XLSX as XlsxLib | undefined;
-      if (lib?.read && lib?.utils) {
-        xlsxLib = lib;
-        return xlsxLib;
-      }
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-    }
+      const lib = (window as any).XLSX as XlsxLib;
+      if (lib?.read) { xlsxLib = lib; return lib; }
+    } catch { /* try next */ }
   }
-  throw new Error(
-    `Não foi possível carregar o leitor de Excel. Verifique sua conexão ou converta o arquivo para CSV e tente novamente. (${lastError.message})`
-  );
+  throw new Error('SheetJS indisponível via CDN');
 }
 
 async function parseExcelToRows(buffer: ArrayBuffer): Promise<EditorRow[]> {
-  const XLSX = await loadXlsx();
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' });
-  return sheetDataToRows(data);
+  // Tenta parser nativo primeiro — sem CDN, sem dependências
+  try {
+    return await parseExcelNative(buffer);
+  } catch {
+    // Fallback: SheetJS via CDN
+    const XLSX = await loadXlsx();
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' });
+    return sheetDataToRows(data);
+  }
 }
 
 // ─── Células ──────────────────────────────────────────────────────────────────

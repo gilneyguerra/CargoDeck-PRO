@@ -182,12 +182,12 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             "flex-1 flex items-center justify-center font-black text-center leading-tight overflow-hidden break-words",
             textColorClass,
             !isLightBackground && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-          )} style={{ fontSize: `${Math.max(6, fontSize * 0.9)}px`, display: (cargo.widthMeters < 0.6 || cargo.lengthMeters < 0.6) ? 'none' : 'flex' }}>
+          )} style={{ fontSize: `${Math.max(6, fontSize * 0.9)}px` }}>
             {cargo.identifier}
           </div>
 
           {/* Unidade de Destino (Badge) */}
-          {cargo.destinoCarga && (cargo.widthMeters > 0.8 && cargo.lengthMeters > 0.8) && (
+          {cargo.destinoCarga && (
             <div 
               className={cn(
                 "mt-auto px-1.5 py-1 rounded-md font-black tracking-tighter shadow-md text-center truncate",
