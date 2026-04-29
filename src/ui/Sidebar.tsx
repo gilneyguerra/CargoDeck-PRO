@@ -1,6 +1,6 @@
 import {
   Plus, Upload, Trash2, Box, Package, Anchor, Truck,
-  Zap, MoveRight, Users, MessageSquare
+  Zap, MoveRight, Users, MessageSquare, Table2
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '../hooks/usePDFUpload';
@@ -13,6 +13,7 @@ import { ManualCargoModal } from './ManualCargoModal';
 import { BatchMoveModal } from './BatchMoveModal';
 import { GroupMoveModal } from './GroupMoveModal';
 import { ManifestoChatModal } from './ManifestoChatModal';
+import { CargoEditorModal } from './CargoEditorModal';
 
 export default function Sidebar() {
   const { 
@@ -32,6 +33,7 @@ export default function Sidebar() {
   const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
   const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
+  const [showEditorModal, setShowEditorModal] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: 'inventory-sidebar',
@@ -125,26 +127,26 @@ export default function Sidebar() {
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
         {/* Manifest Import Section */}
         <div className="p-0 border-b border-subtle bg-header/20">
-            <div className="grid grid-cols-2 gap-0">
+            <div className="grid grid-cols-3 gap-0">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isProcessing}
                   title="Importar Manifesto PDF"
                   className={cn(
-                    "border-r border-subtle p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300",
+                    "border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300",
                     isProcessing
                       ? "bg-brand-primary/5 cursor-not-allowed"
                       : "bg-main/30 hover:bg-main cursor-pointer group"
                   )}
                 >
-                    <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-                      {isProcessing ? <Zap className="w-5 h-5 animate-pulse" /> : <Upload className="w-5 h-5" />}
+                    <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+                      {isProcessing ? <Zap className="w-4 h-4 animate-pulse" /> : <Upload className="w-4 h-4" />}
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.1em]">
-                        {isProcessing ? 'PROCESSANDO...' : 'IMPORTAR PDF'}
+                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">
+                        {isProcessing ? 'PROCESSANDO...' : 'PDF'}
                       </span>
-                      <span className="text-[9px] font-bold text-muted">OCR Tradicional</span>
+                      <span className="text-[8px] font-bold text-muted">OCR</span>
                     </div>
                 </button>
 
@@ -152,14 +154,29 @@ export default function Sidebar() {
                   onClick={() => setShowChatModal(true)}
                   disabled={isProcessing}
                   title="Importar via Chat IA"
-                  className="p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
+                  className="border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
                 >
-                    <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-                      <MessageSquare className="w-5 h-5" />
+                    <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+                      <MessageSquare className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.1em]">IMPORTAR VIA IA</span>
-                      <span className="text-[9px] font-bold text-muted">Chat Inteligente</span>
+                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">VIA IA</span>
+                      <span className="text-[8px] font-bold text-muted">Chat</span>
+                    </div>
+                </button>
+
+                <button
+                  onClick={() => setShowEditorModal(true)}
+                  disabled={isProcessing}
+                  title="Editor de Cargas em Grade"
+                  className="p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
+                >
+                    <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+                      <Table2 className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">GRADE</span>
+                      <span className="text-[8px] font-bold text-muted">Planilha</span>
                     </div>
                 </button>
             </div>
@@ -316,6 +333,7 @@ export default function Sidebar() {
         />
         <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
         <ManifestoChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
+        <CargoEditorModal isOpen={showEditorModal} onClose={() => setShowEditorModal(false)} />
     </aside>
   );
 }
