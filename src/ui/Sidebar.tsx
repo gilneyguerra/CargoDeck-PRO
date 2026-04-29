@@ -1,6 +1,6 @@
-import { 
-  Plus, Upload, Trash2, Box, Package, Anchor, Truck, 
-  Zap, MoveRight
+import {
+  Plus, Upload, Trash2, Box, Package, Anchor, Truck,
+  Zap, MoveRight, Users
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '../hooks/usePDFUpload';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useDroppable } from '@dnd-kit/core';
 import { ManualCargoModal } from './ManualCargoModal';
 import { BatchMoveModal } from './BatchMoveModal';
+import { GroupMoveModal } from './GroupMoveModal';
 
 export default function Sidebar() {
   const { 
@@ -28,6 +29,7 @@ export default function Sidebar() {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
   const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
+  const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: 'inventory-sidebar',
@@ -194,8 +196,15 @@ export default function Sidebar() {
                 </button>
 
                 <div className="flex items-center gap-1.5 ml-auto">
+                    <button
+                      onClick={() => setShowGroupMoveModal(true)}
+                      title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-all shrink-0"
+                    >
+                      <Users size={12} /> GRUPO
+                    </button>
                     {selectedCargoIds.size > 0 && (
-                      <button 
+                      <button
                         onClick={() => setIsBatchMoveOpen(true)}
                         className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black text-white bg-indigo-600 hover:brightness-110 shadow-md shadow-indigo-500/20 transition-all shrink-0"
                       >
@@ -279,16 +288,17 @@ export default function Sidebar() {
         </div>
 
         <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-        <BatchMoveModal 
-          isOpen={isBatchMoveOpen} 
-          onClose={() => setIsBatchMoveOpen(false)} 
-          selectedCargoIds={Array.from(selectedCargoIds)} 
+        <BatchMoveModal
+          isOpen={isBatchMoveOpen}
+          onClose={() => setIsBatchMoveOpen(false)}
+          selectedCargoIds={Array.from(selectedCargoIds)}
           selectedCount={selectedCargoIds.size}
           onSuccess={() => {
             setSelectedCargoIds(new Set());
             notify('Cargas movidas com sucesso!', 'success');
           }}
         />
+        <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
     </aside>
   );
 }
