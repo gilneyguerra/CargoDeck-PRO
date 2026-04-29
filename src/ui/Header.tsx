@@ -1,6 +1,6 @@
 import {
   Trash2, Download, CloudUpload, UserCircle, LogIn,
-  Sun, Moon, Plus, Users
+  Sun, Moon, Plus
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
@@ -9,7 +9,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { AuthModal } from './AuthModal';
-import { GroupMoveModal } from './GroupMoveModal';
 import { cn } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 
@@ -29,7 +28,6 @@ export function Header() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
   const [isEditingShip, setIsEditingShip] = useState(false);
-  const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
   const [tempShipName, setTempShipName] = useState(manifestShipName || '');
 
   // Update temp name when store changes (e.g. from PDF OCR)
@@ -211,15 +209,6 @@ export function Header() {
             </div>
 
             <button
-              onClick={() => setShowGroupMoveModal(true)}
-              title="Movimentar Cargas em Grupo"
-              className="flex items-center gap-2 bg-[#1A237E] hover:brightness-110 text-white px-5 py-3.5 rounded-2xl text-xs font-extrabold shadow-high active:scale-95 transition-all hover-lift"
-            >
-              <Users size={16} />
-              <span className="tracking-widest hidden lg:inline">MOVER EM GRUPO</span>
-            </button>
-
-            <button
               onClick={handleSaveToCloud}
               disabled={saving}
               title="Sincronizar"
@@ -260,7 +249,6 @@ export function Header() {
       </header>
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
 
       {exportModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">

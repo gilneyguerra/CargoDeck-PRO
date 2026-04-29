@@ -1,5 +1,6 @@
 // src/ui/GroupMoveModal.tsx
 import { useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
     X, Search, CheckCircle2, AlertTriangle, Scale,
     Users, ChevronRight, ChevronLeft
@@ -218,8 +219,8 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
             <div className="w-[95vw] h-[90vh] bg-white dark:bg-[#0f172a] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-subtle animate-in fade-in slide-in-from-bottom-4 duration-300">
 
                 {/* ── Header ── */}
@@ -476,6 +477,7 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                 </div>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

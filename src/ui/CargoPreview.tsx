@@ -49,11 +49,22 @@ export function CargoPreview({ format, length, width, height, color, quantity = 
         }
     }
 
-    // Determine visual size based on props with safety guards
+    // Determine visual size — enforce minimum 36px on smallest dimension
+    const MIN_DISPLAY_PX = 36;
     const safeTotalWidth = Math.max(0.1, totalWidth);
-    const displayWidth = dynamicScale ? Math.min(safeTotalWidth, 60) : safeTotalWidth;
-    const scaleFactor = displayWidth / safeTotalWidth;
-    const displayHeight = Math.max(0.1, totalHeight * scaleFactor);
+    const rawDisplayWidth = dynamicScale ? Math.min(safeTotalWidth, 60) : safeTotalWidth;
+    const rawScaleFactor = rawDisplayWidth / safeTotalWidth;
+    const rawDisplayHeight = Math.max(0.1, totalHeight * rawScaleFactor);
+
+    // Scale up uniformly so the smallest dimension reaches MIN_DISPLAY_PX
+    const minDim = Math.min(rawDisplayWidth, rawDisplayHeight);
+    const minBoost = minDim < MIN_DISPLAY_PX ? MIN_DISPLAY_PX / minDim : 1;
+    const displayWidth = dynamicScale
+        ? Math.min(rawDisplayWidth * minBoost, 80)
+        : rawDisplayWidth * minBoost;
+    const displayHeight = dynamicScale
+        ? Math.min(rawDisplayHeight * minBoost, 80)
+        : rawDisplayHeight * minBoost;
 
     return (
         <svg 

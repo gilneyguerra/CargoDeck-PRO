@@ -1,12 +1,13 @@
 import { useState, memo, useMemo } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
-import { Settings, Plus, Search, Trash2, Edit, CheckCircle2, Scale } from 'lucide-react';
+import { Settings, Plus, Search, Trash2, Edit, CheckCircle2, Scale, Users } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import type { Bay } from '@/domain/Bay';
 import type { Cargo } from '@/domain/Cargo';
 import type { CargoLocation } from '@/domain/Location';
 import { DeckSettingsModal } from './DeckSettingsModal';
+import { GroupMoveModal } from './GroupMoveModal';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import DraggableCargo from './DraggableCargo';
 import { metersToPixels } from '@/lib/scaling';
@@ -169,6 +170,7 @@ export function DeckArea() {
      const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, setEditingCargo, editLocation, deleteLocation } = useCargoStore();
     const activeLocation = locations.find(l => l.id === activeLocationId);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
 
     // Auxiliar para contar matches por localização
     const getMatchesForLocation = (loc: CargoLocation) => {
@@ -381,7 +383,16 @@ export function DeckArea() {
                       />
                     </div>
                     
-                    <button 
+                    <button
+                      onClick={() => setShowGroupMoveModal(true)}
+                      title="Movimentar Cargas em Grupo"
+                      className="flex items-center gap-3 bg-[#1A237E] hover:brightness-110 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 h-16 shrink-0"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="hidden xl:inline">MOVER EM GRUPO</span>
+                    </button>
+
+                    <button
                       onClick={() => setIsSettingsOpen(true)}
                       className="flex items-center gap-3 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 h-16"
                     >
@@ -407,6 +418,7 @@ export function DeckArea() {
                 </div>
             </div>
             
+            <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
             <DeckSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         </div>
     );
