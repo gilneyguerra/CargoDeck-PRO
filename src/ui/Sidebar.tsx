@@ -1,6 +1,6 @@
 import {
   Plus, Upload, Trash2, Box, Package, Anchor, Truck,
-  Zap, MoveRight, Users
+  Zap, MoveRight, Users, MessageSquare
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '../hooks/usePDFUpload';
@@ -12,6 +12,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { ManualCargoModal } from './ManualCargoModal';
 import { BatchMoveModal } from './BatchMoveModal';
 import { GroupMoveModal } from './GroupMoveModal';
+import { ManifestoChatModal } from './ManifestoChatModal';
 
 export default function Sidebar() {
   const { 
@@ -30,6 +31,7 @@ export default function Sidebar() {
   const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
   const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
   const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: 'inventory-sidebar',
@@ -123,29 +125,43 @@ export default function Sidebar() {
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
         {/* Manifest Import Section */}
         <div className="p-0 border-b border-subtle bg-header/20">
-            <div className="grid grid-cols-1 gap-4">
-                <button 
+            <div className="grid grid-cols-2 gap-0">
+                <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isProcessing}
-                  title="Importar Manifesto"
+                  title="Importar Manifesto PDF"
                   className={cn(
-                    "w-full border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center gap-4 transition-all duration-300",
-                    isProcessing 
-                      ? "bg-brand-primary/5 border-brand-primary/30 cursor-not-allowed" 
-                      : "bg-main/30 border-strong/50 hover:bg-main hover:border-brand-primary cursor-pointer group shadow-low hover:shadow-medium"
+                    "border-r border-subtle p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300",
+                    isProcessing
+                      ? "bg-brand-primary/5 cursor-not-allowed"
+                      : "bg-main/30 hover:bg-main cursor-pointer group"
                   )}
                 >
-                    <div className="p-5 bg-brand-primary/10 rounded-full text-brand-primary group-hover:scale-110 transition-transform shadow-low">
-                      {isProcessing ? <Zap className="w-7 h-7 animate-pulse" /> : <Upload className="w-7 h-7" />}
+                    <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+                      {isProcessing ? <Zap className="w-5 h-5 animate-pulse" /> : <Upload className="w-5 h-5" />}
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-xs font-black text-primary uppercase tracking-[0.1em] mb-1.5">
-                        {isProcessing ? 'SCANNING DATA...' : 'UPLOAD MANIFEST'}
+                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.1em]">
+                        {isProcessing ? 'PROCESSANDO...' : 'IMPORTAR PDF'}
                       </span>
-                      <span className="text-[10px] font-black text-secondary">Surgical PDF Processing</span>
+                      <span className="text-[9px] font-bold text-muted">OCR Tradicional</span>
                     </div>
                 </button>
-                
+
+                <button
+                  onClick={() => setShowChatModal(true)}
+                  disabled={isProcessing}
+                  title="Importar via Chat IA"
+                  className="p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
+                >
+                    <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.1em]">IMPORTAR VIA IA</span>
+                      <span className="text-[9px] font-bold text-muted">Chat Inteligente</span>
+                    </div>
+                </button>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
         </div>
@@ -299,6 +315,7 @@ export default function Sidebar() {
           }}
         />
         <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
+        <ManifestoChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
     </aside>
   );
 }
