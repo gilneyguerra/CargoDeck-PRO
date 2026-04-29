@@ -40,6 +40,13 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Solução**: Ao remover um bloco JSX que consome uma variável local, remover também a declaração da variável no mesmo passo.
 - **Contexto**: Ocorrido em `GridRow` do `CargoEditorModal.tsx` — `catMeta` foi declarado para uso de cor mas o elemento visual não foi gerado.
 
+## 10. Referência de Tipo a Pacote Não Instalado via `typeof import()` (TS2307)
+- **Problema**: Erro `TS2307: Cannot find module 'xlsx' or its corresponding type declarations`.
+- **Causa**: Ao carregar uma biblioteca via CDN em runtime (sem `npm install`), usar `typeof import('xlsx')` como anotação de tipo faz o compilador TypeScript tentar resolver o módulo `xlsx` em tempo de compilação — e falha porque o pacote não existe em `node_modules`. A **lição 6** (tipagem de libs CDN) não cobriu este padrão porque tratava de `declare const` em arquivos `.d.ts`, não de `import()` de tipo embutido no código.
+- **Solução**: Nunca usar `typeof import('pacote-não-instalado')` como tipo. Em vez disso, declarar uma **interface local mínima** que descreve apenas os métodos realmente usados do objeto CDN, e fazer cast via `(window as any).LIB as MinhaInterface`.
+- **Regra geral**: Qualquer biblioteca carregada por `<script>` dinâmico ou CDN — sem entrada em `package.json` — **nunca pode ser referenciada por nome de módulo** em anotações TypeScript (`import type`, `typeof import`, `import()`). Use sempre interfaces locais ou `unknown` com cast pontual.
+- **Contexto**: Ocorrido em `CargoEditorModal.tsx` ao implementar importação de Excel via SheetJS CDN — `typeof import('xlsx')` usado como tipo de variável e retorno de Promise causou falha no build do Vercel.
+
 ## 7. Imports Redundantes de React (Modern JSX)
 - **Problema**: Erro `TS6133: 'React' is declared but its value is never read`.
 - **Causa**: Em projetos com React 17+, o compilador não exige o import global do `React` para processar JSX. Mantê-lo no topo do arquivo sem chamadas explícitas (como `React.useState`) gera um alerta de variável não utilizada.

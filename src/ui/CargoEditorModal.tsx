@@ -174,18 +174,29 @@ function parseCsvToRows(text: string): EditorRow[] {
 
 // ─── Parser Excel (SheetJS via CDN) ──────────────────────────────────────────
 
-// Carrega SheetJS uma única vez e mantém em memória
-let xlsxLib: typeof import('xlsx') | null = null;
+// Interface mínima do SheetJS — evita `import('xlsx')` que exige o pacote instalado.
+// SheetJS é carregado em runtime via CDN e exposto em window.XLSX.
+interface XlsxLib {
+  read: (data: ArrayBuffer, opts: { type: 'array' }) => {
+    SheetNames: string[];
+    Sheets: Record<string, unknown>;
+  };
+  utils: {
+    sheet_to_json: <T>(sheet: unknown, opts: { header: 1; defval: string }) => T[];
+  };
+}
 
-async function loadXlsx() {
+let xlsxLib: XlsxLib | null = null;
+
+async function loadXlsx(): Promise<XlsxLib> {
   if (xlsxLib) return xlsxLib;
-  return new Promise<typeof import('xlsx')>((resolve, reject) => {
+  return new Promise<XlsxLib>((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
     script.onload = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      xlsxLib = (window as any).XLSX as typeof import('xlsx');
-      resolve(xlsxLib!);
+      xlsxLib = (window as any).XLSX as XlsxLib;
+      resolve(xlsxLib);
     };
     script.onerror = () => reject(new Error('Falha ao carregar biblioteca Excel (SheetJS)'));
     document.head.appendChild(script);
@@ -198,7 +209,7 @@ async function parseExcelToRows(buffer: ArrayBuffer): Promise<EditorRow[]> {
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const data = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' });
-  return sheetDataToRows(data as string[][]);
+  return sheetDataToRows(data);
 }
 
 // ─── Células ──────────────────────────────────────────────────────────────────
