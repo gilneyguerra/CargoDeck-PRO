@@ -21,6 +21,11 @@ export function PDFUploader() {
         const extractedItems = await upload(file);
 
         if (extractedItems) {
+            const categoryMap: Record<string, Cargo['category']> = {
+                CONTAINER: 'CONTAINER', BASKET: 'BASKET', TUBULAR: 'TUBULAR',
+                EQUIPMENT: 'EQUIPMENT', HAZARDOUS: 'HAZARDOUS', HEAVY: 'HEAVY',
+            };
+
             const mappedCargoes: Cargo[] = extractedItems.map(item => {
                 let widthMeters: number;
                 let lengthMeters: number;
@@ -28,44 +33,64 @@ export function PDFUploader() {
                 if (item.width !== undefined && item.length !== undefined) {
                     widthMeters = item.width;
                     lengthMeters = item.length;
-                    logger.debug(`Using parsed dimensions for ${item.identifier}`, { widthMeters, lengthMeters });
                 } else if (item.volume > 0) {
                     widthMeters = Math.max(Math.sqrt(item.volume), 2.4);
                     lengthMeters = Math.max(Math.sqrt(item.volume), 6);
-                    logger.warn(`Using volume-based fallback dimensions for ${item.identifier}`, { 
-                        volume: item.volume, 
-                        widthMeters, 
-                        lengthMeters 
-                    });
+                    logger.warn(`Volume-based fallback dimensions for ${item.identifier}`, { volume: item.volume });
                 } else {
                     widthMeters = 2.4;
                     lengthMeters = 6;
-                    logger.warn(`No dimensions available for ${item.identifier}, using defaults`, { 
-                        widthMeters, 
-                        lengthMeters 
-                    });
+                    logger.warn(`Default dimensions applied for ${item.identifier}`);
                 }
 
+                const heightMeters = item.height ?? 0;
+                const weightKg  = item.weightKg ?? (item.weight * 1000);
+                const weightTon = item.weight;
+
                 return {
-                    id:           item.id,
-                    description:  item.description,
-                    identifier:   item.identifier,
-                    weightTonnes: item.weight,
+                    id:          item.id,
+                    description: item.description,
+                    identifier:  item.identifier,
+
+                    // Dimensões — flat (engine) + nested (spec)
                     widthMeters,
                     lengthMeters,
-                    heightMeters: item.height ?? 0,
-                    quantity:     1,
-                    category:     (item.tipoDetectado as Cargo['category']) ?? 'GENERAL',
-                    status:       'UNALLOCATED' as const,
-                    x:            item.positionX,
-                    y:            item.positionY,
-                    isRotated:    item.rotation ? item.rotation > 0 : false,
-                    // Metadados do manifesto
+                    heightMeters,
+                    dimensoes: { comprimento: lengthMeters, largura: widthMeters, altura: heightMeters, unidade: 'm' as const },
+
+                    // Peso — flat (engine) + nested (spec)
+                    weightTonnes: weightTon,
+                    peso: { valorOriginal: weightKg, valorEmToneladas: weightTon, unidade: 't' as const },
+
+                    // Campos obrigatórios
+                    quantity:    1,
+                    status:      'UNALLOCATED' as const,
+                    isRemovable: false,
+                    alerts:      [],
+
+                    // Tipo
+                    category: categoryMap[item.tipoDetectado ?? ''] ?? 'GENERAL',
+                    format:   item.tipoDetectado === 'TUBULAR' ? 'Tubular' : 'Retangular',
+
+                    // Posição espacial (atribuída pelo drag-drop)
+                    x:         item.positionX,
+                    y:         item.positionY,
+                    isRotated: item.rotation ? item.rotation > 0 : false,
+
+                    // Operacional
+                    isBackload: item.isBackload,
+
+                    // Manifesto (9 elementos da spec)
                     nomeEmbarcacao:    item.nomeEmbarcacao,
                     numeroAtendimento: item.numeroAtendimento,
                     origemCarga:       item.origemCarga,
                     destinoCarga:      item.destinoCarga,
                     roteiroPrevisto:   item.roteiroPrevisto,
+
+                    // Metadados de extração
+                    dataExtracao:   item.dataExtracao,
+                    fonteManifesto: file.name,
+                    tamanhoFisico:  item.tamanhoFisico,
                 };
             });
             addCargas(mappedCargoes);

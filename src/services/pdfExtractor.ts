@@ -122,22 +122,25 @@ function parseHeaderInfo(fullText: string): ManifestHeader {
         if (!candidate.match(SHIP_CODE_BLACKLIST)) header.nomeEmbarcacao = candidate;
     }
 
-    // 3. Roteiro Previsto (Padrão sugerido na Seção 7)
-    const roteiroRegex = /(?:Roteiro Previsto de Cargas|ROTEIRO PREVISTO|ROTEIRO):\s([A-Z0-9\s->]+)/i;
+    // 3. Roteiro Previsto — suporta separadores → / -> / - / espaço duplo
+    const roteiroRegex = /(?:Roteiro Previsto(?:\s+de\s+Cargas)?|ROTEIRO(?:\s+PREVISTO)?)\s*[:-]?\s*([A-Z0-9][→a-zA-Z0-9\s\->/]+)/i;
     const roteiroMatch = fullText.match(roteiroRegex);
     if (roteiroMatch) {
-        header.roteiroPrevisto = roteiroMatch[1].split(/\s*->\s*|\s+-\s+/).map(s => s.trim().toUpperCase());
+        header.roteiroPrevisto = roteiroMatch[1]
+            .split(/\s*[→>]\s*|\s*->\s*|\s{2,}/)
+            .map(s => s.replace(/^[-\s]+|[-\s]+$/g, '').trim().toUpperCase())
+            .filter(s => /^[A-Z0-9]{2,10}$/.test(s));
     }
 
-    // 4. Local de Origem / Destino (Padrão sugerido na Seção 7) - Suporte a nomes longos
-    const origemRegex = /(?:Origem|ORIGEM):\s*([A-Z0-9\sÀ-ÿ.-]{2,40})/i;
-    const destinoRegex = /(?:Destino|DESTINO):\s*([A-Z0-9\sÀ-ÿ.-]{2,40})/i;
-    
+    // 4. Local de Origem / Destino — aceita "Local de Origem", para na quebra de linha, limite 80 chars
+    const origemRegex = /(?:(?:Local\s+de\s+)?Origem|ORIGEM)\s*[:-]?\s*([^\n\r]{2,80})/i;
+    const destinoRegex = /(?:(?:Local\s+de\s+)?Destino|DESTINO)\s*[:-]?\s*([^\n\r]{2,80})/i;
+
     const oMatch = fullText.match(origemRegex);
     const dMatch = fullText.match(destinoRegex);
-    
-    if (oMatch) header.origemCarga = oMatch[1].trim().toUpperCase();
-    if (dMatch) header.destinoCarga = dMatch[1].trim().toUpperCase();
+
+    if (oMatch) header.origemCarga = oMatch[1].replace(/\s+/g, ' ').trim().toUpperCase();
+    if (dMatch) header.destinoCarga = dMatch[1].replace(/\s+/g, ' ').trim().toUpperCase();
 
     // Fallback: Busca via seção (acrônimos ou nomes) se os padrões explícitos falharem
     if (!header.origemCarga || !header.destinoCarga) {
@@ -228,7 +231,14 @@ function extractIdentifier(text: string): string | undefined {
                 
                 // Validação ISO 6346 para Containers (sempre tem prioridade se tiver 10-11 chars)
                 if (clean.length >= 10 && validateISO6346(clean)) return clean;
-                
+
+                // Filtra IDs numéricos de 6 ou 8 dígitos que parecem datas (DDMMYY / DDMMYYYY)
+                if (/^\d+$/.test(clean) && (clean.length === 6 || clean.length === 8)) {
+                    const dd = parseInt(clean.slice(0, 2), 10);
+                    const mm = parseInt(clean.slice(2, 4), 10);
+                    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) continue;
+                }
+
                 // Se não for container mas tiver formato válido
                 if (clean.length >= 4) return clean;
             }
