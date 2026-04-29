@@ -188,19 +188,54 @@ interface XlsxLib {
 
 let xlsxLib: XlsxLib | null = null;
 
-async function loadXlsx(): Promise<XlsxLib> {
-  if (xlsxLib) return xlsxLib;
-  return new Promise<XlsxLib>((resolve, reject) => {
+// Múltiplos CDNs em ordem de prioridade — tenta o próximo se o anterior falhar
+const XLSX_CDN_URLS = [
+  'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+];
+
+function loadScript(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Remover script anterior com a mesma src se falhou
+    const existing = document.querySelector(`script[data-xlsx]`);
+    if (existing) existing.remove();
+
     const script = document.createElement('script');
-    script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-    script.onload = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      xlsxLib = (window as any).XLSX as XlsxLib;
-      resolve(xlsxLib);
-    };
-    script.onerror = () => reject(new Error('Falha ao carregar biblioteca Excel (SheetJS)'));
+    script.src = url;
+    script.setAttribute('data-xlsx', '1');
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`CDN indisponível: ${url}`));
     document.head.appendChild(script);
   });
+}
+
+async function loadXlsx(): Promise<XlsxLib> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (xlsxLib || (window as any).XLSX) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    xlsxLib = xlsxLib ?? ((window as any).XLSX as XlsxLib);
+    return xlsxLib!;
+  }
+
+  let lastError: Error = new Error('Nenhum CDN disponível');
+  for (const url of XLSX_CDN_URLS) {
+    try {
+      await loadScript(url);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lib = (window as any).XLSX as XlsxLib | undefined;
+      if (lib?.read && lib?.utils) {
+        xlsxLib = lib;
+        return xlsxLib;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  throw new Error(
+    `Não foi possível carregar o leitor de Excel. Verifique sua conexão ou converta o arquivo para CSV e tente novamente. (${lastError.message})`
+  );
 }
 
 async function parseExcelToRows(buffer: ArrayBuffer): Promise<EditorRow[]> {
