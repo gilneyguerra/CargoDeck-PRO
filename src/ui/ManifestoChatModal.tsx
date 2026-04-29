@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent } fro
 import { createPortal } from 'react-dom';
 import { X, Send, Paperclip, Bot, User, AlertTriangle, CheckCircle2, Package } from 'lucide-react';
 import { useManifestoExtraction, type ChatMessage } from '@/hooks/useManifestoExtraction';
-import type { ManifestoJSON } from '@/services/manifestExtractor';
+import { flattenManifestoJSON, countCargas, type ManifestoJSON } from '@/services/manifestExtractor';
 import { cn } from '@/lib/utils';
 
 interface Props { isOpen: boolean; onClose: () => void }
@@ -63,23 +63,43 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 
 function PreviewTable({ json }: { json: ManifestoJSON }) {
   const alertas = json.metadadosExtracao?.revisoesSugeridas ?? [];
+  const allItems = flattenManifestoJSON(json);
+  const total = countCargas(json);
+  const hasSections = json.sections && json.sections.length > 0;
 
   return (
-    <div className="border-t border-subtle bg-sidebar/50 p-4 shrink-0 max-h-64 overflow-y-auto no-scrollbar">
+    <div className="border-t border-subtle bg-sidebar/50 p-4 shrink-0 max-h-72 overflow-y-auto no-scrollbar">
       <div className="flex items-center gap-2 mb-3">
         <Package size={14} className="text-brand-primary" />
         <span className="text-[10px] font-black text-primary uppercase tracking-widest">
-          Pré-visualização — {json.cargasArray.length} cargas
+          Pré-visualização — {total} cargas
         </span>
-        <span className="ml-auto text-[9px] font-black text-muted uppercase">
-          {json.rotaData.origem} → {json.rotaData.destino}
-        </span>
+        {hasSections ? (
+          <span className="ml-auto text-[9px] font-black text-brand-primary uppercase bg-brand-primary/10 px-2 py-0.5 rounded-lg">
+            {json.sections!.length} seção(ões)
+          </span>
+        ) : (
+          <span className="ml-auto text-[9px] font-black text-muted uppercase">
+            {json.rotaData?.origem} → {json.rotaData?.destino}
+          </span>
+        )}
       </div>
 
       {alertas.length > 0 && (
         <div className="flex items-start gap-2 bg-status-warning/10 border border-status-warning/30 rounded-xl px-4 py-2 mb-3">
           <AlertTriangle size={12} className="text-status-warning shrink-0 mt-0.5" />
           <p className="text-[10px] text-status-warning font-bold">{alertas.join(' · ')}</p>
+        </div>
+      )}
+
+      {/* Resumo por seções quando disponível */}
+      {hasSections && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {json.sections!.map((s, i) => (
+            <span key={i} className="text-[9px] font-black px-2 py-1 bg-main border border-subtle rounded-lg text-secondary">
+              {s.origin} → {s.destination}: <strong className="text-primary">{s.items.length}</strong>
+            </span>
+          ))}
         </div>
       )}
 
@@ -96,21 +116,21 @@ function PreviewTable({ json }: { json: ManifestoJSON }) {
             </tr>
           </thead>
           <tbody>
-            {json.cargasArray.slice(0, 50).map((c, i) => (
+            {allItems.slice(0, 50).map((c, i) => (
               <tr key={i} className="border-b border-subtle/30 hover:bg-main/50 transition-colors">
                 <td className="py-1.5 pr-3 text-muted">{c.numero}</td>
                 <td className="py-1.5 pr-3 text-brand-primary font-bold">{c.codigoID}</td>
                 <td className="py-1.5 pr-3 text-primary truncate max-w-[160px]">{c.descricao}</td>
                 <td className="py-1.5 pr-3 text-right text-primary font-bold">{Number(c.peso_ton).toFixed(2)}</td>
-                <td className="py-1.5 pr-3 text-secondary">{c.dimensoes.c}×{c.dimensoes.l}×{c.dimensoes.a}</td>
+                <td className="py-1.5 pr-3 text-secondary">{c.dimensoes?.c}×{c.dimensoes?.l}×{c.dimensoes?.a}</td>
                 <td className="py-1.5 text-secondary">{c.destinoFinal}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {json.cargasArray.length > 50 && (
+        {total > 50 && (
           <p className="text-center text-[9px] text-muted mt-2 font-bold uppercase tracking-widest">
-            +{json.cargasArray.length - 50} cargas adicionais
+            +{total - 50} cargas adicionais
           </p>
         )}
       </div>
@@ -167,7 +187,7 @@ export function ManifestoChatModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   const canImport = phase === 'awaiting_confirmation' && extractedJSON && !isProcessing;
-  const cargoCount = extractedJSON?.cargasArray.length ?? 0;
+  const cargoCount = extractedJSON ? countCargas(extractedJSON) : 0;
 
   return createPortal(
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">

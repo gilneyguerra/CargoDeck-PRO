@@ -4,10 +4,13 @@ import {
   validateManifestoData,
   applyCorrectionFromChat,
   transformToCargoObjects,
+  calculateStabilityBalance,
+  countCargas,
   type ManifestoJSON,
   type ValidationResult,
 } from '@/services/manifestExtractor';
 import { routeTask } from '@/services/llmRouter';
+import { saveExtractionLog } from '@/services/auditLog';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 
@@ -32,7 +35,7 @@ interface ExtractionState {
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: 'Olá! Sou seu assistente de importação inteligente.\n\nCole o conteúdo do manifesto de carga ou faça upload de um arquivo PDF. Vou extrair, validar e estruturar todos os dados automaticamente.',
+  content: 'Olá! Sou seu assistente de importação inteligente.\n\nCole o conteúdo do manifesto de carga ou faça upload de um arquivo PDF. Vou extrair, validar e estruturar todos os dados automaticamente.\n\n**Suporte a multi-rota:** Detectarei automaticamente mudanças de Origem/Destino no documento.',
   timestamp: new Date(),
 };
 
@@ -68,14 +71,50 @@ export function useManifestoExtraction(onClose: () => void) {
     }));
   }, []);
 
+  const buildSummaryMessage = useCallback((json: ManifestoJSON, validation: ValidationResult): string => {
+    const total = countCargas(json);
+    let responseText = `**Manifesto processado com sucesso!**\n\n`;
+    responseText += `🚢 **Navio:** ${json.naveData?.nome || 'N/D'}\n`;
+
+    // Resumo por seções (novo schema) ou rota legada
+    if (json.sections && json.sections.length > 0) {
+      json.sections.forEach(section => {
+        responseText += `📍 **${section.origin} → ${section.destination}:** ${section.items.length} carga(s)\n`;
+      });
+    } else {
+      responseText += `📍 **Rota:** ${json.rotaData?.origem} → ${json.rotaData?.destino}\n`;
+      if (json.rotaData?.mudancasSequenciais?.length) {
+        responseText += `🔀 **Mudanças de rota detectadas:** ${json.rotaData.mudancasSequenciais.length}\n`;
+      }
+    }
+
+    responseText += `📦 **Total de cargas:** ${total}\n`;
+
+    const confianca = json.metadadosExtracao?.confiancaScore;
+    if (confianca !== undefined) {
+      responseText += `🎯 **Confiança da extração:** ${(confianca * 100).toFixed(0)}%\n`;
+    }
+
+    if (validation.alertas.length > 0) {
+      responseText += `\n⚠️ **Alertas de validação (Nemotron RCA):**\n`;
+      validation.alertas.forEach(a => { responseText += `• ${a}\n`; });
+      responseText += `\nPosso importar mesmo assim, ou deseja corrigir algum item via chat?`;
+    } else {
+      responseText += `\n✅ Todos os dados foram validados com sucesso.\n\nDeseja importar as ${total} cargas para o inventário?`;
+    }
+
+    return responseText;
+  }, []);
+
   const runExtractAndValidate = useCallback(async (rawText: string) => {
     setState(prev => ({ ...prev, isProcessing: true, phase: 'extracting' }));
     const loadingId = addMessage('assistant', '...', true);
-    setBanner('Extraindo dados do manifesto via IA...', 30);
+    setBanner('MiniMax M2.5 extraindo dados do manifesto...', 25);
 
     try {
       const json = await extractManifestoJSON(rawText);
-      updateMessage(loadingId, `Extração concluída. Encontrei **${json.cargasArray.length} carga(s)**.\n\nValidando dados...`);
+      const total = countCargas(json);
+      updateMessage(loadingId, `Extração concluída. Encontrei **${total} carga(s)**.\n\nNemotron analisando integridade dos dados...`);
 
       setState(prev => ({ ...prev, phase: 'validating', extractedJSON: json }));
       setBanner('Validando integridade dos dados...', 70);
@@ -83,23 +122,7 @@ export function useManifestoExtraction(onClose: () => void) {
       const validation = await validateManifestoData(json);
       hideBanner();
 
-      let responseText = `**Manifesto processado com sucesso!**\n\n`;
-      responseText += `🚢 **Navio:** ${json.naveData.nome || 'N/D'}\n`;
-      responseText += `📍 **Rota:** ${json.rotaData.origem} → ${json.rotaData.destino}\n`;
-      responseText += `📦 **Total de cargas:** ${json.cargasArray.length}\n`;
-
-      if (json.rotaData.mudancasSequenciais && json.rotaData.mudancasSequenciais.length > 0) {
-        responseText += `🔀 **Mudanças de rota detectadas:** ${json.rotaData.mudancasSequenciais.length}\n`;
-      }
-
-      if (validation.alertas.length > 0) {
-        responseText += `\n⚠️ **Alertas de validação:**\n`;
-        validation.alertas.forEach(a => { responseText += `• ${a}\n`; });
-        responseText += `\nPosso importar mesmo assim, ou deseja corrigir algum item?`;
-      } else {
-        responseText += `\n✅ Todos os dados foram validados com sucesso.\n\nDeseja importar as ${json.cargasArray.length} cargas para o inventário?`;
-      }
-
+      const responseText = buildSummaryMessage(json, validation);
       updateMessage(loadingId, responseText);
 
       conversationHistory.current.push(
@@ -120,7 +143,7 @@ export function useManifestoExtraction(onClose: () => void) {
       updateMessage(loadingId, `❌ Erro na extração: ${msg}\n\nVerifique se a chave VITE_GEMINI_API_KEY está configurada e tente novamente.`);
       setState(prev => ({ ...prev, phase: 'idle', isProcessing: false }));
     }
-  }, [addMessage, updateMessage, setBanner, hideBanner]);
+  }, [addMessage, updateMessage, setBanner, hideBanner, buildSummaryMessage]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || state.isProcessing) return;
@@ -133,22 +156,18 @@ export function useManifestoExtraction(onClose: () => void) {
     }
 
     if (state.phase === 'awaiting_confirmation') {
-      const lower = text.toLowerCase();
-      const isConfirm = /^(sim|s|yes|y|ok|confirmar|importar|pode|prosseguir|vamos)/.test(lower);
-      const isCancel = /^(n[aã]o|no|cancelar|abort)/.test(lower);
+      const lower = text.toLowerCase().trim();
+      const isConfirm = /^(sim|s|yes|y|ok|confirmar|importar|pode|prosseguir|vamos|confirma)/.test(lower);
+      const isCancel  = /^(n[aã]o|no|cancelar|abort|sair)/.test(lower);
 
-      if (isConfirm) {
-        await confirmImport();
-        return;
-      }
-
+      if (isConfirm) { await confirmImport(); return; }
       if (isCancel) {
-        addMessage('assistant', 'Importação cancelada. Quando quiser, cole um novo manifesto.');
+        addMessage('assistant', 'Importação cancelada. Quando quiser, cole um novo manifesto ou faça upload de um PDF.');
         setState(prev => ({ ...prev, phase: 'idle', extractedJSON: null }));
         return;
       }
 
-      // Treat as correction
+      // Tratado como correção
       setState(prev => ({ ...prev, isProcessing: true }));
       const loadingId = addMessage('assistant', '...', true);
 
@@ -161,7 +180,8 @@ export function useManifestoExtraction(onClose: () => void) {
           { role: 'model', parts: [{ text: 'Correção aplicada.' }] }
         );
 
-        let responseText = `✅ Correção aplicada. JSON atualizado com **${updated.cargasArray.length} cargas**.`;
+        const total = countCargas(updated);
+        let responseText = `✅ Correção aplicada. JSON atualizado com **${total} cargas**.`;
         if (validation.alertas.length > 0) {
           responseText += `\n\n⚠️ Ainda há alertas:\n` + validation.alertas.map(a => `• ${a}`).join('\n');
           responseText += '\n\nDeseja importar mesmo assim?';
@@ -176,22 +196,23 @@ export function useManifestoExtraction(onClose: () => void) {
         updateMessage(loadingId, `❌ Erro ao aplicar correção: ${msg}`);
         setState(prev => ({ ...prev, isProcessing: false }));
       }
-    } else {
-      // General chat mode
-      setState(prev => ({ ...prev, isProcessing: true }));
-      const loadingId = addMessage('assistant', '...', true);
-      try {
-        const res = await routeTask('CHAT', text, conversationHistory.current);
-        updateMessage(loadingId, res.content);
-        conversationHistory.current.push(
-          { role: 'user', parts: [{ text }] },
-          { role: 'model', parts: [{ text: res.content }] }
-        );
-      } catch {
-        updateMessage(loadingId, 'Não consegui processar sua mensagem. Tente novamente.');
-      } finally {
-        setState(prev => ({ ...prev, isProcessing: false }));
-      }
+      return;
+    }
+
+    // Chat livre em qualquer outra fase
+    setState(prev => ({ ...prev, isProcessing: true }));
+    const loadingId = addMessage('assistant', '...', true);
+    try {
+      const res = await routeTask('CHAT', text, conversationHistory.current);
+      updateMessage(loadingId, res.content);
+      conversationHistory.current.push(
+        { role: 'user', parts: [{ text }] },
+        { role: 'model', parts: [{ text: res.content }] }
+      );
+    } catch {
+      updateMessage(loadingId, 'Não consegui processar sua mensagem. Tente novamente.');
+    } finally {
+      setState(prev => ({ ...prev, isProcessing: false }));
     }
   }, [state, addMessage, updateMessage, runExtractAndValidate]);
 
@@ -199,18 +220,16 @@ export function useManifestoExtraction(onClose: () => void) {
     if (state.isProcessing) return;
 
     addMessage('user', `📎 Arquivo: ${file.name}`);
-
     setState(prev => ({ ...prev, isProcessing: true }));
     const loadingId = addMessage('assistant', '...', true);
     setBanner('Carregando e processando PDF...', 10);
 
     try {
-      // Dynamically import pdfExtractor to avoid circular deps
       const { PDFExtractor } = await import('@/services/pdfExtractor');
-      const validation = PDFExtractor.validateFile(file);
-      if (!validation.valid) throw new Error(validation.error.message);
+      const fileValidation = PDFExtractor.validateFile(file);
+      if (!fileValidation.valid) throw new Error(fileValidation.error.message);
 
-      updateMessage(loadingId, 'PDF carregado. Extraindo texto...');
+      updateMessage(loadingId, 'PDF carregado. Extraindo texto via OCR...');
       setBanner('Extraindo texto do PDF...', 40);
 
       const result = await PDFExtractor.extract(file, (p) => {
@@ -218,19 +237,18 @@ export function useManifestoExtraction(onClose: () => void) {
       });
 
       if (!result.success || !result.data?.items?.length) {
-        updateMessage(loadingId, 'Não foi possível extrair texto do PDF. Tente colar o texto do manifesto diretamente.');
+        updateMessage(loadingId, 'Não foi possível extrair texto do PDF. Tente colar o texto do manifesto diretamente no chat.');
         hideBanner();
         setState(prev => ({ ...prev, isProcessing: false }));
         return;
       }
 
       const items = result.data.items;
-      // Build raw text from extracted items for LLM parsing
       const rawText = items.map(i =>
         `${i.identifier} | ${i.description} | ${i.weight}t | ${i.length ?? 0}x${i.width ?? 0}x${i.height ?? 0}m`
       ).join('\n');
 
-      updateMessage(loadingId, `Texto extraído (${items.length} itens detectados via OCR). Enviando para análise IA...`);
+      updateMessage(loadingId, `Texto extraído — ${items.length} itens detectados via OCR. Enviando para MiniMax M2.5...`);
       hideBanner();
       setState(prev => ({ ...prev, isProcessing: false }));
 
@@ -251,8 +269,21 @@ export function useManifestoExtraction(onClose: () => void) {
     try {
       const cargoes = await transformToCargoObjects(state.extractedJSON);
       setExtractedCargoes(cargoes);
+
+      // Auditoria (spec seção 14 — logs para auditoria)
+      saveExtractionLog(state.extractedJSON, cargoes.length);
+
+      // Cálculo de estabilidade (spec seção 11)
+      const stability = calculateStabilityBalance(cargoes);
+
       hideBanner();
       notify(`${cargoes.length} carga(s) importadas com sucesso!`, 'success');
+
+      if (!stability.isBalanced && stability.alertMessage) {
+        // Pequeno delay para não sobrepor o toast de sucesso
+        setTimeout(() => notify(stability.alertMessage!, 'warning'), 1500);
+      }
+
       setState(prev => ({ ...prev, phase: 'done', isProcessing: false }));
       onClose();
     } catch (err) {
