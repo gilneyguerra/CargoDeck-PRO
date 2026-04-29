@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, CheckCircle2, Table2, AlertCircle, Upload } from 'lucide-react';
+import { X, Plus, Trash2, CheckCircle2, Table2, AlertCircle, Upload, Download } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
@@ -176,13 +176,24 @@ function parseCsvToRows(text: string): EditorRow[] {
 
 // Interface mínima do SheetJS — evita `import('xlsx')` que exige o pacote instalado.
 // SheetJS é carregado em runtime via CDN e exposto em window.XLSX.
+interface XlsxSheet {
+  '!cols'?: { wch: number }[];
+  [key: string]: unknown;
+}
+
+interface XlsxWorkbook {
+  SheetNames: string[];
+  Sheets: Record<string, XlsxSheet>;
+}
+
 interface XlsxLib {
-  read: (data: ArrayBuffer, opts: { type: 'array' }) => {
-    SheetNames: string[];
-    Sheets: Record<string, unknown>;
-  };
+  read: (data: ArrayBuffer, opts: { type: 'array' }) => XlsxWorkbook;
+  writeFile: (wb: XlsxWorkbook, filename: string) => void;
   utils: {
-    sheet_to_json: <T>(sheet: unknown, opts: { header: 1; defval: string }) => T[];
+    sheet_to_json: <T>(sheet: XlsxSheet, opts: { header: 1; defval: string }) => T[];
+    book_new: () => XlsxWorkbook;
+    book_append_sheet: (wb: XlsxWorkbook, ws: XlsxSheet, name: string) => void;
+    aoa_to_sheet: (data: string[][]) => XlsxSheet;
   };
 }
 
@@ -393,6 +404,88 @@ function GridRow({ row, rowIdx, onChange, onDelete, onTab }: RowProps) {
 
 // ─── Modal principal ──────────────────────────────────────────────────────────
 
+// ─── Download do template Excel ───────────────────────────────────────────────
+
+const TEMPLATE_HEADERS = [
+  'Descrição',
+  'Código identificador',
+  'Carga Perigosa?',
+  'Categoria',
+  'Origem',
+  'Destino',
+  'Quantidade',
+  'Peso (t)',
+  'Comprimento (m)',
+  'Largura (m)',
+  'Altura (m)',
+];
+
+const TEMPLATE_HINTS = [
+  'Ex: CONTAINER HWOC 000030 ESL AC10/163',
+  'Ex: HWOC 000030',
+  'SIM ou NÃO',
+  'CONTAINER | BASKET | GENERAL | EQUIPMENT | TUBULAR | HAZARDOUS | HEAVY | FRAGILE | OTHER',
+  'Ex: PACU',
+  'Ex: NS44',
+  '1 (sempre)',
+  'Ex: 7.50',
+  'Ex: 6.05',
+  'Ex: 2.43',
+  'Ex: 2.59',
+];
+
+const TEMPLATE_EXAMPLE = [
+  'CONTAINER U2 JF 0158 ESL 286-241',
+  'U2 JF 0158',
+  'NÃO',
+  'CONTAINER',
+  'PACU',
+  'NS45',
+  '1',
+  '7.5',
+  '6.05',
+  '2.43',
+  '2.59',
+];
+
+async function downloadTemplate() {
+  // Gera CSV como fallback — também funciona sem SheetJS
+  const buildCsv = () => {
+    const sep = ';';
+    const rows = [TEMPLATE_HEADERS, TEMPLATE_HINTS, TEMPLATE_EXAMPLE];
+    return rows.map(r => r.map(c => `"${c}"`).join(sep)).join('\r\n');
+  };
+
+  try {
+    const XLSX = await loadXlsx();
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, TEMPLATE_HINTS, TEMPLATE_EXAMPLE]);
+
+    // Larguras de coluna
+    ws['!cols'] = [
+      { wch: 50 }, { wch: 24 }, { wch: 14 }, { wch: 52 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 14 }, { wch: 12 }, { wch: 12 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Plano de Carga');
+    XLSX.writeFile(wb, 'CargoDeck_Modelo_Plano_de_Carga.xlsx');
+  } catch {
+    // Fallback: download como CSV
+    const csv = buildCsv();
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'CargoDeck_Modelo_Plano_de_Carga.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
 interface Props { isOpen: boolean; onClose: () => void }
 
 export function CargoEditorModal({ isOpen, onClose }: Props) {
@@ -554,7 +647,29 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
               </div>
             )}
 
-            {/* Botão importar CSV */}
+            {/* Botão baixar planilha modelo */}
+            <div className="relative group/dl">
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-2 px-4 py-2 bg-sidebar border-2 border-subtle hover:border-indigo-400/60 text-secondary hover:text-indigo-400 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
+                title="Baixar planilha modelo"
+              >
+                <Download size={14} />
+                Modelo
+              </button>
+              {/* Tooltip explicativo */}
+              <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 w-64 opacity-0 group-hover/dl:opacity-100 transition-opacity duration-200">
+                <div className="bg-[#1e1e2e] border border-indigo-400/30 rounded-2xl px-4 py-3 shadow-xl">
+                  <p className="text-[11px] font-black text-indigo-300 uppercase tracking-widest mb-1">Planilha Modelo</p>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    Baixe nossa planilha modelo, insira os dados de cada carga nas colunas indicadas e faça o upload para extração automática.
+                  </p>
+                  <p className="text-[10px] text-muted mt-2 font-bold">Formato .xlsx ou .csv</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botão importar planilha */}
             <button
               onClick={() => fileImportRef.current?.click()}
               className="flex items-center gap-2 px-4 py-2 bg-sidebar border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
