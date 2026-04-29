@@ -47,6 +47,28 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Regra geral**: Qualquer biblioteca carregada por `<script>` dinâmico ou CDN — sem entrada em `package.json` — **nunca pode ser referenciada por nome de módulo** em anotações TypeScript (`import type`, `typeof import`, `import()`). Use sempre interfaces locais ou `unknown` com cast pontual.
 - **Contexto**: Ocorrido em `CargoEditorModal.tsx` ao implementar importação de Excel via SheetJS CDN — `typeof import('xlsx')` usado como tipo de variável e retorno de Promise causou falha no build do Vercel.
 
+## 11. `Uint8Array<ArrayBufferLike>` Incompatível com APIs de Browser (TS2345)
+- **Problema**: Erro `TS2345: Type 'Uint8Array<ArrayBufferLike>' is not assignable to 'ArrayBufferView<ArrayBuffer>'`. O TypeScript strict distingue `ArrayBuffer` de `SharedArrayBuffer` — `ArrayBufferLike` é a união dos dois, mas APIs como `DecompressionStream.writer.write()` exigem especificamente `ArrayBuffer`.
+- **Causa**: Ao declarar `compressed: Uint8Array` sem qualificar o generic, o tipo inferido é `Uint8Array<ArrayBufferLike>`. Mesmo que em runtime nunca seja um `SharedArrayBuffer`, o compilador trata como possível.
+- **Solução**: Antes de passar o `Uint8Array` para APIs que exigem `ArrayBuffer` puro, fazer a guarda:
+  ```typescript
+  const safe = arr.buffer instanceof ArrayBuffer ? arr : new Uint8Array(arr);
+  writer.write(safe);
+  ```
+  Ou declarar o parâmetro como `Uint8Array<ArrayBuffer>` quando o contexto garantir isso.
+- **Contexto**: Ocorrido em `inflateRaw()` do parser XLSX nativo em `CargoEditorModal.tsx`.
+
+## 12. Condição Sempre Verdadeira em Cast de Interface (TS2774)
+- **Problema**: Erro `TS2774: This condition will always return true since this function is always defined`.
+- **Causa**: Ao fazer `const lib = value as MinhaInterface`, o TypeScript assume que `lib` é sempre `MinhaInterface` (nunca `undefined`). Portanto, `if (lib?.propriedade)` é marcado como condição sempre verdadeira — o `?.` se torna sem sentido num tipo que não é optional.
+- **Solução**: Declarar a variável como `MinhaInterface | undefined` antes de verificar:
+  ```typescript
+  const lib = (window as any).XLSX as XlsxLib | undefined;
+  if (lib && typeof lib.read === 'function') { ... }
+  ```
+  O `typeof x === 'function'` é mais robusto que `lib?.method` pois verifica o valor real em runtime sem acionar TS2774.
+- **Contexto**: Ocorrido no loader de SheetJS via CDN em `CargoEditorModal.tsx` — `lib` castado como `XlsxLib` tornava a guarda `if (lib?.read)` sempre verdadeira para o compilador.
+
 ## 7. Imports Redundantes de React (Modern JSX)
 - **Problema**: Erro `TS6133: 'React' is declared but its value is never read`.
 - **Causa**: Em projetos com React 17+, o compilador não exige o import global do `React` para processar JSX. Mantê-lo no topo do arquivo sem chamadas explícitas (como `React.useState`) gera um alerta de variável não utilizada.

@@ -177,7 +177,11 @@ function parseCsvToRows(text: string): EditorRow[] {
 async function inflateRaw(compressed: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream('deflate-raw');
   const writer = ds.writable.getWriter();
-  writer.write(compressed);
+  // Garante ArrayBuffer puro (não SharedArrayBuffer) para compatibilidade com DecompressionStream
+  const plainBuffer = compressed.buffer instanceof ArrayBuffer
+    ? compressed
+    : new Uint8Array(compressed);
+  writer.write(plainBuffer);
   writer.close();
   const chunks: Uint8Array[] = [];
   const reader = ds.readable.getReader();
@@ -307,8 +311,8 @@ async function loadXlsx(): Promise<XlsxLib> {
         document.head.appendChild(s);
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lib = (window as any).XLSX as XlsxLib;
-      if (lib?.read) { xlsxLib = lib; return lib; }
+      const lib = (window as any).XLSX as XlsxLib | undefined;
+      if (lib && typeof lib.read === 'function') { xlsxLib = lib; return lib; }
     } catch { /* try next */ }
   }
   throw new Error('SheetJS indisponível via CDN');
