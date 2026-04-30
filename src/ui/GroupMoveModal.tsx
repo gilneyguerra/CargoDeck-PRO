@@ -130,7 +130,9 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
     const [step, setStep] = useState<0 | 1>(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [searchText, setSearchText] = useState('');
-    const [showOnlyUnallocated, setShowOnlyUnallocated] = useState(false);
+    // Default true: cargas já alocadas (incluindo as recém movidas em movimentações
+    // anteriores) não aparecem na lista — o foco do modal é distribuir cargas pendentes.
+    const [showOnlyUnallocated, setShowOnlyUnallocated] = useState(true);
     const [targetLocationId, setTargetLocationId] = useState(locations[0]?.id ?? '');
     const [targetBayId, setTargetBayId] = useState<string>('distribute');
     const [targetSide, setTargetSide] = useState<'port' | 'center' | 'starboard' | 'distribute-sides'>('port');
@@ -281,10 +283,21 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
         setStep(0);
         setSelectedIds(new Set());
         setSearchText('');
-        setShowOnlyUnallocated(false);
+        setShowOnlyUnallocated(true); // Sempre reabre mostrando apenas pendentes
         setTargetBayId('distribute');
         setTargetSide('port');
         onClose();
+    };
+
+    /**
+     * Voltar do step 2 (configuração) para o step 0 (seleção).
+     * Mantém a seleção atual (usuário quer ADICIONAR mais cargas) mas reseta
+     * filtros para garantir que todas as cargas pendentes apareçam novamente.
+     */
+    const handleBackToSelection = () => {
+        setStep(0);
+        setSearchText('');
+        setShowOnlyUnallocated(true);
     };
 
     if (!isOpen && !showDuplicates) return null;
@@ -554,8 +567,9 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                     ) : (
                         <>
                             <button
-                                onClick={() => setStep(0)}
+                                onClick={handleBackToSelection}
                                 className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-muted hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors uppercase tracking-widest"
+                                title="Voltar para escolher mais cargas (filtros serão resetados)"
                             >
                                 <ChevronLeft className="w-4 h-4" /> Voltar
                             </button>
