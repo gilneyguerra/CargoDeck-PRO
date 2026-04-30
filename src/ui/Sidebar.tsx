@@ -1,5 +1,5 @@
 import {
-  Plus, Upload, Zap, Users, MessageSquare, Table2, LayoutGrid,
+  Plus, Upload, Zap, MessageSquare, Table2, LayoutGrid,
   Package, Anchor, Box, Flame, Truck, Layers, Flag, ArrowRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
@@ -9,7 +9,6 @@ import { useRef, useState, useMemo, type ChangeEvent } from 'react';
 import { useNotificationStore } from '@/features/notificationStore';
 import { cn } from '@/lib/utils';
 import { ManualCargoModal } from './ManualCargoModal';
-import { GroupMoveModal } from './GroupMoveModal';
 import { ManifestoChatModal } from './ManifestoChatModal';
 import { CargoEditorModal } from './CargoEditorModal';
 
@@ -22,7 +21,6 @@ export default function Sidebar() {
   const { notify, setBanner, hideBanner } = useNotificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showEditorModal, setShowEditorModal] = useState(false);
 
@@ -269,45 +267,18 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* CTA principal: ir para a página de Geração Modal */}
-      <div className="flex-1 p-5 flex flex-col gap-3 overflow-y-auto no-scrollbar">
-        <button
-          onClick={() => setViewMode('modal-generation')}
-          disabled={stats.total === 0}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all min-h-[40px]',
-            stats.total > 0
-              ? 'bg-brand-primary text-white hover:brightness-110 shadow-md shadow-brand-primary/20 active:scale-95'
-              : 'bg-sidebar border-2 border-dashed border-subtle text-muted opacity-60 cursor-not-allowed'
-          )}
-        >
-          <LayoutGrid size={14} />
-          {stats.total > 0 ? `Gerenciar ${stats.total} cargas` : 'Sem cargas no inventário'}
-          {stats.total > 0 && <ArrowRight size={14} />}
-        </button>
-
-        <button
-          onClick={() => setShowGroupMoveModal(true)}
-          disabled={stats.total === 0 && stats.allocated === 0}
-          title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black text-white bg-[#1A237E] hover:brightness-110 disabled:opacity-40 shadow-md transition-all uppercase tracking-widest min-h-[40px]"
-        >
-          <Users size={12} /> Mover em Grupo
-        </button>
-
-        <div className="flex-1 flex flex-col items-center justify-center text-center pt-8">
-          <div className="w-14 h-14 rounded-full bg-main border-2 border-subtle flex items-center justify-center mb-3 opacity-40">
-            <Truck size={20} className="text-secondary" />
-          </div>
-          <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
-            A lista de cargas e a alocação em lote agora vivem na página dedicada de
-            <span className="text-brand-primary font-black"> Geração Modal de Transporte</span>.
-          </p>
+      {/* Mensagem informativa — substitui os CTAs antigos (movidos para a toolbar da página dedicada) */}
+      <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto no-scrollbar">
+        <div className="w-14 h-14 rounded-full bg-main border-2 border-subtle flex items-center justify-center mb-3 opacity-50">
+          <Truck size={20} className="text-secondary" />
         </div>
+        <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
+          As ações de gerenciamento e movimentação em grupo agora vivem na página dedicada de
+          <span className="text-brand-primary font-black"> Geração Modal de Transporte</span>.
+        </p>
       </div>
 
       <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-      <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
       <ManifestoChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
       <CargoEditorModal isOpen={showEditorModal} onClose={() => setShowEditorModal(false)} />
     </aside>

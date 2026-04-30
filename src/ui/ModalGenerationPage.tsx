@@ -1,18 +1,17 @@
-import { useState, useMemo, useRef, useDeferredValue, useEffect, type ChangeEvent } from 'react';
+import { useState, useMemo, useDeferredValue, useEffect } from 'react';
 import {
-  ArrowLeft, Search, Upload, MessageSquare, Table2, Plus,
+  ArrowLeft, Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
-  Boxes, Flame, Layers, Flag, Zap, Sparkles
+  Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
-import { usePDFUpload } from '@/hooks/usePDFUpload';
-import { ManifestoChatModal } from './ManifestoChatModal';
 import { CargoEditorModal } from './CargoEditorModal';
 import { ManualCargoModal } from './ManualCargoModal';
 import { AllocateCargoModal } from './AllocateCargoModal';
 import { PriorityModal } from './PriorityModal';
 import { CargoAssistant } from './CargoAssistant';
+import { GroupMoveModal } from './GroupMoveModal';
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
 
@@ -160,15 +159,14 @@ export function ModalGenerationPage() {
     clearUnallocatedCargoes
   } = useCargoStore();
   const { notify, ask } = useNotificationStore();
-  const { upload, loading: isProcessing } = usePDFUpload();
 
   // Modais
-  const [showChat, setShowChat] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [showAllocate, setShowAllocate] = useState(false);
   const [showPriority, setShowPriority] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
+  const [showGroupMove, setShowGroupMove] = useState(false);
 
   // Filtro persistido
   const [filterTab, setFilterTab] = useState<FilterTab>(() => {
@@ -186,8 +184,6 @@ export function ModalGenerationPage() {
   // Busca com debounce via useDeferredValue
   const [searchInput, setSearchInput] = useState('');
   const deferredSearch = useDeferredValue(searchInput);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filtragem completa
   const filtered = useMemo(() => {
@@ -238,12 +234,6 @@ export function ModalGenerationPage() {
   const handleSelectAll = () => {
     if (allFilteredSelected) clearCargoSelection();
     else selectMultipleCargos(filtered.map(c => c.id));
-  };
-
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await upload(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleEdit = (cargo: Cargo) => setEditingCargo(cargo);
@@ -331,42 +321,29 @@ export function ModalGenerationPage() {
           </div>
         </div>
 
-        {/* Busca */}
-        <div className="flex-1 min-w-[240px] max-w-md relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Buscar por ID, descrição, manifesto…"
-            className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-all min-h-[40px]"
-          />
-          {searchInput && (
-            <button
-              onClick={() => setSearchInput('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-sidebar text-muted hover:text-primary"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
+        <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+          {/* Busca */}
+          <div className="relative w-[200px] sm:w-[240px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar ID, descrição, manifesto…"
+              className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-all min-h-[40px]"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-sidebar text-muted hover:text-primary"
+                title="Limpar busca"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            title="Importar Manifesto PDF (OCR)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px] disabled:opacity-40"
-          >
-            <Upload size={12} /> PDF
-          </button>
-          <button
-            onClick={() => setShowChat(true)}
-            title="Importar via Chat IA"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px]"
-          >
-            <MessageSquare size={12} /> IA
-          </button>
+          {/* Botões padrão de import / criação */}
           <button
             onClick={() => setShowEditor(true)}
             title="Editor em Grade (Excel/CSV)"
@@ -381,9 +358,108 @@ export function ModalGenerationPage() {
           >
             <Plus size={12} /> Manual
           </button>
-        </div>
 
-        <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileUpload} className="hidden" />
+          {/* Toggle do Assistente IA */}
+          <button
+            onClick={() => setShowAssistant(s => !s)}
+            title="Assistente de Carga (IA)"
+            className={cn(
+              'relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px]',
+              showAssistant
+                ? 'bg-brand-primary text-white border-brand-primary shadow-md'
+                : 'bg-main border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary'
+            )}
+          >
+            <Sparkles size={12} className={showAssistant ? '' : 'group-hover:rotate-12'} />
+            IA
+            <span className={cn(
+              'absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-main',
+              showAssistant ? 'bg-status-warning' : 'bg-status-success'
+            )} />
+          </button>
+
+          {/* Gerenciar (vindo da sidebar) — re-aciona view atual; útil como atalho de scroll-to-top */}
+          <button
+            onClick={() => setViewMode('modal-generation')}
+            title="Gerenciar Cargas"
+            disabled={unallocatedCargoes.length === 0}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 border-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/15 transition-all min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <LayoutGrid size={12} />
+            Gerenciar
+          </button>
+
+          {/* Mover em Grupo (vindo da sidebar) */}
+          <button
+            onClick={() => setShowGroupMove(true)}
+            title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-all min-h-[40px]"
+          >
+            <Users size={12} />
+            Grupo
+          </button>
+
+          {/* Action Bar inline — aparece quando há seleção */}
+          {selectedCount > 0 && (
+            <div className="flex items-center gap-2 pl-2 ml-1 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar transition-all min-h-[36px]"
+                title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
+              >
+                {allFilteredSelected ? <CheckSquare size={12} /> : <Square size={12} />}
+                {allFilteredSelected ? 'Desmarcar' : 'Tudo'}
+              </button>
+
+              <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest">
+                <span className="text-brand-primary font-mono">{selectedCount}</span>
+                <span className="text-muted">·</span>
+                <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
+              </div>
+
+              <button
+                onClick={handleAllocate}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 active:scale-95 transition-all shadow-md min-h-[36px]"
+                title="Mover para Convés"
+              >
+                <ArrowRight size={12} />
+                Mover
+              </button>
+              <button
+                onClick={handleGroupContainer}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary transition-all min-h-[36px]"
+                title="Agrupar em Contentor"
+              >
+                <Boxes size={12} />
+                Agrupar
+              </button>
+              <button
+                onClick={handleChangePriority}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-warning/50 text-secondary hover:text-status-warning transition-all min-h-[36px]"
+                title="Alterar Prioridade"
+              >
+                <Flag size={12} />
+                Prior.
+              </button>
+              <button
+                onClick={handleDeleteSelected}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-all min-h-[36px]"
+                title="Excluir Selecionadas"
+              >
+                <Trash2 size={12} />
+                Excluir
+              </button>
+
+              <button
+                onClick={clearCargoSelection}
+                className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-all min-h-[36px]"
+                title="Limpar seleção"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs de Filtragem */}
@@ -429,7 +505,7 @@ export function ModalGenerationPage() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-6 pb-32">
+      <div className="flex-1 overflow-y-auto p-6">
         {filtered.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-sidebar border-2 border-subtle flex items-center justify-center mb-4">
@@ -467,82 +543,7 @@ export function ModalGenerationPage() {
         )}
       </div>
 
-      {/* Floating Action Bar — aparece quando há seleção */}
-      {selectedCount > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 animate-in slide-in-from-bottom-4 fade-in duration-200">
-          <div className="bg-main border-2 border-brand-primary rounded-2xl shadow-high px-4 py-3 flex items-center gap-3 backdrop-blur-md">
-            <button
-              onClick={handleSelectAll}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar transition-all"
-            >
-              {allFilteredSelected ? <CheckSquare size={12} /> : <Square size={12} />}
-              {allFilteredSelected ? 'Desmarcar' : 'Tudo'}
-            </button>
-
-            <div className="h-6 w-px bg-subtle" />
-
-            <div className="flex items-center gap-3 px-2 text-[11px] font-black uppercase tracking-widest">
-              <span className="text-brand-primary font-mono">{selectedCount}</span>
-              <span className="text-muted">·</span>
-              <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
-            </div>
-
-            <div className="h-6 w-px bg-subtle" />
-
-            <button
-              onClick={handleAllocate}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 active:scale-95 transition-all shadow-md"
-            >
-              <ArrowRight size={12} />
-              Mover p/ Convés
-            </button>
-            <button
-              onClick={handleGroupContainer}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary transition-all"
-            >
-              <Boxes size={12} />
-              Agrupar
-            </button>
-            <button
-              onClick={handleChangePriority}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-warning/50 text-secondary hover:text-status-warning transition-all"
-            >
-              <Flag size={12} />
-              Prioridade
-            </button>
-            <button
-              onClick={handleDeleteSelected}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-all"
-            >
-              <Trash2 size={12} />
-              Excluir
-            </button>
-
-            <button
-              onClick={clearCargoSelection}
-              className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-all"
-              title="Limpar seleção"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Botão flutuante do Assistente IA */}
-      {!showAssistant && (
-        <button
-          onClick={() => setShowAssistant(true)}
-          className="absolute bottom-6 right-6 z-20 w-14 h-14 rounded-full bg-gradient-to-br from-brand-primary to-indigo-600 text-white shadow-high hover:scale-110 active:scale-95 transition-all flex items-center justify-center group"
-          title="Assistente de Carga (IA)"
-        >
-          <Sparkles size={22} className="group-hover:rotate-12 transition-transform" />
-          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-status-success border-2 border-main" />
-        </button>
-      )}
-
       {/* Modais */}
-      <ManifestoChatModal isOpen={showChat} onClose={() => setShowChat(false)} />
       <CargoEditorModal isOpen={showEditor} onClose={() => setShowEditor(false)} />
       <ManualCargoModal isOpen={showManual} onClose={() => setShowManual(false)} />
       <AllocateCargoModal
@@ -561,6 +562,7 @@ export function ModalGenerationPage() {
         onClose={() => setShowAssistant(false)}
         selectedCargos={unallocatedCargoes.filter(c => selectedCargos.has(c.id))}
       />
+      <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
   );
 }
