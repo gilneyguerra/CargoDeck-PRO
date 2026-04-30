@@ -301,10 +301,14 @@ export function ModalGenerationPage() {
       <div className="px-6 py-4 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3 flex-wrap">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black text-secondary hover:text-primary hover:bg-main border-2 border-transparent hover:border-subtle uppercase tracking-widest transition-all min-h-[40px]"
+          title="Voltar ao Plano de Estivagem (Deck)"
+          className="nav-back group relative flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest min-h-[40px] bg-gradient-to-br from-brand-primary/10 to-brand-primary/5 border-2 border-brand-primary/30 text-brand-primary hover:from-brand-primary/15 hover:to-brand-primary/10 hover:border-brand-primary/50 transition-all shadow-sm hover:shadow-md hover:-translate-x-0.5 active:translate-x-0 active:scale-95"
         >
-          <ArrowLeft size={14} />
-          Deck
+          <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-primary/15 group-hover:bg-brand-primary/25 group-hover:-translate-x-0.5 transition-all">
+            <ArrowLeft size={12} />
+          </span>
+          <span>Deck</span>
+          <span className="hidden sm:inline text-[8px] font-bold opacity-60 normal-case tracking-wide">/ voltar</span>
         </button>
 
         <div className="h-8 w-px bg-subtle" />
@@ -515,7 +519,7 @@ export function ModalGenerationPage() {
               <>
                 <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhuma carga no inventário</h3>
                 <p className="text-[11px] text-secondary leading-relaxed">
-                  Use os botões acima para importar manifestos via PDF/IA/Excel ou criar cargas manualmente.
+                  Use os botões acima para importar manifestos via Excel ou criar cargas manualmente.
                 </p>
               </>
             ) : (

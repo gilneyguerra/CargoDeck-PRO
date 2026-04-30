@@ -12,6 +12,8 @@ import { GroupMoveModal } from './GroupMoveModal';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import DraggableCargo from './DraggableCargo';
 import { metersToPixels } from '@/lib/scaling';
+import { VesselIdentificationButton } from './VesselIdentificationButton';
+import { DeckActionToolbar } from './DeckActionToolbar';
 
 
 interface LocationTabProps {
@@ -292,11 +294,13 @@ export function DeckArea() {
                   </button>
               </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-8 mb-8 px-2">
-                <div className="flex items-center gap-8 flex-1 min-w-fit">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 mb-8 px-2">
+                <div className="flex items-center gap-6 flex-1 min-w-fit flex-wrap">
                     <div className="flex flex-col">
-                      <h2 className="deck-title text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
+                      <h2 className="deck-title text-3xl xl:text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
                     </div>
+
+                    <VesselIdentificationButton variant="deck" />
 
                     {/* Stability Info (Migrated from Header) */}
                     {(totalPort > 0 || totalStarboard > 0) && (
@@ -355,15 +359,15 @@ export function DeckArea() {
                     )}
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-5 shrink-0">
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
                     {/* Contador de Resultados da Busca GLOBAL */}
                     {searchTerm && (
                       <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                         <div className="bg-status-warning/10 border border-status-warning/30 px-6 py-2 rounded-2xl flex items-center gap-4 shadow-low h-16">
+                         <div className="bg-status-warning/10 border border-status-warning/30 px-5 py-2 rounded-2xl flex items-center gap-3 shadow-low h-16">
                             <CheckCircle2 className="w-5 h-5 text-status-warning" />
                             <div className="flex flex-col items-start justify-center leading-none">
                               <span className="text-[10px] font-black text-status-warning uppercase tracking-widest mb-1">
-                                 {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM ENCONTRADO' : 'ITENS ENCONTRADOS'}
+                                 {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM' : 'ITENS'}
                               </span>
                               <div className="flex items-center gap-2 opacity-70">
                                  <span className="text-[9px] font-bold text-status-warning uppercase">Deck: {globalSearchMatchCount - inventoryMatchCount}</span>
@@ -376,32 +380,41 @@ export function DeckArea() {
                     )}
 
                     <div className="relative group">
-                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted group-focus-within:text-brand-primary transition-all group-focus-within:rotate-12" />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted group-focus-within:text-brand-primary transition-all group-focus-within:rotate-12" />
                       <input
                         type="text"
                         placeholder="BUSCAR NO DECK..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-80 pl-14 pr-6 py-4.5 text-xs font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/60 text-primary uppercase shadow-low h-16"
+                        className="w-56 xl:w-72 pl-12 pr-4 text-xs font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/60 text-primary uppercase shadow-low h-16"
                       />
                     </div>
-                    
+
                     <button
                       onClick={() => setShowGroupMoveModal(true)}
                       title="Movimentar Cargas em Grupo"
-                      className="flex items-center gap-3 bg-[#1A237E] hover:brightness-110 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 h-16 shrink-0"
+                      className="flex items-center gap-2 bg-[#1A237E] hover:brightness-110 text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-md active:scale-95 h-16 shrink-0"
                     >
                       <Users className="w-4 h-4" />
-                      <span className="hidden xl:inline">MOVER EM GRUPO</span>
+                      <span className="hidden 2xl:inline">MOVER EM GRUPO</span>
+                      <span className="2xl:hidden">GRUPO</span>
                     </button>
 
                     <button
                       onClick={() => setIsSettingsOpen(true)}
-                      className="flex items-center gap-3 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 h-16"
+                      className="flex items-center gap-2 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-md active:scale-95 h-16"
+                      title="Configurar Deck"
                     >
                       <Settings className="w-4 h-4" />
-                      CONFIGURAR DECK
+                      <span className="hidden 2xl:inline">CONFIGURAR DECK</span>
+                      <span className="2xl:hidden">CONFIG</span>
                     </button>
+
+                    {/* Separador visual entre controles do deck e ações de manifesto */}
+                    <div className="h-12 w-px bg-border-subtle hidden sm:block mx-1" />
+
+                    {/* Ações operacionais movidas do Header global */}
+                    <DeckActionToolbar />
                 </div>
             </div>
             

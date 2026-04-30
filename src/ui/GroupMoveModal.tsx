@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X, Search, CheckCircle2, AlertTriangle, Scale,
-    Users, ChevronRight, ChevronLeft
+    Users, ChevronRight, ChevronLeft, Shuffle
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useStabilityCalculation } from '@/hooks/useStabilityCalculation';
@@ -128,7 +128,7 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
     const [showOnlyUnallocated, setShowOnlyUnallocated] = useState(false);
     const [targetLocationId, setTargetLocationId] = useState(locations[0]?.id ?? '');
     const [targetBayId, setTargetBayId] = useState<string>('distribute');
-    const [targetSide, setTargetSide] = useState<'port' | 'center' | 'starboard'>('port');
+    const [targetSide, setTargetSide] = useState<'port' | 'center' | 'starboard' | 'distribute-sides'>('port');
 
     // Inventário completo: não alocadas + todas as alocadas em baias
     const allCargoes = useMemo(() => {
@@ -368,7 +368,7 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                                 {/* Bordo */}
                                 <div>
                                     <label className="text-[10px] font-black text-muted uppercase tracking-widest block mb-2">Bordo</label>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-3 gap-3 mb-3">
                                         {([
                                             { side: 'port'      as const, label: 'BOMBORDO' },
                                             { side: 'center'    as const, label: 'CENTRO'   },
@@ -388,6 +388,24 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                                             </button>
                                         ))}
                                     </div>
+
+                                    {/* Distribuição balanceada por bordo */}
+                                    <button
+                                        onClick={() => setTargetSide('distribute-sides')}
+                                        title="Distribui igualmente: 1ª carga p/ bombordo, 2ª p/ boreste, 3ª p/ centro, 4ª p/ bombordo, e assim por diante."
+                                        className={cn(
+                                            'w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest border-2 transition-all',
+                                            targetSide === 'distribute-sides'
+                                                ? 'border-emerald-500 bg-gradient-to-r from-emerald-500/10 via-emerald-500/15 to-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-md shadow-emerald-500/10'
+                                                : 'border-dashed border-subtle text-muted hover:border-emerald-500/40 hover:text-emerald-600 dark:hover:text-emerald-400'
+                                        )}
+                                    >
+                                        <Shuffle className="w-3.5 h-3.5" />
+                                        Distribuir igualmente entre os 3 bordos
+                                    </button>
+                                    <p className="text-[10px] text-muted leading-relaxed mt-2 px-1">
+                                        Round-robin balanceado <strong className="text-secondary">port → starboard → center</strong> minimiza desequilíbrio transversal automaticamente.
+                                    </p>
                                 </div>
                             </div>
 

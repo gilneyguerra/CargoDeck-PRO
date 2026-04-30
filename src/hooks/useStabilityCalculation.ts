@@ -23,7 +23,7 @@ export interface StabilityResult {
  */
 export function useStabilityCalculation(
     selectedCargoIds: string[],
-    targetSide: 'port' | 'center' | 'starboard'
+    targetSide: 'port' | 'center' | 'starboard' | 'distribute-sides'
 ): StabilityResult {
     const locations = useCargoStore(s => s.locations);
     const unallocatedCargoes = useCargoStore(s => s.unallocatedCargoes);
@@ -61,6 +61,11 @@ export function useStabilityCalculation(
         // Adiciona o peso selecionado ao bordo alvo
         if (targetSide === 'port') pesoBombordo += pesoSelecionado;
         else if (targetSide === 'starboard') pesoBoreste += pesoSelecionado;
+        else if (targetSide === 'distribute-sides') {
+            // Distribuição balanceada: 1/3 bombordo, 1/3 boreste, 1/3 centro (este último não impacta)
+            pesoBombordo += pesoSelecionado / 3;
+            pesoBoreste += pesoSelecionado / 3;
+        }
         // 'center' não afeta o balanço transversal
 
         const total = pesoBombordo + pesoBoreste;

@@ -38,17 +38,27 @@ export default function Sidebar() {
 
   return (
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
-      {/* Botão de navegação principal: Módulo de Geração Modal de Transporte */}
-      <div className="p-0 border-b border-subtle bg-header/20">
+      {/* Botão de navegação principal — destaque visual proeminente */}
+      <div className="p-3 border-b border-subtle bg-header/20">
         <button
           onClick={() => setViewMode('modal-generation')}
           title="Abrir Módulo de Geração Modal de Transporte"
-          className="w-full px-4 py-4 flex items-center justify-center gap-2 bg-brand-primary/5 hover:bg-brand-primary/15 transition-all duration-300 group cursor-pointer min-h-[40px]"
+          className="nav-cta relative w-full px-4 py-4 flex items-center justify-center gap-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-all duration-300 group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden"
         >
-          <LayoutGrid className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">GERAÇÃO MODAL</span>
-          <ArrowRight className="w-3 h-3 text-brand-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+          {/* Anel pulsante de fundo */}
+          <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
+          {/* Brilho que atravessa no hover */}
+          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-all duration-700" />
+
+          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:rotate-3 transition-all">
+            <LayoutGrid className="w-4 h-4" />
+          </span>
+          <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">GERAÇÃO MODAL</span>
+          <ArrowRight className="relative w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
         </button>
+        <p className="text-[9px] font-bold text-secondary uppercase tracking-[0.2em] text-center opacity-60 mt-2">
+          módulo de transporte ↗
+        </p>
       </div>
 
       {/* Resumo Estatístico */}

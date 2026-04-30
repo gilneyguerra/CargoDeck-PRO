@@ -3,11 +3,13 @@ import { useState, useCallback } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 
+export type TargetSide = 'port' | 'center' | 'starboard' | 'distribute-sides';
+
 export interface MovementOptions {
     cargoIds: string[];
     targetLocationId: string;
     targetBayId: string | 'distribute';
-    targetSide: 'port' | 'center' | 'starboard';
+    targetSide: TargetSide;
 }
 
 export interface CargoMovementResult {
@@ -15,6 +17,11 @@ export interface CargoMovementResult {
     loading: boolean;
     movedCount: number;
 }
+
+// Quando targetSide === 'distribute-sides', faz round-robin balanceado entre os 3 bordos.
+// A ordem [port, starboard, center] minimiza o desequilíbrio inicial em listas pequenas
+// (1ª carga vai p/ bombordo, 2ª p/ boreste compensando, 3ª p/ centro).
+const SIDE_ROTATION: Array<'port' | 'center' | 'starboard'> = ['port', 'starboard', 'center'];
 
 export function useCargoMovement(): CargoMovementResult {
     const [loading, setLoading] = useState(false);
@@ -41,6 +48,7 @@ export function useCargoMovement(): CargoMovementResult {
 
             const bays = targetLocation.bays;
             let bayIndex = 0;
+            let sideIndex = 0;
             let moved = 0;
 
             for (const cargoId of cargoIds) {
@@ -48,13 +56,19 @@ export function useCargoMovement(): CargoMovementResult {
                     ? bays[bayIndex % bays.length].id
                     : targetBayId;
 
-                moveCargoToBay(cargoId, resolvedBayId, targetSide);
+                const resolvedSide = targetSide === 'distribute-sides'
+                    ? SIDE_ROTATION[sideIndex % SIDE_ROTATION.length]
+                    : targetSide;
+
+                moveCargoToBay(cargoId, resolvedBayId, resolvedSide);
                 bayIndex++;
+                sideIndex++;
                 moved++;
             }
 
             setMovedCount(moved);
-            notify(`${moved} carga(s) movida(s) com sucesso para ${targetLocation.name}.`, 'success');
+            const sideNote = targetSide === 'distribute-sides' ? ' (distribuição balanceada por bordo)' : '';
+            notify(`${moved} carga(s) movida(s) com sucesso para ${targetLocation.name}${sideNote}.`, 'success');
             return true;
         } catch {
             notify('Erro ao mover cargas. Tente novamente.', 'error');
