@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Target, 
-  Cpu, 
-  MousePointer2, 
-  ArrowRight, 
+import {
+  ArrowRight,
   CheckCircle2,
   Menu,
   X,
   Plus,
   Sparkles,
   Zap,
-  BarChart3,
-  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FeatureShowcase } from './landing/FeatureShowcase';
+import { MockExcelImport } from './landing/mocks/MockExcelImport';
+import { MockCargoGrid } from './landing/mocks/MockCargoGrid';
+import { MockBatchMove } from './landing/mocks/MockBatchMove';
+import { MockDragDrop } from './landing/mocks/MockDragDrop';
+import { MockPdfExport } from './landing/mocks/MockPdfExport';
+import { MockDashboard } from './landing/mocks/MockDashboard';
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -126,142 +127,123 @@ export function LandingPage({ onEnterApp }: LandingPageProps) {
         </div>
       </section>
 
-      {/* Feature Section - Phase 2 Corrigida */}
-      <section id="features" className="py-32 relative z-20 bg-white">
+      {/* Feature Showcase Grid — 6 mockups animados das features-chave */}
+      <section id="features" className="py-32 relative z-20 bg-grey-50 overflow-hidden">
+         {/* Pequenos detalhes de fundo */}
+         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-action/40 to-transparent" />
+         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-action/40 to-transparent" />
+
          <div className="max-w-7xl mx-auto px-6">
+           {/* Header da seção */}
            <div className="flex flex-col items-center text-center mb-24 space-y-4">
-             <div className="w-16 h-1 bg-maritime rounded-full" />
-             <h2 className="text-xs font-black text-action uppercase tracking-[0.4em]">Arquitetura de Dados</h2>
-             <h3 className="text-4xl md:text-6xl font-montserrat font-black tracking-tighter text-maritime uppercase italic">Tecnologia Certificada</h3>
+             <div className="w-16 h-1 bg-action rounded-full" />
+             <h2 className="text-xs font-black text-action uppercase tracking-[0.4em]">Experiência Operacional</h2>
+             <h3 className="text-4xl md:text-6xl font-montserrat font-black tracking-tighter text-maritime uppercase italic max-w-4xl">
+               Tudo que você opera, em <span className="text-action">6 cenas</span>
+             </h3>
+             <p className="max-w-2xl text-maritime/50 font-medium pt-4">
+               Cada feature do CargoDeck Plan demonstrada no contexto real — manifesto, grid, plano de convés e relatório consolidado.
+             </p>
            </div>
 
-           <div className="grid md:grid-cols-3 gap-10">
-              {[
-                { 
-                  icon: <Cpu className="w-8 h-8" />, 
-                  title: "Extrator AVA V4", 
-                  desc: "Reconhecimento avançado de tabelas e metadados em manifestos escaneados com rede neural proprietária.",
-                  tag: "High Accuracy"
-                },
-                { 
-                  icon: <Target className="w-8 h-8" />, 
-                  title: "Validação ISO 6346", 
-                  desc: "Verificação automática de padrões internacionais para contêineres e códigos de terminais portuários.",
-                  tag: "Global Standard"
-                },
-                { 
-                  icon: <Sparkles className="w-8 h-8" />, 
-                  title: "Estabilidade em Tempo Real", 
-                  desc: "Cálculo instantâneo de centro de gravidade e deslocamento lateral de carga para segurança operacional.",
-                  tag: "Safety First"
-                },
-                { 
-                  icon: <MousePointer2 className="w-8 h-8" />, 
-                  title: "Drag & Drop Tátil", 
-                  desc: "Sistema de alocação fluida com grids magnéticos e detecção automática de sobreposição de carga.",
-                  tag: "Ultra Smooth"
-                },
-                { 
-                  icon: <Shield className="w-8 h-8" />, 
-                  title: "Segurança de Dados", 
-                  desc: "Criptografia de nível militar para todos os seus manifestos e dados operacionais de logística.",
-                  tag: "Full Encryption"
-                },
-                { 
-                  icon: <BarChart3 className="w-8 h-8" />, 
-                  title: "BI Logístico", 
-                  desc: "Relatórios de ocupação de convés e eficiência de carga por navio, destino e período operacional.",
-                  tag: "Deep Insight"
-                }
-              ].map((feature, i) => (
-                <div key={i} className="group relative p-10 bg-white border border-black/5 rounded-[2rem] hover:border-t-action hover:border-t-4 hover:shadow-xl transition-all duration-500 hover:-translate-y-3">
-                   <div className="absolute top-6 right-8 text-[8px] font-black uppercase tracking-widest text-maritime/30 transition-colors group-hover:text-action">
-                      {feature.tag}
-                   </div>
-                  <div className="p-5 bg-maritime/5 border border-maritime/10 rounded-2xl w-fit mb-8 shadow-sm group-hover:bg-action group-hover:text-white transition-all text-maritime">
-                    {feature.icon}
-                  </div>
-                  <h4 className="text-2xl font-black text-maritime uppercase tracking-tight mb-4 italic">{feature.title}</h4>
-                  <p className="text-maritime/60 text-sm leading-relaxed font-medium">{feature.desc}</p>
-                </div>
-              ))}
+           {/* As 6 cenas — alternando esquerda/direita */}
+           <div className="space-y-32 md:space-y-40">
+             <FeatureShowcase
+               index={1}
+               direction="lr"
+               eyebrow="Extração Inteligente"
+               title="Manifesto em segundos, não horas"
+               description="Cole um PDF ou suba um Excel. A IA multi-modelo (OpenCode Zen) reconhece embarcação, atendimento, roteiro e cada carga — com pesos, dimensões e códigos ISO 6346 validados automaticamente."
+               bullets={[
+                 'Suporte a PDF escaneado (Tesseract OCR) e planilhas Excel/CSV nativas',
+                 'Detecção de duplicatas via hash SHA-256 antes de importar',
+                 'Validação de schema com Zod — campos faltantes viram alertas, não erros',
+                 'Roteador multi-modelo: extração robusta com fallback em 3 níveis',
+               ]}
+               mockLabel="Demonstração: importação de manifesto Excel com cargas extraídas via IA"
+               mock={<MockExcelImport />}
+             />
+
+             <FeatureShowcase
+               index={2}
+               direction="rl"
+               eyebrow="Inventário Visual"
+               title="Grid responsivo com filtros dinâmicos"
+               description="Cargas não alocadas em cards proporcionais — largura×altura refletindo dimensões reais. Filtros por categoria nascem automaticamente do que você importa, e cargas perigosas ganham destaque pulsante imediato."
+               bullets={[
+                 'Tabs dinâmicas por categoria (Contentores, Cestas, Tubulares, Perigosas…)',
+                 'Busca instantânea (useDeferredValue) por ID, descrição, manifesto ou destino',
+                 'Cards proporcionais ao tamanho real da carga (L×A em metros)',
+                 'Hazmat com borda roxa pulsante e badge de identificação imediata',
+               ]}
+               mockLabel="Demonstração: grid de cargas com filtros dinâmicos e identificação de carga perigosa"
+               mock={<MockCargoGrid />}
+             />
+
+             <FeatureShowcase
+               index={3}
+               direction="lr"
+               eyebrow="Operação em Lote"
+               title="Movimentação em grupo com 1 clique"
+               description="Selecione múltiplas cargas e mova todas para uma baia, distribua entre bordos ou aplique prioridade — sem fricção. A barra de ação aparece quando há seleção e some quando não há, mantendo a tela limpa."
+               bullets={[
+                 'Selecionar tudo / inverter / limpar — atalhos contextuais',
+                 'Distribuição por bordo: Bombordo / Centro / Boreste em uma única ação',
+                 'Indicador transversal recalcula em tempo real durante a operação',
+                 'Operador decide — o app nunca bloqueia movimentação por critério automático',
+               ]}
+               mockLabel="Demonstração: seleção múltipla de cargas e movimentação em lote para destino"
+               mock={<MockBatchMove />}
+             />
+
+             <FeatureShowcase
+               index={4}
+               direction="rl"
+               eyebrow="Plano de Convés"
+               title="Drag & drop direto na baia certa"
+               description="Cargas aparecem no convés respeitando dimensões reais. Arraste uma carga e o destino válido brilha. Solte e a baia atualiza ocupação, peso e equilíbrio automaticamente — tudo em 60fps com @dnd-kit."
+               bullets={[
+                 'Visualização proporcional: container 20" não vira a mesma silhueta de um skid',
+                 'Highlight da baia destino com glow cyan durante o arraste',
+                 'Indicador de ocupação por baia (% peso máximo) sempre visível',
+                 'Suporte a múltiplos conveses (Main Deck, Riser Deck, conforme a unidade)',
+               ]}
+               mockLabel="Demonstração: arrastar uma carga da lista até a baia destino no plano de convés"
+               mock={<MockDragDrop />}
+             />
+
+             <FeatureShowcase
+               index={5}
+               direction="lr"
+               eyebrow="Entrega Operacional"
+               title="PDF consolidado pronto para o turno"
+               description="Um clique gera o Plano de Carga assinado, com logo, atendimento, todas as baias e cargas alocadas, peso por convés e linha de assinatura. Lazy-loaded — só baixa o jspdf quando você realmente exporta."
+               bullets={[
+                 'Logo + assinatura customizáveis em Configurar Relatório',
+                 'Layout A4 paisagem com cabeçalho operacional e rodapé com responsável',
+                 'Cores por categoria (CONTAINER laranja, HAZARDOUS vermelho, etc.)',
+                 'Exportação alternativa em CSV para integração com ERP',
+               ]}
+               mockLabel="Demonstração: relatório PDF sendo gerado linha a linha com cabeçalho e baias"
+               mock={<MockPdfExport />}
+             />
+
+             <FeatureShowcase
+               index={6}
+               direction="rl"
+               eyebrow="Telemetria em Tempo Real"
+               title="Dashboard com equilíbrio transversal"
+               description="Cargas alocadas, peso total, ocupação e a divisão de pesos Bombordo / Centro / Boreste — atualizados a cada movimentação. Indicador apenas informativo: a decisão final fica sempre com o operador."
+               bullets={[
+                 'KPIs ao vivo: total de cargas, tonelagem alocada, % ocupação',
+                 'Gauge transversal: 3 barras coloridas com soma por bordo',
+                 'Identificação automática de hazmat para segregação visual',
+                 'Histórico de erros (errorReporter) com sugestões acionáveis',
+               ]}
+               mockLabel="Demonstração: dashboard com KPIs animados e gauge de equilíbrio transversal"
+               mock={<MockDashboard />}
+             />
            </div>
-         </div>
-      </section>
-
-      {/* Motion Art 1 Showcase: OCR em Ação */}
-      <section id="process" className="py-40 relative z-20 overflow-hidden bg-white">
-         <div className="max-w-7xl mx-auto px-6">
-            <div className="grid md:grid-cols-2 gap-24 items-center">
-               <div className="space-y-12">
-                  <div className="space-y-6">
-                    <h2 className="text-xs font-black text-action uppercase tracking-[0.4em]">Operação Assistida</h2>
-                    <h3 className="text-5xl md:text-7xl font-montserrat font-black tracking-tighter text-maritime uppercase italic leading-none">OCR <br /> Cirúrgico</h3>
-                  </div>
-
-                  <div className="space-y-12">
-                    {[
-                      { step: '01', title: 'Carregamento de Manifesto', desc: 'Arraste PDFs complexos Petrobras/TAGAZ para o terminal de leitura.' },
-                      { step: '02', title: 'Scanning AVA', desc: 'A linha Cyan percorre o documento identificando campos espaciais.' },
-                      { step: '03', title: 'Validação Digital', desc: 'O sistema valida pesos e dimensões contra o banco de dados global.' }
-                    ].map((item, i) => (
-                      <div key={i} className="flex gap-10 group">
-                        <div className="flex-shrink-0 w-16 h-16 bg-maritime/5 border-2 border-maritime/10 rounded-2xl flex items-center justify-center text-2xl font-black font-montserrat text-maritime/20 group-hover:text-action group-hover:border-action/30 transition-all duration-500">
-                          {item.step}
-                        </div>
-                        <div className="space-y-2">
-                           <h5 className="text-xl font-black text-maritime uppercase tracking-tight">{item.title}</h5>
-                           <p className="text-maritime/40 text-sm leading-relaxed font-medium">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-               </div>
-
-               {/* Simulated OCR Interface (Motion Art 1 Core) */}
-               <div className="relative group">
-                  <div className="absolute -inset-10 bg-action/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-                  <div className="relative bg-maritime border-2 border-action/20 rounded-[3.5rem] p-8 shadow-2xl overflow-hidden aspect-[4/5] flex flex-col">
-                     {/* Header Mockup */}
-                     <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/5">
-                        <div className="flex gap-2">
-                           <div className="w-3 h-3 rounded-full bg-red-500/30" />
-                           <div className="w-3 h-3 rounded-full bg-yellow-500/30" />
-                           <div className="w-3 h-3 rounded-full bg-green-500/30" />
-                        </div>
-                        <span className="text-[10px] font-black text-cyan-neon uppercase tracking-widest">Scanner Atividade</span>
-                     </div>
-                     
-                     {/* OCR Scanning Area */}
-                     <div className="flex-1 rounded-3xl bg-white/[0.02] border border-white/5 p-6 relative overflow-hidden">
-                        {/* Simulation of a document with text lines */}
-                        <div className="space-y-5 opacity-40">
-                           <div className="h-4 w-3/4 bg-white/10 rounded" />
-                           <div className="h-4 w-full bg-white/10 rounded" />
-                           <div className="h-4 w-1/2 bg-white/10 rounded" />
-                           <div className="h-4 w-2/3 bg-white/10 rounded" />
-                           <div className="h-4 w-full bg-white/10 rounded" />
-                           <div className="h-32 w-full border-2 border-action/20 border-dashed rounded-xl mt-10" />
-                           <div className="h-4 w-3/4 bg-white/10 rounded" />
-                           <div className="h-4 w-full bg-white/10 rounded" />
-                        </div>
-
-                        {/* The Scan Line Component */}
-                        <div className="absolute top-0 left-0 w-full h-[4px] bg-cyan-neon shadow-neon animate-[scan_4s_ease-in-out_infinite] z-30" />
-
-                        {/* OCR Revealed Fields - Motion Art 4 */}
-                        <div className="absolute left-10 top-20 w-48 h-8 px-4 bg-action/20 border border-action rounded-lg flex items-center gap-3 animate-pulse opacity-0 [animation:fadeIn_1s_ease-in_forwards_2.5s]">
-                           <Search className="w-3 h-3 text-cyan-neon" />
-                           <span className="text-[9px] font-black text-white uppercase italic typewriter">Container ID: CX-204</span>
-                        </div>
-                        <div className="absolute right-10 top-64 w-40 h-8 px-4 bg-cyan-neon/20 border border-cyan-neon rounded-lg flex items-center gap-3 animate-pulse opacity-0 [animation:fadeIn_1s_ease-in_forwards_3.5s]">
-                           <Zap className="w-3 h-3 text-cyan-neon" />
-                           <span className="text-[9px] font-black text-white uppercase italic">Peso: 12,4 TN</span>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
          </div>
       </section>
 
@@ -380,7 +362,7 @@ export function LandingPage({ onEnterApp }: LandingPageProps) {
          </div>
       </footer>
 
-      {/* Global CSS for Animations */}
+      {/* Global CSS — animações do hero + showcase mocks */}
       <style>{`
         @keyframes scan {
           0% { transform: translateY(-20px); opacity: 0; }
@@ -392,20 +374,136 @@ export function LandingPage({ onEnterApp }: LandingPageProps) {
           from { opacity: 0; transform: scale(0.9); }
           to { opacity: 1; transform: scale(1); }
         }
-        .typewriter {
-          overflow: hidden;
-          white-space: nowrap;
-          border-right: 2px solid #00D9FF;
-          animation: typing 1.5s steps(20, end) infinite;
-        }
-        @keyframes typing {
-          from { width: 0 }
-          to { width: 100% }
-        }
         .glass {
           background: rgba(255, 255, 255, 0.08);
           backdrop-filter: blur(10px);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        /* ───── MockExcelImport ───── */
+        @keyframes cursor-excel-flow {
+          0%   { top: 6%; left: 4%; opacity: 0; transform: scale(1); }
+          8%   { top: 6%; left: 4%; opacity: 1; transform: scale(1); }
+          22%  { top: 12%; left: 78%; opacity: 1; transform: scale(1); }
+          28%  { top: 12%; left: 78%; opacity: 1; transform: scale(0.82); }
+          33%  { top: 12%; left: 78%; opacity: 1; transform: scale(1); }
+          70%  { top: 12%; left: 78%; opacity: 1; transform: scale(1); }
+          88%  { top: 6%; left: 4%; opacity: 0.3; transform: scale(1); }
+          100% { top: 6%; left: 4%; opacity: 0; transform: scale(1); }
+        }
+        @keyframes excel-btn-pulse {
+          0%, 20%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+          25%           { box-shadow: 0 0 0 6px rgba(16,185,129,0.5); }
+          35%           { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+        @keyframes card-row-in {
+          0%, 25% { opacity: 0; transform: translateY(8px); }
+          35%     { opacity: 1; transform: translateY(0); }
+          90%     { opacity: 1; transform: translateY(0); }
+          100%    { opacity: 0; transform: translateY(8px); }
+        }
+        @keyframes banner-in {
+          0%, 60% { opacity: 0; transform: translateY(8px); }
+          70%     { opacity: 1; transform: translateY(0); }
+          92%     { opacity: 1; transform: translateY(0); }
+          100%    { opacity: 0; transform: translateY(8px); }
+        }
+
+        /* ───── MockCargoGrid ───── */
+        @keyframes pulse-hazard {
+          0%, 100% {
+            border-color: rgba(232,121,249,0.3);
+            box-shadow: 0 0 0 0 rgba(232,121,249,0);
+          }
+          50% {
+            border-color: rgba(232,121,249,0.7);
+            box-shadow: 0 0 12px 2px rgba(232,121,249,0.35);
+          }
+        }
+
+        /* ───── MockBatchMove ───── */
+        @keyframes action-bar-slide-in {
+          0%, 35% { opacity: 0; transform: translateX(20px); }
+          50%     { opacity: 1; transform: translateX(0); }
+          92%     { opacity: 1; transform: translateX(0); }
+          100%    { opacity: 0; transform: translateX(20px); }
+        }
+        @keyframes row-select {
+          0%, 15% { background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+          25%     { background-color: rgba(0,217,255,0.08); border-color: rgba(0,217,255,0.3); }
+          92%     { background-color: rgba(0,217,255,0.08); border-color: rgba(0,217,255,0.3); }
+          100%    { background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        }
+        @keyframes check-pop {
+          0%, 15% { opacity: 0; transform: scale(0.5); }
+          22%     { opacity: 1; transform: scale(1.15); }
+          28%     { opacity: 1; transform: scale(1); }
+          92%     { opacity: 1; transform: scale(1); }
+          100%    { opacity: 0; transform: scale(0.5); }
+        }
+        @keyframes destination-in {
+          0%, 60% { opacity: 0; transform: translateY(6px); }
+          70%     { opacity: 1; transform: translateY(0); }
+          92%     { opacity: 1; transform: translateY(0); }
+          100%    { opacity: 0; transform: translateY(6px); }
+        }
+
+        /* ───── MockDragDrop ───── */
+        @keyframes card-source-pulse {
+          0%, 100% { box-shadow: 0 0 12px rgba(0,217,255,0.3); }
+          50%      { box-shadow: 0 0 20px rgba(0,217,255,0.5); }
+        }
+        @keyframes bay-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+          50%      { box-shadow: 0 0 18px 4px rgba(52,211,153,0.45); }
+        }
+        @keyframes drag-cursor-flow {
+          0%   { top: 28%; left: 6%; opacity: 0; }
+          8%   { top: 28%; left: 6%; opacity: 1; }
+          25%  { top: 30%; left: 22%; opacity: 1; }
+          50%  { top: 38%; left: 60%; opacity: 1; }
+          70%  { top: 50%; left: 72%; opacity: 1; }
+          80%  { top: 50%; left: 72%; opacity: 1; transform: scale(0.92); }
+          85%  { top: 50%; left: 72%; opacity: 0.7; transform: scale(1); }
+          100% { top: 28%; left: 6%; opacity: 0; transform: scale(1); }
+        }
+
+        /* ───── MockPdfExport ───── */
+        @keyframes btn-download-pulse {
+          0%, 100% { box-shadow: 0 8px 16px -4px rgba(16,185,129,0.4); transform: translateY(0); }
+          50%      { box-shadow: 0 12px 24px -4px rgba(16,185,129,0.6); transform: translateY(-2px); }
+        }
+        @keyframes paper-line {
+          0%, 5%   { transform: scaleY(0); }
+          15%      { transform: scaleY(1); }
+          92%      { transform: scaleY(1); }
+          100%     { transform: scaleY(0); }
+        }
+        @keyframes paper-line-h {
+          0%, 5%   { transform: scaleX(0); }
+          15%      { transform: scaleX(1); }
+          92%      { transform: scaleX(1); }
+          100%     { transform: scaleX(0); }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        /* ───── MockDashboard ───── */
+        @keyframes gauge-fill {
+          from { transform: scaleX(0); }
+          to   { transform: scaleX(1); }
+        }
+
+        /* ───── prefers-reduced-motion ───── */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+          }
         }
       `}</style>
     </div>

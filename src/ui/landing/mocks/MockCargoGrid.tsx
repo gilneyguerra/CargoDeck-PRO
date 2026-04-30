@@ -34,21 +34,24 @@ export function MockCargoGrid() {
           </div>
         </div>
 
-        {/* Filter tabs com active rotativo */}
+        {/* Filter tabs (Todas ativo) */}
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
           {[
-            { label: 'Todas',       count: '12', active: 'tab-todas' },
-            { label: 'Contentores', count: '4',  active: 'tab-cont' },
-            { label: 'Cestas',      count: '3',  active: 'tab-cestas' },
-            { label: 'Perigosas',   count: '1',  active: 'tab-haz', hazardous: true },
-            { label: 'Tubulares',   count: '2',  active: 'tab-tub' },
+            { label: 'Todas',       count: '12', isActive: true },
+            { label: 'Contentores', count: '4' },
+            { label: 'Cestas',      count: '3' },
+            { label: 'Perigosas',   count: '1', hazardous: true },
+            { label: 'Tubulares',   count: '2' },
           ].map((t) => (
             <span
               key={t.label}
               className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${
-                t.hazardous ? 'border-fuchsia-400/30 bg-fuchsia-500/5 text-fuchsia-300' : 'border-white/10 bg-white/5 text-white/50'
+                t.isActive
+                  ? 'border-action/40 bg-action/15 text-cyan-neon'
+                  : t.hazardous
+                  ? 'border-fuchsia-400/30 bg-fuchsia-500/5 text-fuchsia-300'
+                  : 'border-white/10 bg-white/5 text-white/50'
               }`}
-              style={{ animation: `tab-cycle-${t.active} 6s ease-in-out infinite` }}
             >
               {t.label} · {t.count}
             </span>
@@ -57,18 +60,13 @@ export function MockCargoGrid() {
 
         {/* Grid de cards */}
         <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2 content-start">
-          {CARGOES.map((c, i) => {
+          {CARGOES.map((c) => {
             const colors = COLORS[c.color];
             return (
               <div
                 key={c.id}
                 className={`relative rounded-lg border-2 ${colors.border} ${colors.bg} p-2 flex flex-col gap-1`}
-                style={{
-                  animation: c.hazardous
-                    ? 'pulse-hazard 2.4s ease-in-out infinite, card-row-in 0.6s ease-out backwards'
-                    : 'card-row-in 0.6s ease-out backwards',
-                  animationDelay: `${i * 0.12}s`,
-                }}
+                style={c.hazardous ? { animation: 'pulse-hazard 2.4s ease-in-out infinite' } : undefined}
               >
                 {c.hazardous && (
                   <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/40 flex items-center gap-1">
