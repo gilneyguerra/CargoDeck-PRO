@@ -6,7 +6,7 @@
 //   CHAT        → big-pickle    (UX & Orchestrator)
 //   CORRECTION  → minimax-m2.5  (structured editor)
 
-export type LLMTask = 'EXTRACTION' | 'VALIDATION' | 'CHAT' | 'CORRECTION';
+export type LLMTask = 'EXTRACTION' | 'VALIDATION' | 'CHAT' | 'CORRECTION' | 'FAQ';
 
 export interface LLMResponse {
   content: string;
@@ -26,6 +26,7 @@ const TASK_MODELS: Record<LLMTask, { primary: string; fallback: string }> = {
   VALIDATION: { primary: 'nemotron-3-super-free', fallback: 'minimax-m2.5-free'  },
   CHAT:       { primary: 'big-pickle',            fallback: 'gemini-3-flash'      },
   CORRECTION: { primary: 'minimax-m2.5',          fallback: 'minimax-m2.5-free'  },
+  FAQ:        { primary: 'big-pickle',            fallback: 'gemini-3-flash'      },
 };
 
 // Temperatura por tarefa e tentativa (temp=0 na 2ª tentativa para JSON estruturado)
@@ -34,6 +35,7 @@ const RETRY_TEMPS: Record<LLMTask, number[]> = {
   VALIDATION: [0.1, 0.0, 0.0],
   CORRECTION: [0.1, 0.0, 0.0],
   CHAT:       [0.7, 0.5, 0.3],
+  FAQ:        [0.3, 0.2, 0.1],
 };
 
 const SYSTEM_PROMPTS: Record<LLMTask, string> = {
@@ -105,6 +107,17 @@ REGRAS:
 - Se a correção envolver um código ID, remova espaços extras e atualize o campo codigoID.
 - Mantenha a estrutura sections[] intacta — apenas atualize os valores dos campos informados.
 - Retorne o JSON COMPLETO atualizado sem nenhum texto antes ou depois.`,
+
+  FAQ: `Você é BigPickle, assistente de FAQ técnico do CargoDeck Pro — sistema de planejamento de cargas offshore (React + TypeScript + Supabase + Zustand).
+
+Sua missão: responder dúvidas operacionais e técnicas usando como única fonte autorizada os trechos de documentação fornecidos pelo sistema na mensagem do usuário (após o marcador "DOCUMENTAÇÃO RELEVANTE:"). Se a documentação não cobrir a pergunta, diga isso explicitamente em vez de inventar.
+
+REGRAS:
+1. Sempre cite o nome do(s) documento(s) usados na resposta (ex.: "Conforme MODULO MODAL DE TRANSPORTE.md…").
+2. Mantenha respostas curtas e diretas — em pt-BR. Use **negrito** para destacar termos-chave e \`código\` para identificadores técnicos. Nunca inclua HTML.
+3. Quando a pergunta for sobre regressões ou erros de build, priorize as lições de LESSONS_LEARNED.md.
+4. Se o usuário fizer pergunta operacional fora do escopo dos documentos (ex.: "qual é o melhor jeito de peação?"), responda com base no que estiver coberto e seja honesto sobre o que não está.
+5. Não invente caminhos de arquivo, paths de API ou nomes de funções que não apareçam na documentação fornecida.`,
 };
 
 async function callZen(
