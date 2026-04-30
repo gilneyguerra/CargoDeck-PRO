@@ -1,14 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Use environment variables or provided fallbacks to ensure functionality
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://vdjrfoxnibufxqntwrkr.supabase.co';
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkanJmb3huaWJ1ZnhxbnR3cmtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NDg5NTMsImV4cCI6MjA5MDMyNDk1M30.IkVLLhVZJGsQUSdke7mC5pinrCCOWO8UYh3jKDCcYJM';
+// Credenciais OBRIGATÓRIAS via variáveis de ambiente.
+// RLS é validado no backend (vide supabase-setup.sql) — chave anon só funciona
+// dentro das políticas configuradas para auth.uid() = user_id.
+const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
 
-if (!import.meta.env?.VITE_SUPABASE_URL) {
-  console.info('Supabase: Usando credenciais de fallback para conexão.');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Configuração ausente: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente (.env ou Vercel) antes de iniciar a aplicação.'
+  );
 }
 
-export const supabase = createClient(
-  supabaseUrl, 
-  supabaseAnonKey
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
