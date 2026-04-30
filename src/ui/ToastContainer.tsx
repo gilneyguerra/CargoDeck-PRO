@@ -1,6 +1,7 @@
 import { useNotificationStore } from '@/features/notificationStore';
 import { StandardToast, StandardBanner, StandardModal } from './standard/UIComponents';
 import { AlertDialog } from './AlertDialog';
+import { PromptModal } from './PromptModal';
 
 export function ToastContainer() {
   const { notifications, removeNotification, banner, confirm, alert } = useNotificationStore();
@@ -60,6 +61,9 @@ export function ToastContainer() {
         variant={alert.variant}
         onConfirm={alert.onConfirm}
       />
+
+      {/* 5. Prompt Modal Global — substitui window.prompt (Z-1050, sempre centralizado) */}
+      <PromptModal />
     </>
   );
 }

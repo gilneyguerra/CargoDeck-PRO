@@ -69,6 +69,8 @@ export interface CargoState {
     clearCargoSelection: () => void;
     setPriorityBatch: (cargoIds: string[], priority: 'normal' | 'high' | 'urgent') => void;
     setHydrationStatus: (status: boolean) => void;
+    /** Reseta todo o estado para o "Default" (estágio inicial pós-logout / primeira abertura). */
+    resetToDefault: () => void;
 }
 
 const createInitialBays = () => Array.from({ length: 10 }, (_, i) => ({
@@ -147,6 +149,37 @@ export const useCargoStore = create<CargoState>()(
                 })),
             })),
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
+
+            /**
+             * Reset completo do estado para "Default" — usado:
+             * - No logout (limpa tudo do usuário anterior)
+             * - Para garantir isolamento entre sessões
+             * Cria uma nova location inicial limpa para que o app permaneça utilizável.
+             */
+            resetToDefault: () => {
+                const newLocId = uuidv4();
+                set({
+                    manifestsLoaded: false,
+                    unallocatedCargoes: [],
+                    manifestShipName: null,
+                    manifestAtendimento: null,
+                    manifestRoteiro: null,
+                    locations: [
+                        {
+                            id: newLocId,
+                            name: 'Convés Principal',
+                            config: DEFAULT_DECK_CONFIG,
+                            bays: createInitialBays(),
+                        },
+                    ],
+                    activeLocationId: newLocId,
+                    searchTerm: '',
+                    editingCargo: null,
+                    isHydratedFromCloud: false,
+                    viewMode: 'deck' as ViewMode,
+                    selectedCargos: new Set<string>(),
+                });
+            },
 
             setSearchTerm: (term) => set({ searchTerm: term }),
 

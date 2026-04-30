@@ -32,11 +32,25 @@ interface AlertState {
   onConfirm: () => void;
 }
 
+interface PromptState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  placeholder: string;
+  defaultValue: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  required: boolean;
+  onConfirm: (value: string) => void;
+  onCancel: () => void;
+}
+
 interface NotificationState {
   notifications: Notification[];
   banner: BannerState;
   confirm: ConfirmState;
   alert: AlertState;
+  prompt: PromptState;
 
   // Toasts
   notify: (message: string, type?: NotificationType, duration?: number) => void;
@@ -53,6 +67,18 @@ interface NotificationState {
   // Alert Dialog (erros críticos / sucesso destacado)
   showAlert: (opts: { title: string; message: string; variant: AlertVariant }) => Promise<void>;
   closeAlert: () => void;
+
+  // Prompt Dialog (substitui window.prompt) — retorna string ou null se cancelado
+  askInput: (opts: {
+    title: string;
+    message?: string;
+    placeholder?: string;
+    defaultValue?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    required?: boolean;
+  }) => Promise<string | null>;
+  closePrompt: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
@@ -71,6 +97,18 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     message: '',
     variant: 'success',
     onConfirm: () => {},
+  },
+  prompt: {
+    isOpen: false,
+    title: '',
+    message: '',
+    placeholder: '',
+    defaultValue: '',
+    confirmLabel: 'OK',
+    cancelLabel: 'Cancelar',
+    required: false,
+    onConfirm: () => {},
+    onCancel: () => {},
   },
 
   notify: (message, type = 'info', duration = 4000) => {
@@ -137,5 +175,34 @@ export const useNotificationStore = create<NotificationState>((set) => ({
 
   closeAlert: () => {
     set((s) => ({ alert: { ...s.alert, isOpen: false } }));
+  },
+
+  askInput: ({ title, message = '', placeholder = '', defaultValue = '', confirmLabel = 'OK', cancelLabel = 'Cancelar', required = false }) => {
+    return new Promise<string | null>((resolve) => {
+      set({
+        prompt: {
+          isOpen: true,
+          title,
+          message,
+          placeholder,
+          defaultValue,
+          confirmLabel,
+          cancelLabel,
+          required,
+          onConfirm: (value: string) => {
+            set((s) => ({ prompt: { ...s.prompt, isOpen: false } }));
+            resolve(value);
+          },
+          onCancel: () => {
+            set((s) => ({ prompt: { ...s.prompt, isOpen: false } }));
+            resolve(null);
+          },
+        },
+      });
+    });
+  },
+
+  closePrompt: () => {
+    set((s) => ({ prompt: { ...s.prompt, isOpen: false } }));
   },
 }));

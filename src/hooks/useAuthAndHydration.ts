@@ -7,7 +7,34 @@ import { useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
 import { useCargoStore } from '@/features/cargoStore';
+import { useReportSettings } from '@/features/reportSettingsStore';
+import { useErrorReporter } from '@/features/errorReporter';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
+
+// Chaves auxiliares de localStorage que pertencem ao usuário corrente
+// (todas devem ser zeradas no logout para isolamento entre sessões).
+const USER_SCOPED_LOCAL_STORAGE_KEYS = [
+    'cargodeck-creation-draft',
+    'cargodeck-modal-generation-filter',
+    'cargodeck-report-settings', // limpo via resetAll() do store, mas a chave também
+];
+
+/**
+ * Limpa todo o estado de aplicação ligado ao usuário (cargos, configs, drafts, logs).
+ * Chamado no SIGNED_OUT — também útil em testes / reset manual.
+ */
+function clearAllUserState() {
+    // Resets do Zustand
+    useCargoStore.getState().resetToDefault();
+    useReportSettings.getState().resetAll();
+    useErrorReporter.getState().clear();
+
+    // Chaves auxiliares de localStorage
+    for (const k of USER_SCOPED_LOCAL_STORAGE_KEYS) {
+        try { localStorage.removeItem(k); } catch { /* ignore quota / privacy mode */ }
+    }
+    logger.info('Estado da aplicação resetado para Default após logout.');
+}
 
 export const useAuthAndHydration = () => {
     const { hydrateFromDb, setManifestDetails, setHydrationStatus } = useCargoStore();
@@ -89,7 +116,9 @@ export const useAuthAndHydration = () => {
                 
                 loadStowage();
             } else if (event === 'SIGNED_OUT') {
-                logger.info('Usuario saiu da sessao.');
+                logger.info('Usuario saiu da sessao — limpando estado completo.');
+                // Reset profundo: cargos, locations, configs, logs, drafts em localStorage
+                clearAllUserState();
                 setManifestDetails(null, null, []);
             }
         });

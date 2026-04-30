@@ -221,9 +221,16 @@ export function DeckArea() {
     }, [searchTerm, locations]);
 
     // Cálculo de estabilidade movido para o componente StabilityIndicator (renderizado no Sidebar)
+    const askInput = useNotificationStore(s => s.askInput);
 
-    const handleAddLocation = () => {
-        const name = prompt('Nome do novo local: (ex. Porão 1)');
+    const handleAddLocation = async () => {
+        const name = await askInput({
+            title: 'Nova Aba de Carga',
+            message: 'Identifique o novo local de armazenamento (convés, pátio, porão, etc.).',
+            placeholder: 'Ex.: Porão 1',
+            confirmLabel: 'Criar',
+            required: true,
+        });
         if (name) addLocation(name);
     };
 
@@ -241,9 +248,16 @@ export function DeckArea() {
                         isActive={activeLocationId === loc.id} 
                         matchCount={getMatchesForLocation(loc)}
                         onClick={() => setActiveLocation(loc.id)}
-                        onEdit={(editLoc) => {
-                          const name = prompt('Editar nome do local:', editLoc.name);
-                          if (name !== null && name.trim() !== '') {
+                        onEdit={async (editLoc) => {
+                          const name = await askInput({
+                            title: 'Editar Aba de Carga',
+                            message: 'Atualize o nome do local de armazenamento.',
+                            placeholder: 'Nome do local',
+                            defaultValue: editLoc.name,
+                            confirmLabel: 'Salvar',
+                            required: true,
+                          });
+                          if (name && name.trim() !== '') {
                             editLocation(editLoc.id, { name: name.trim() });
                           }
                         }}

@@ -378,13 +378,17 @@ export function ModalGenerationPage() {
         <button
           onClick={handleBack}
           title="Voltar ao Plano de Estivagem (Deck)"
-          className="nav-back group relative flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest min-h-[40px] bg-gradient-to-br from-brand-primary/10 to-brand-primary/5 border-2 border-brand-primary/30 text-brand-primary hover:from-brand-primary/15 hover:to-brand-primary/10 hover:border-brand-primary/50 transition-all shadow-sm hover:shadow-md hover:-translate-x-0.5 active:translate-x-0 active:scale-95"
+          className="nav-cta relative flex items-center justify-center gap-3 px-5 py-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-all duration-300 group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
         >
-          <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-primary/15 group-hover:bg-brand-primary/25 group-hover:-translate-x-0.5 transition-all">
-            <ArrowLeft size={12} />
+          {/* Anel pulsante de fundo (mesmo do botão GERAÇÃO MODAL) */}
+          <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
+          {/* Brilho que atravessa no hover */}
+          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-all duration-700" />
+
+          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:-rotate-3 group-hover:-translate-x-0.5 transition-all">
+            <ArrowLeft size={14} />
           </span>
-          <span>Deck</span>
-          <span className="hidden sm:inline text-[8px] font-bold opacity-60 normal-case tracking-wide">/ voltar</span>
+          <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">Deck</span>
         </button>
 
         <div className="h-8 w-px bg-subtle" />

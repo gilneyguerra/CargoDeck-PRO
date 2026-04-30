@@ -89,7 +89,7 @@ export class PdfGeneratorService {
     if (shipName) {
       doc.setFontSize(11);
       doc.setTextColor(180, 200, 255);
-      doc.text(`NAVIO: ${shipName.toUpperCase()}`, pageWidth / 2, 21, { align: 'center' });
+      doc.text(`UNIDADE: ${shipName.toUpperCase()}`, pageWidth / 2, 21, { align: 'center' });
     }
 
     doc.setTextColor(255, 255, 255);

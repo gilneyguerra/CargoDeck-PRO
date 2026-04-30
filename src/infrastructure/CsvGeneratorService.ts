@@ -8,7 +8,7 @@ export class CsvGeneratorService {
         atendimento: string | null
     ): Blob {
         const headers = [
-            'Navio',
+            'Unidade',
             'Atendimento',
             'Local',
             'Bay',
