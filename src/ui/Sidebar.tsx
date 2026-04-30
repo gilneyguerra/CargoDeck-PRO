@@ -1,28 +1,16 @@
 import {
-  Plus, Upload, Zap, MessageSquare, Table2, LayoutGrid,
-  Package, Anchor, Box, Flame, Truck, Layers, Flag, ArrowRight
+  Plus, LayoutGrid, Package, Anchor, Box, Flame, Truck, Layers, Flag, ArrowRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
-import type { CargoCategory } from '@/domain/Cargo';
-import { usePDFUpload } from '../hooks/usePDFUpload';
-import { useRef, useState, useMemo, type ChangeEvent } from 'react';
-import { useNotificationStore } from '@/features/notificationStore';
-import { cn } from '@/lib/utils';
+import { useState, useMemo } from 'react';
 import { ManualCargoModal } from './ManualCargoModal';
-import { ManifestoChatModal } from './ManifestoChatModal';
-import { CargoEditorModal } from './CargoEditorModal';
 
 export default function Sidebar() {
   const {
-    unallocatedCargoes, setExtractedCargoes, setViewMode, locations
+    unallocatedCargoes, setViewMode, locations
   } = useCargoStore();
 
-  const { upload, loading: isProcessing } = usePDFUpload();
-  const { notify, setBanner, hideBanner } = useNotificationStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [showEditorModal, setShowEditorModal] = useState(false);
 
   // ─── Resumo Estatístico ────────────────────────────────────────────────────
 
@@ -46,130 +34,24 @@ export default function Sidebar() {
     return { total, totalWeight, byCategory, containers, loose, urgent, high, allocated };
   }, [unallocatedCargoes, locations]);
 
-  // ─── PDF Upload Handler ────────────────────────────────────────────────────
-
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBanner('Iniciando processamento cirúrgico do manifesto...', 0);
-    try {
-      setBanner('Lendo dados do PDF...', 30);
-      const items = await upload(file);
-      setBanner('Validando cargas extraídas...', 70);
-
-      if (items && items.length > 0) {
-        const domainCargoes = items.map(item => ({
-          id: item.id,
-          identifier: item.identifier,
-          description: item.description,
-          weightTonnes: item.weight,
-          widthMeters: item.width || 0,
-          lengthMeters: item.length || 0,
-          heightMeters: item.height || 2,
-          quantity: 1,
-          category: (item.tipoDetectado as CargoCategory | undefined) || 'GENERAL',
-          status: 'UNALLOCATED' as const,
-          isBackload: item.isBackload,
-          nomeEmbarcacao: item.nomeEmbarcacao,
-          numeroAtendimento: item.numeroAtendimento,
-          origemCarga: item.origemCarga,
-          destinoCarga: item.destinoCarga,
-          roteiroPrevisto: item.roteiroPrevisto,
-          dataExtracao: item.dataExtracao,
-          tamanhoFisico: item.tamanhoFisico,
-          color: item.isBackload ? '#fca311' : '#3b82f6',
-          format: 'Retangular' as const,
-        }));
-        setBanner('Finalizando integração...', 90);
-        setExtractedCargoes(domainCargoes);
-        notify(`Manifesto processado! ${items.length} cargas carregadas.`, 'success');
-      } else {
-        notify('Nenhuma carga válida identificada no manifesto.', 'warning');
-      }
-    } catch {
-      notify('Falha crítica no processamento do manifesto.', 'error');
-    } finally {
-      hideBanner();
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
-      {/* Manifest Import Section */}
+      {/* Botão de navegação principal: Módulo de Geração Modal de Transporte */}
       <div className="p-0 border-b border-subtle bg-header/20">
-        <div className="grid grid-cols-3 gap-0">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            title="Importar Manifesto PDF"
-            className={cn(
-              'border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300',
-              isProcessing
-                ? 'bg-brand-primary/5 cursor-not-allowed'
-                : 'bg-main/30 hover:bg-main cursor-pointer group'
-            )}
-          >
-            <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-              {isProcessing ? <Zap className="w-4 h-4 animate-pulse" /> : <Upload className="w-4 h-4" />}
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">
-                {isProcessing ? 'PROCESSANDO...' : 'PDF'}
-              </span>
-              <span className="text-[8px] font-bold text-muted">OCR</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setShowChatModal(true)}
-            disabled={isProcessing}
-            title="Importar via Chat IA"
-            className="border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
-          >
-            <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-              <MessageSquare className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">VIA IA</span>
-              <span className="text-[8px] font-bold text-muted">Chat</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setShowEditorModal(true)}
-            disabled={isProcessing}
-            title="Editor de Cargas em Grade"
-            className="p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
-          >
-            <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-              <Table2 className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">GRADE</span>
-              <span className="text-[8px] font-bold text-muted">Excel/CSV</span>
-            </div>
-          </button>
-        </div>
-
-        {/* Botão de navegação principal: Módulo de Geração Modal de Transporte */}
         <button
           onClick={() => setViewMode('modal-generation')}
-          disabled={isProcessing}
           title="Abrir Módulo de Geração Modal de Transporte"
-          className="w-full px-4 py-3 flex items-center justify-center gap-2 border-t-2 border-brand-primary/30 bg-brand-primary/5 hover:bg-brand-primary/15 transition-all duration-300 group disabled:opacity-40 cursor-pointer"
+          className="w-full px-4 py-4 flex items-center justify-center gap-2 bg-brand-primary/5 hover:bg-brand-primary/15 transition-all duration-300 group cursor-pointer min-h-[40px]"
         >
           <LayoutGrid className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">GERAÇÃO MODAL</span>
           <ArrowRight className="w-3 h-3 text-brand-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
         </button>
-
-        <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
       </div>
 
-      {/* Resumo Estatístico — substitui a lista vertical conforme spec */}
+      {/* Resumo Estatístico */}
       <div className="p-5 border-b border-subtle flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -250,7 +132,7 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Breakdown por categoria — top 3 */}
+        {/* Breakdown por categoria — top 4 */}
         {Object.keys(stats.byCategory).length > 0 && (
           <div className="space-y-1.5">
             <p className="text-[9px] font-black text-muted uppercase tracking-widest">Top categorias</p>
@@ -267,20 +149,18 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Mensagem informativa — substitui os CTAs antigos (movidos para a toolbar da página dedicada) */}
+      {/* Mensagem informativa */}
       <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto no-scrollbar">
         <div className="w-14 h-14 rounded-full bg-main border-2 border-subtle flex items-center justify-center mb-3 opacity-50">
           <Truck size={20} className="text-secondary" />
         </div>
         <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
-          As ações de gerenciamento e movimentação em grupo agora vivem na página dedicada de
+          Importação de manifestos (PDF/IA/Excel), gerenciamento e movimentação em lote ficam na página dedicada de
           <span className="text-brand-primary font-black"> Geração Modal de Transporte</span>.
         </p>
       </div>
 
       <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-      <ManifestoChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
-      <CargoEditorModal isOpen={showEditorModal} onClose={() => setShowEditorModal(false)} />
     </aside>
   );
 }
