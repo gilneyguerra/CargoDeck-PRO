@@ -2,7 +2,13 @@
 import { useMemo } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 
-export type StabilityStatus = 'OK' | 'WARNING' | 'CRITICAL';
+/**
+ * Status de estabilidade — APENAS INDICATIVO (não bloqueia movimentação).
+ * 'OK' / 'WARNING' refletem o desequilíbrio para o operador, mas o app
+ * NUNCA impede a operação por critério automático. Decisão fica com o
+ * usuário que opera o plano de carga.
+ */
+export type StabilityStatus = 'OK' | 'WARNING';
 
 export interface StabilityResult {
     pesoBombordo: number;
@@ -16,10 +22,11 @@ export interface StabilityResult {
  * Calcula o equilíbrio transversal (Bombordo vs Boreste) simulando a movimentação
  * das cargas selecionadas para o bordo alvo.
  *
- * Fórmulas (spec Seção 6):
+ * Fórmulas:
  *   Diff     = |pesoBombordo - pesoBoreste|
  *   Desq%    = (Diff / (pesoBombordo + pesoBoreste)) × 100
- *   OK       ≤ 5% | WARNING 5-10% | CRITICAL > 10%
+ *   OK       ≤ 10% | WARNING > 10%
+ *   (Status é APENAS visual; nunca bloqueia confirmação.)
  */
 export function useStabilityCalculation(
     selectedCargoIds: string[],
@@ -72,9 +79,8 @@ export function useStabilityCalculation(
         const diff = Math.abs(pesoBombordo - pesoBoreste);
         const diffPercent = total > 0 ? (diff / total) * 100 : 0;
 
-        const status: StabilityStatus =
-            diffPercent <= 5 ? 'OK' :
-            diffPercent <= 10 ? 'WARNING' : 'CRITICAL';
+        // Status apenas informativo — sem categoria 'CRITICAL' bloqueante
+        const status: StabilityStatus = diffPercent <= 10 ? 'OK' : 'WARNING';
 
         return { pesoBombordo, pesoBoreste, pesoSelecionado, diffPercent, status };
     }, [selectedCargoIds, targetSide, locations, unallocatedCargoes]);

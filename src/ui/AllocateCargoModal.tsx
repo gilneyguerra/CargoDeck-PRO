@@ -79,12 +79,6 @@ export function AllocateCargoModal({ isOpen, onClose, selectedCargoIds, onSucces
 
   if (!isOpen) return null;
 
-  // Validação de capacidade da bay selecionada
-  const currentBay = bays.find(b => b.id === selectedBayId);
-  const wouldExceed = currentBay
-    ? (currentBay.currentWeightTonnes + totalWeight) > currentBay.maxWeightTonnes
-    : false;
-
   return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
       <div
@@ -206,19 +200,7 @@ export function AllocateCargoModal({ isOpen, onClose, selectedCargoIds, onSucces
             </div>
           </div>
 
-          {/* Alerta de capacidade */}
-          {wouldExceed && (
-            <div className="bg-status-error/10 border-2 border-status-error/30 rounded-xl p-4 flex items-start gap-3">
-              <AlertTriangle size={16} className="text-status-error shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[11px] font-black text-status-error uppercase tracking-widest">Capacidade Excedida</p>
-                <p className="text-[10px] text-secondary mt-0.5">
-                  Adicionar {totalWeight.toFixed(2)}t a esta baia (atual: {currentBay?.currentWeightTonnes.toFixed(2)}t)
-                  ultrapassará o limite de {currentBay?.maxWeightTonnes.toFixed(2)}t.
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Alerta de capacidade removido — operação não é bloqueada por limite automático */}
         </div>
 
         {/* Footer */}

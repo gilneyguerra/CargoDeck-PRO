@@ -20,13 +20,14 @@ interface GaugeProps {
     pesoBombordo: number;
     pesoBoreste: number;
     diffPercent: number;
-    status: 'OK' | 'WARNING' | 'CRITICAL';
+    status: 'OK' | 'WARNING';
 }
 
 function StabilityGauge({ pesoBombordo, pesoBoreste, diffPercent, status }: GaugeProps) {
-    const barColor  = status === 'OK' ? 'bg-emerald-500' : status === 'WARNING' ? 'bg-amber-500' : 'bg-red-600';
-    const textColor = status === 'OK' ? 'text-emerald-600 dark:text-emerald-400' : status === 'WARNING' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
-    const label     = status === 'OK' ? 'Estável' : status === 'WARNING' ? 'Atenção' : 'Bloqueado — Desequilíbrio crítico';
+    // Indicador APENAS visual — não bloqueia operação. Decisão é do operador.
+    const barColor  = status === 'OK' ? 'bg-emerald-500' : 'bg-amber-500';
+    const textColor = status === 'OK' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400';
+    const label     = status === 'OK' ? 'Equilíbrio adequado' : 'Atenção — desequilíbrio elevado';
     const Icon      = status === 'OK' ? CheckCircle2 : AlertTriangle;
 
     return (
@@ -226,7 +227,8 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
     }, [unallocatedCargoes, locations, selectedIds]);
 
     const handleConfirm = async () => {
-        if (stability.status === 'CRITICAL' || loading) return;
+        // Operação NUNCA é bloqueada pelo desequilíbrio — apenas avisa visualmente.
+        if (loading) return;
 
         // 1. Detectar duplicatas ANTES de qualquer outra ação
         const dups = detectDuplicates();
@@ -525,9 +527,10 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                                     status={stability.status}
                                 />
 
-                                {stability.status === 'CRITICAL' && (
-                                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-xs font-bold text-red-700 dark:text-red-400">
-                                        Desequilíbrio superior a 10%. Mude o bordo de destino ou selecione menos cargas para continuar.
+                                {/* Aviso de desequilíbrio elevado (apenas informativo — não bloqueia confirmação) */}
+                                {stability.status === 'WARNING' && stability.diffPercent > 10 && (
+                                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-xs font-bold text-amber-700 dark:text-amber-400">
+                                        Desequilíbrio acima de 10%. Considere alterar o bordo de destino para melhor distribuição — operação permitida.
                                     </div>
                                 )}
                             </div>
@@ -582,12 +585,10 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                                 </button>
                                 <button
                                     onClick={handleConfirm}
-                                    disabled={stability.status === 'CRITICAL' || loading}
+                                    disabled={loading}
                                     className={cn(
                                         'flex items-center gap-2 px-7 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all',
-                                        stability.status === 'CRITICAL'
-                                            ? 'bg-red-100 dark:bg-red-950 text-red-400 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:brightness-110 active:scale-95 shadow-lg shadow-emerald-500/20 disabled:opacity-50'
+                                        'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:brightness-110 active:scale-95 shadow-lg shadow-emerald-500/20 disabled:opacity-50'
                                     )}
                                 >
                                     {loading ? 'Movendo...' : 'Confirmar Movimentação'}
