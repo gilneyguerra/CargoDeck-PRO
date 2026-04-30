@@ -11,8 +11,11 @@ export type CargoCategory =
 
 export type CargoStatus = 'UNALLOCATED' | 'ALLOCATED' | 'CONFLICT';
 
+export type CargoPriority = 'normal' | 'high' | 'urgent';
+
 export interface Cargo {
   id: string;
+  priority?: CargoPriority;
   description: string;
   identifier: string; // código único da carga (ex: "MLTU 280189-9", "802567-3")
   weightTonnes: number;

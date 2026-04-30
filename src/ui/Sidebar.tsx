@@ -1,83 +1,64 @@
 import {
-  Plus, Upload, Trash2, Box, Package, Anchor, Truck,
-  Zap, MoveRight, Users, MessageSquare, Table2, LayoutGrid
+  Plus, Upload, Zap, Users, MessageSquare, Table2, LayoutGrid,
+  Package, Anchor, Box, Flame, Truck, Layers, Flag, ArrowRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
+import type { CargoCategory } from '@/domain/Cargo';
 import { usePDFUpload } from '../hooks/usePDFUpload';
 import { useRef, useState, useMemo, type ChangeEvent } from 'react';
-import DraggableCargo from './DraggableCargo';
 import { useNotificationStore } from '@/features/notificationStore';
 import { cn } from '@/lib/utils';
-import { useDroppable } from '@dnd-kit/core';
 import { ManualCargoModal } from './ManualCargoModal';
-import { BatchMoveModal } from './BatchMoveModal';
 import { GroupMoveModal } from './GroupMoveModal';
 import { ManifestoChatModal } from './ManifestoChatModal';
 import { CargoEditorModal } from './CargoEditorModal';
 
 export default function Sidebar() {
   const {
-    unallocatedCargoes, clearUnallocatedCargoes,
-    deleteMultipleCargoes, setEditingCargo, searchTerm,
-    setExtractedCargoes, setViewMode
+    unallocatedCargoes, setExtractedCargoes, setViewMode, locations
   } = useCargoStore();
 
   const { upload, loading: isProcessing } = usePDFUpload();
-  const { 
-    notify, setBanner, hideBanner, ask 
-  } = useNotificationStore();
+  const { notify, setBanner, hideBanner } = useNotificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'container' | 'equipment' | 'tubular' | 'basket'>('all');
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [selectedCargoIds, setSelectedCargoIds] = useState<Set<string>>(new Set());
-  const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
   const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showEditorModal, setShowEditorModal] = useState(false);
 
-  const { setNodeRef } = useDroppable({
-    id: 'inventory-sidebar',
-  });
+  // ─── Resumo Estatístico ────────────────────────────────────────────────────
 
-  // Filtros combinados com Busca Global
-  const filteredCargoes = useMemo(() => {
-    let result = unallocatedCargoes;
+  const stats = useMemo(() => {
+    const total = unallocatedCargoes.length;
+    const totalWeight = unallocatedCargoes.reduce((s, c) => s + (c.weightTonnes || 0), 0);
+    const byCategory = unallocatedCargoes.reduce((acc, c) => {
+      const key = c.category || 'GENERAL';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const containers = unallocatedCargoes.filter(c => c.category === 'CONTAINER').length;
+    const loose = total - containers;
+    const urgent = unallocatedCargoes.filter(c => c.priority === 'urgent').length;
+    const high = unallocatedCargoes.filter(c => c.priority === 'high').length;
 
-    // 1. Filtro de Categorias lateral
-    if (activeTab !== 'all') {
-      result = result.filter(c => {
-        const type = (c.category || '').toLowerCase();
-        if (activeTab === 'container') return type.includes('container') || type.includes('cont');
-        if (activeTab === 'equipment') return type.includes('equipment') || type.includes('equi') || type.includes('skid') || type.includes('tanque');
-        if (activeTab === 'tubular') return type.includes('tubular') || type.includes('riser') || type.includes('pipe') || type.includes('tubo');
-        if (activeTab === 'basket') return type.includes('basket') || type.includes('cesta');
-        return true;
-      });
-    }
+    // Cargas alocadas (todas as bays de todas as locations)
+    const allocated = locations.reduce((sum, loc) =>
+      sum + loc.bays.reduce((bs, b) => bs + b.allocatedCargoes.length, 0), 0);
 
-    // 2. Filtro de Busca Global
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(c => 
-        (c.identifier || '').toLowerCase().includes(term) || 
-        (c.description || '').toLowerCase().includes(term)
-      );
-    }
+    return { total, totalWeight, byCategory, containers, loose, urgent, high, allocated };
+  }, [unallocatedCargoes, locations]);
 
-    return result;
-  }, [unallocatedCargoes, activeTab, searchTerm]);
+  // ─── PDF Upload Handler ────────────────────────────────────────────────────
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setBanner('Iniciando processamento cirúrgico do manifesto...', 0);
-    
     try {
       setBanner('Lendo dados do PDF...', 30);
       const items = await upload(file);
       setBanner('Validando cargas extraídas...', 70);
-      
+
       if (items && items.length > 0) {
         const domainCargoes = items.map(item => ({
           id: item.id,
@@ -88,7 +69,7 @@ export default function Sidebar() {
           lengthMeters: item.length || 0,
           heightMeters: item.height || 2,
           quantity: 1,
-          category: (item.tipoDetectado as any) || 'GENERAL',
+          category: (item.tipoDetectado as CargoCategory | undefined) || 'GENERAL',
           status: 'UNALLOCATED' as const,
           isBackload: item.isBackload,
           nomeEmbarcacao: item.nomeEmbarcacao,
@@ -99,16 +80,15 @@ export default function Sidebar() {
           dataExtracao: item.dataExtracao,
           tamanhoFisico: item.tamanhoFisico,
           color: item.isBackload ? '#fca311' : '#3b82f6',
-          format: 'Retangular'
+          format: 'Retangular' as const,
         }));
-
         setBanner('Finalizando integração...', 90);
-        setExtractedCargoes(domainCargoes as any);
+        setExtractedCargoes(domainCargoes);
         notify(`Manifesto processado! ${items.length} cargas carregadas.`, 'success');
       } else {
         notify('Nenhuma carga válida identificada no manifesto.', 'warning');
       }
-    } catch (err) {
+    } catch {
       notify('Falha crítica no processamento do manifesto.', 'error');
     } finally {
       hideBanner();
@@ -116,255 +96,220 @@ export default function Sidebar() {
     }
   };
 
-  const toggleSelectCargo = (id: string) => {
-    const newSet = new Set(selectedCargoIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setSelectedCargoIds(newSet);
-  };
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <aside className="w-[360px] border-r-[3px] border-brand-primary bg-sidebar flex flex-col shrink-0 h-full shadow-high z-20 font-sans">
-        {/* Manifest Import Section */}
-        <div className="p-0 border-b border-subtle bg-header/20">
-            <div className="grid grid-cols-3 gap-0">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isProcessing}
-                  title="Importar Manifesto PDF"
-                  className={cn(
-                    "border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300",
-                    isProcessing
-                      ? "bg-brand-primary/5 cursor-not-allowed"
-                      : "bg-main/30 hover:bg-main cursor-pointer group"
-                  )}
-                >
-                    <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-                      {isProcessing ? <Zap className="w-4 h-4 animate-pulse" /> : <Upload className="w-4 h-4" />}
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">
-                        {isProcessing ? 'PROCESSANDO...' : 'PDF'}
-                      </span>
-                      <span className="text-[8px] font-bold text-muted">OCR</span>
-                    </div>
-                </button>
-
-                <button
-                  onClick={() => setShowChatModal(true)}
-                  disabled={isProcessing}
-                  title="Importar via Chat IA"
-                  className="border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
-                >
-                    <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-                      <MessageSquare className="w-4 h-4" />
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">VIA IA</span>
-                      <span className="text-[8px] font-bold text-muted">Chat</span>
-                    </div>
-                </button>
-
-                <button
-                  onClick={() => setShowEditorModal(true)}
-                  disabled={isProcessing}
-                  title="Editor de Cargas em Grade"
-                  className="p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
-                >
-                    <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
-                      <Table2 className="w-4 h-4" />
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">GRADE</span>
-                      <span className="text-[8px] font-bold text-muted">Planilha</span>
-                    </div>
-                </button>
+      {/* Manifest Import Section */}
+      <div className="p-0 border-b border-subtle bg-header/20">
+        <div className="grid grid-cols-3 gap-0">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            title="Importar Manifesto PDF"
+            className={cn(
+              'border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300',
+              isProcessing
+                ? 'bg-brand-primary/5 cursor-not-allowed'
+                : 'bg-main/30 hover:bg-main cursor-pointer group'
+            )}
+          >
+            <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+              {isProcessing ? <Zap className="w-4 h-4 animate-pulse" /> : <Upload className="w-4 h-4" />}
             </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">
+                {isProcessing ? 'PROCESSANDO...' : 'PDF'}
+              </span>
+              <span className="text-[8px] font-bold text-muted">OCR</span>
+            </div>
+          </button>
 
-            {/* Botão para abrir página dedicada de Cargas Não Alocadas */}
-            <button
-              onClick={() => setViewMode('unallocated')}
-              disabled={isProcessing}
-              title="Abrir página dedicada de Cargas Não Alocadas (grid + alocação em lote)"
-              className="w-full px-4 py-3 flex items-center justify-center gap-2 border-t border-subtle bg-main/20 hover:bg-brand-primary/10 transition-all duration-300 group disabled:opacity-40 cursor-pointer"
-            >
-              <LayoutGrid className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">CARGAS NÃO ALOCADAS</span>
-              <span className="text-[8px] font-bold text-muted">Grid + alocação em lote</span>
-            </button>
+          <button
+            onClick={() => setShowChatModal(true)}
+            disabled={isProcessing}
+            title="Importar via Chat IA"
+            className="border-r border-subtle p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
+          >
+            <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+              <MessageSquare className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">VIA IA</span>
+              <span className="text-[8px] font-bold text-muted">Chat</span>
+            </div>
+          </button>
 
-            <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
+          <button
+            onClick={() => setShowEditorModal(true)}
+            disabled={isProcessing}
+            title="Editor de Cargas em Grade"
+            className="p-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 bg-main/30 hover:bg-brand-primary/5 cursor-pointer group disabled:opacity-40"
+          >
+            <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary group-hover:scale-110 transition-transform">
+              <Table2 className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] font-black text-primary uppercase tracking-[0.08em]">GRADE</span>
+              <span className="text-[8px] font-bold text-muted">Excel/CSV</span>
+            </div>
+          </button>
         </div>
 
-        {/* Filters and List - Refactored for Containment */}
-        <div className="p-4 border-b border-subtle flex flex-col gap-4 overflow-hidden min-w-0">
-           {/* Section Identity: Row 1 */}
-           <div className="flex items-center justify-between gap-2 min-w-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-brand-primary/10 shadow-sm flex items-center justify-center text-brand-primary shrink-0 border border-brand-primary/20">
-                  <Package size={20} />
+        {/* Botão de navegação principal: Módulo de Geração Modal de Transporte */}
+        <button
+          onClick={() => setViewMode('modal-generation')}
+          disabled={isProcessing}
+          title="Abrir Módulo de Geração Modal de Transporte"
+          className="w-full px-4 py-3 flex items-center justify-center gap-2 border-t-2 border-brand-primary/30 bg-brand-primary/5 hover:bg-brand-primary/15 transition-all duration-300 group disabled:opacity-40 cursor-pointer"
+        >
+          <LayoutGrid className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">GERAÇÃO MODAL</span>
+          <ArrowRight className="w-3 h-3 text-brand-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+        </button>
+
+        <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
+      </div>
+
+      {/* Resumo Estatístico — substitui a lista vertical conforme spec */}
+      <div className="p-5 border-b border-subtle flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+              <Package size={16} className="text-brand-primary" />
+            </div>
+            <div>
+              <h3 className="text-[11px] font-black text-primary uppercase tracking-widest leading-none">Resumo de Carga</h3>
+              <p className="text-[9px] font-bold text-secondary opacity-70 mt-0.5">Inventário ativo</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsManualModalOpen(true)}
+            title="Nova Carga Manual"
+            className="p-2 text-secondary hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all border border-transparent hover:border-brand-primary/20"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        {/* Cards de números principais */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-main border border-subtle rounded-xl p-3">
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-muted uppercase tracking-widest mb-1.5">
+              <Box size={10} /> Não Alocadas
+            </div>
+            <p className="text-xl font-mono font-black text-brand-primary leading-none">{stats.total}</p>
+            <p className="text-[10px] font-mono font-black text-secondary mt-1">{stats.totalWeight.toFixed(1)} t</p>
+          </div>
+          <div className="bg-main border border-subtle rounded-xl p-3">
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-muted uppercase tracking-widest mb-1.5">
+              <Anchor size={10} /> Alocadas
+            </div>
+            <p className="text-xl font-mono font-black text-status-success leading-none">{stats.allocated}</p>
+            <p className="text-[10px] font-mono font-black text-secondary mt-1">a bordo</p>
+          </div>
+        </div>
+
+        {/* Breakdown soltas/contentores */}
+        <div className="bg-main border border-subtle rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <Layers size={10} className="text-muted" />
+              <span className="font-black text-secondary uppercase tracking-widest">Soltas</span>
+            </div>
+            <span className="font-mono font-black text-primary">{stats.loose}</span>
+          </div>
+          <div className="flex items-center justify-between text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <Package size={10} className="text-muted" />
+              <span className="font-black text-secondary uppercase tracking-widest">Contentores</span>
+            </div>
+            <span className="font-mono font-black text-primary">{stats.containers}</span>
+          </div>
+        </div>
+
+        {/* Prioridade — só aparece se houver */}
+        {(stats.urgent > 0 || stats.high > 0) && (
+          <div className="bg-status-warning/5 border border-status-warning/30 rounded-xl p-3 space-y-2">
+            {stats.urgent > 0 && (
+              <div className="flex items-center justify-between text-[10px]">
+                <div className="flex items-center gap-1.5">
+                  <Flame size={10} className="text-status-error" />
+                  <span className="font-black text-status-error uppercase tracking-widest">Urgentes</span>
                 </div>
-                <div className="flex flex-col truncate">
-                  <span className="text-[11px] font-black text-primary uppercase tracking-widest truncate">Inventory</span>
-                  <span className="text-[9px] font-bold text-secondary uppercase opacity-70">Ready for Loading</span>
-                </div>
+                <span className="font-mono font-black text-status-error">{stats.urgent}</span>
               </div>
-              
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border border-indigo-500/20 text-indigo-600 text-[10px] font-extrabold px-2.5 py-1 rounded-lg">
-                  {unallocatedCargoes.length}
-                </span>
-                <button 
-                  onClick={() => setIsManualModalOpen(true)}
-                  title="Novo Item"
-                  className="p-2 text-secondary hover:text-brand-primary hover:bg-brand-primary/5 rounded-xl transition-all border border-transparent hover:border-brand-primary/20"
-                >
-                  <Plus size={18} />
-                </button>
+            )}
+            {stats.high > 0 && (
+              <div className="flex items-center justify-between text-[10px]">
+                <div className="flex items-center gap-1.5">
+                  <Flag size={10} className="text-status-warning" />
+                  <span className="font-black text-status-warning uppercase tracking-widest">Alta Prioridade</span>
+                </div>
+                <span className="font-mono font-black text-status-warning">{stats.high}</span>
               </div>
-           </div>
+            )}
+          </div>
+        )}
 
-           {/* Operational Controls: Row 2 */}
-           <div className="flex items-center justify-between bg-main/40 p-2.5 rounded-2xl border border-subtle/50 gap-2 shadow-inner">
-                <button 
-                  onClick={() => {
-                    if (selectedCargoIds.size === unallocatedCargoes.length) setSelectedCargoIds(new Set());
-                    else setSelectedCargoIds(new Set(unallocatedCargoes.map(c => c.id)));
-                  }}
-                  className={cn(
-                    "px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border shrink-0",
-                    selectedCargoIds.size === unallocatedCargoes.length 
-                      ? "bg-brand-primary border-brand-primary text-white shadow-low" 
-                      : "bg-sidebar border-subtle text-secondary hover:border-brand-primary/40"
-                  )}
-                >
-                  {selectedCargoIds.size === unallocatedCargoes.length ? 'DESMARCAR' : 'SELEC. TUDO'}
-                </button>
-
-                <div className="flex items-center gap-1.5 ml-auto">
-                    <button
-                      onClick={() => setShowGroupMoveModal(true)}
-                      title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-all shrink-0"
-                    >
-                      <Users size={12} /> GRUPO
-                    </button>
-                    {selectedCargoIds.size > 0 && (
-                      <button
-                        onClick={() => setIsBatchMoveOpen(true)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black text-white bg-indigo-600 hover:brightness-110 shadow-md shadow-indigo-500/20 transition-all shrink-0"
-                      >
-                        <MoveRight size={12} /> MOVER
-                      </button>
-                    )}
-                    
-                    <button 
-                       onClick={async () => {
-                         if (selectedCargoIds.size > 0) {
-                           if (await ask('Confirmar Exclusão', `Deseja excluir as ${selectedCargoIds.size} cargas selecionadas?`)) {
-                             deleteMultipleCargoes(Array.from(selectedCargoIds));
-                             setSelectedCargoIds(new Set());
-                             notify('Cargas excluídas com sucesso.', 'success');
-                           }
-                         } else if (unallocatedCargoes.length > 0) {
-                           if (await ask('Limpar Inventário', 'Deseja excluir TODAS as cargas não alocadas? Esta ação é irreversível.')) {
-                             clearUnallocatedCargoes();
-                             notify('Inventário limpo.', 'info');
-                           }
-                         }
-                       }}
-                       disabled={unallocatedCargoes.length === 0}
-                       className={cn(
-                         "p-2 rounded-xl transition-all duration-300",
-                         selectedCargoIds.size > 0 
-                          ? "text-white bg-status-error shadow-md shadow-red-500/20" 
-                          : "text-secondary hover:text-status-error hover:bg-status-error/10 disabled:opacity-30"
-                       )}
-                    >
-                       <Trash2 size={18} />
-                    </button>
+        {/* Breakdown por categoria — top 3 */}
+        {Object.keys(stats.byCategory).length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[9px] font-black text-muted uppercase tracking-widest">Top categorias</p>
+            {Object.entries(stats.byCategory)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 4)
+              .map(([cat, count]) => (
+                <div key={cat} className="flex items-center justify-between text-[10px] bg-main/40 rounded-lg px-2 py-1.5 border border-subtle/50">
+                  <span className="font-black text-secondary uppercase tracking-widest truncate">{cat}</span>
+                  <span className="font-mono font-black text-primary">{count}</span>
                 </div>
-           </div>
+              ))}
+          </div>
+        )}
+      </div>
 
-           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2">
-              <FilterButton active={activeTab === 'all'} count={unallocatedCargoes.length} label="Todos" onClick={() => setActiveTab('all')} icon={<Box size={12}/>} />
-              <FilterButton active={activeTab === 'container'} count={unallocatedCargoes.filter(c => (c.category||'').toLowerCase().includes('cont')).length} label="Cont" onClick={() => setActiveTab('container')} icon={<Package size={12}/>} />
-              <FilterButton active={activeTab === 'equipment'} count={unallocatedCargoes.filter(c => (c.category||'').toLowerCase().includes('equi')).length} label="Equip" onClick={() => setActiveTab('equipment')} icon={<Truck size={12}/>} />
-              <FilterButton active={activeTab === 'tubular'} count={unallocatedCargoes.filter(c => {
-                const type = (c.category || '').toLowerCase();
-                return type.includes('tubular') || type.includes('riser') || type.includes('pipe') || type.includes('tubo');
-              }).length} label="Tub" onClick={() => setActiveTab('tubular')} icon={<Anchor size={12}/>} />
-           </div>
+      {/* CTA principal: ir para a página de Geração Modal */}
+      <div className="flex-1 p-5 flex flex-col gap-3 overflow-y-auto no-scrollbar">
+        <button
+          onClick={() => setViewMode('modal-generation')}
+          disabled={stats.total === 0}
+          className={cn(
+            'w-full flex items-center justify-center gap-2 px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all min-h-[40px]',
+            stats.total > 0
+              ? 'bg-brand-primary text-white hover:brightness-110 shadow-md shadow-brand-primary/20 active:scale-95'
+              : 'bg-sidebar border-2 border-dashed border-subtle text-muted opacity-60 cursor-not-allowed'
+          )}
+        >
+          <LayoutGrid size={14} />
+          {stats.total > 0 ? `Gerenciar ${stats.total} cargas` : 'Sem cargas no inventário'}
+          {stats.total > 0 && <ArrowRight size={14} />}
+        </button>
+
+        <button
+          onClick={() => setShowGroupMoveModal(true)}
+          disabled={stats.total === 0 && stats.allocated === 0}
+          title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black text-white bg-[#1A237E] hover:brightness-110 disabled:opacity-40 shadow-md transition-all uppercase tracking-widest min-h-[40px]"
+        >
+          <Users size={12} /> Mover em Grupo
+        </button>
+
+        <div className="flex-1 flex flex-col items-center justify-center text-center pt-8">
+          <div className="w-14 h-14 rounded-full bg-main border-2 border-subtle flex items-center justify-center mb-3 opacity-40">
+            <Truck size={20} className="text-secondary" />
+          </div>
+          <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
+            A lista de cargas e a alocação em lote agora vivem na página dedicada de
+            <span className="text-brand-primary font-black"> Geração Modal de Transporte</span>.
+          </p>
         </div>
+      </div>
 
-        {/* Scrollable Cargo List */}
-        <div ref={setNodeRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-main/20 no-scrollbar">
-           {filteredCargoes.map(cargo => (
-             <div key={cargo.id} className="relative group/cargo">
-                <div className={cn(
-                  "absolute left-2 top-1/2 -translate-y-1/2 z-20 transition-opacity",
-                  selectedCargoIds.has(cargo.id) ? "opacity-100" : "opacity-0 group-hover/cargo:opacity-100"
-                )}>
-                   <input 
-                     type="checkbox" 
-                     checked={selectedCargoIds.has(cargo.id)}
-                     onChange={() => toggleSelectCargo(cargo.id)}
-                     className="w-4 h-4 rounded border-subtle text-brand-primary focus:ring-brand-primary cursor-pointer"
-                   />
-                </div>
-                <div className={cn("transition-transform", selectedCargoIds.has(cargo.id) && "translate-x-6")}>
-                  <DraggableCargo 
-                    cargo={cargo} 
-                    onEdit={setEditingCargo}
-                    selectable={true}
-                    isSelected={selectedCargoIds.has(cargo.id)}
-                    onToggleSelect={toggleSelectCargo}
-                  />
-                </div>
-             </div>
-           ))}
-           {filteredCargoes.length === 0 && (
-             <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
-                <div className="p-6 bg-sidebar rounded-full mb-4">
-                  <Anchor size={32} className="text-secondary" />
-                </div>
-                <p className="text-xs font-black text-secondary uppercase tracking-widest">Nenhuma carga no inventário</p>
-             </div>
-           )}
-        </div>
-
-        <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
-        <BatchMoveModal
-          isOpen={isBatchMoveOpen}
-          onClose={() => setIsBatchMoveOpen(false)}
-          selectedCargoIds={Array.from(selectedCargoIds)}
-          selectedCount={selectedCargoIds.size}
-          onSuccess={() => {
-            setSelectedCargoIds(new Set());
-            notify('Cargas movidas com sucesso!', 'success');
-          }}
-        />
-        <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
-        <ManifestoChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
-        <CargoEditorModal isOpen={showEditorModal} onClose={() => setShowEditorModal(false)} />
+      <ManualCargoModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} />
+      <GroupMoveModal isOpen={showGroupMoveModal} onClose={() => setShowGroupMoveModal(false)} />
+      <ManifestoChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
+      <CargoEditorModal isOpen={showEditorModal} onClose={() => setShowEditorModal(false)} />
     </aside>
-  );
-}
-
-function FilterButton({ active, count, label, onClick, icon }: any) {
-  return (
-    <button 
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 px-4 py-2 rounded-2xl text-[11px] font-extrabold uppercase tracking-tight whitespace-nowrap transition-all border shadow-low",
-        active 
-          ? "bg-brand-primary text-white border-brand-primary scale-105 z-10" 
-          : "bg-main border-subtle text-primary hover:text-brand-primary hover:border-brand-primary"
-      )}
-    >
-      {icon}
-      {label}
-      <span className={cn("ml-1 font-black px-1.5 py-px rounded-md bg-sidebar/50", active ? "text-white" : "text-brand-primary")}>{count}</span>
-    </button>
   );
 }

@@ -23,7 +23,7 @@ import { findDuplicateOnboard, calculateBayStats } from '../utils/cargoUtils';
 /**
  * Define a estrutura do estado do store de cargas.
  */
-export type ViewMode = 'deck' | 'unallocated';
+export type ViewMode = 'deck' | 'modal-generation';
 
 export interface CargoState {
     manifestsLoaded: boolean;
@@ -65,6 +65,7 @@ export interface CargoState {
     toggleCargoSelection: (id: string) => void;
     selectMultipleCargos: (ids: string[]) => void;
     clearCargoSelection: () => void;
+    setPriorityBatch: (cargoIds: string[], priority: 'normal' | 'high' | 'urgent') => void;
     setHydrationStatus: (status: boolean) => void;
 }
 
@@ -128,6 +129,21 @@ export const useCargoStore = create<CargoState>()(
             selectMultipleCargos: (ids) => set({ selectedCargos: new Set(ids) }),
 
             clearCargoSelection: () => set({ selectedCargos: new Set<string>() }),
+
+            setPriorityBatch: (cargoIds, priority) => set((state) => ({
+                unallocatedCargoes: state.unallocatedCargoes.map(c =>
+                    cargoIds.includes(c.id) ? { ...c, priority } : c
+                ),
+                locations: state.locations.map(loc => ({
+                    ...loc,
+                    bays: loc.bays.map(bay => ({
+                        ...bay,
+                        allocatedCargoes: bay.allocatedCargoes.map(c =>
+                            cargoIds.includes(c.id) ? { ...c, priority } : c
+                        ),
+                    })),
+                })),
+            })),
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
 
             setSearchTerm: (term) => set({ searchTerm: term }),
