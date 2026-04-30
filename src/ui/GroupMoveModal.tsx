@@ -1,5 +1,5 @@
 // src/ui/GroupMoveModal.tsx
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X, Search, CheckCircle2, AlertTriangle, Scale,
@@ -9,6 +9,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { useStabilityCalculation } from '@/hooks/useStabilityCalculation';
 import { useCargoMovement } from '@/hooks/useCargoMovement';
 import { useNotificationStore } from '@/features/notificationStore';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
 
@@ -116,7 +117,10 @@ interface Props {
 export function GroupMoveModal({ isOpen, onClose }: Props) {
     const { unallocatedCargoes, locations } = useCargoStore();
     const notify = useNotificationStore(s => s.notify);
+    const ask = useNotificationStore(s => s.ask);
     const { execute, loading } = useCargoMovement();
+    const titleId = useId();
+    const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
 
     const [step, setStep] = useState<0 | 1>(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -189,8 +193,9 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
         if (stability.status === 'CRITICAL' || loading) return;
 
         if (selectedWeight > 50) {
-            const ok = window.confirm(
-                `A seleção totaliza ${selectedWeight.toFixed(2)} TON.\n\nConfirmar a movimentação em grupo?`
+            const ok = await ask(
+                'Confirmar Movimentação em Grupo',
+                `A seleção totaliza ${selectedWeight.toFixed(2)} TON. Confirmar a movimentação?`
             );
             if (!ok) return;
         }
@@ -220,8 +225,14 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="w-[95vw] h-[90vh] bg-white dark:bg-[#0f172a] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-subtle animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div
+                ref={containerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                className="w-[95vw] h-[90vh] bg-white dark:bg-[#0f172a] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-subtle animate-in fade-in slide-in-from-bottom-4 duration-300"
+            >
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-subtle shrink-0">
@@ -230,7 +241,7 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                             <Users className="w-5 h-5 text-brand-primary" />
                         </div>
                         <div>
-                            <h2 className="text-base font-black text-primary leading-none">Movimentação em Grupo</h2>
+                            <h2 id={titleId} className="text-base font-black text-primary leading-none">Movimentação em Grupo</h2>
                             {step === 0 && selectedIds.size > 0 && (
                                 <p className="text-xs text-muted mt-0.5">
                                     {selectedIds.size} carga(s) selecionada(s) · {selectedWeight.toFixed(2)} TON

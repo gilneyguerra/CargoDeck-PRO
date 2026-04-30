@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useId, type KeyboardEvent, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Plus, Trash2, CheckCircle2, Table2, AlertCircle, Upload, Download } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
@@ -567,6 +568,8 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
   const [rows, setRows] = useState<EditorRow[]>([emptyRow()]);
   const [validated, setValidated] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
   const fileImportRef = useRef<HTMLInputElement>(null);
 
   const { setExtractedCargoes } = useCargoStore();
@@ -698,8 +701,15 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 font-sans">
-      <div className="bg-main border-2 border-subtle rounded-[2rem] w-full max-w-[1280px] shadow-high relative flex flex-col" style={{ height: 'min(90vh, 740px)' }}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-main border-2 border-subtle rounded-[2rem] w-full max-w-[1280px] shadow-high relative flex flex-col"
+        style={{ height: 'min(90vh, 740px)' }}
+      >
 
         {/* Accent */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-primary via-indigo-500 to-brand-primary rounded-t-[2rem] z-10" />
@@ -710,7 +720,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
             <Table2 size={20} className="text-brand-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-primary tracking-tighter uppercase leading-none">Editor de Cargas em Grade</h2>
+            <h2 id={titleId} className="text-lg font-black text-primary tracking-tighter uppercase leading-none">Editor de Cargas em Grade</h2>
             <p className="text-[9px] font-black text-secondary uppercase tracking-[0.3em] opacity-80 mt-0.5">Entrada em massa · Estilo planilha · TAB para navegar</p>
           </div>
 

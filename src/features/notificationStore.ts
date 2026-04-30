@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+export type AlertVariant = 'success' | 'error' | 'warning';
 
 export interface Notification {
   id: string;
@@ -23,33 +24,53 @@ interface ConfirmState {
   onCancel: () => void;
 }
 
+interface AlertState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  variant: AlertVariant;
+  onConfirm: () => void;
+}
+
 interface NotificationState {
   notifications: Notification[];
   banner: BannerState;
   confirm: ConfirmState;
-  
+  alert: AlertState;
+
   // Toasts
   notify: (message: string, type?: NotificationType, duration?: number) => void;
   removeNotification: (id: string) => void;
-  
+
   // Banner
   setBanner: (message: string, progress?: number) => void;
   hideBanner: () => void;
-  
+
   // Confirm Dialog
   ask: (title: string, message: string) => Promise<boolean>;
   closeConfirm: () => void;
+
+  // Alert Dialog (erros críticos / sucesso destacado)
+  showAlert: (opts: { title: string; message: string; variant: AlertVariant }) => Promise<void>;
+  closeAlert: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
   banner: { isVisible: false, message: '' },
-  confirm: { 
-    isOpen: false, 
-    title: '', 
-    message: '', 
-    onConfirm: () => {}, 
-    onCancel: () => {} 
+  confirm: {
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {}
+  },
+  alert: {
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'success',
+    onConfirm: () => {},
   },
 
   notify: (message, type = 'info', duration = 4000) => {
@@ -95,5 +116,26 @@ export const useNotificationStore = create<NotificationState>((set) => ({
 
   closeConfirm: () => {
     set((s) => ({ confirm: { ...s.confirm, isOpen: false } }));
-  }
+  },
+
+  showAlert: ({ title, message, variant }) => {
+    return new Promise<void>((resolve) => {
+      set({
+        alert: {
+          isOpen: true,
+          title,
+          message,
+          variant,
+          onConfirm: () => {
+            set((s) => ({ alert: { ...s.alert, isOpen: false } }));
+            resolve();
+          },
+        },
+      });
+    });
+  },
+
+  closeAlert: () => {
+    set((s) => ({ alert: { ...s.alert, isOpen: false } }));
+  },
 }));

@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, useId, type KeyboardEvent, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Send, Paperclip, Bot, User, AlertTriangle, CheckCircle2, Package } from 'lucide-react';
 import { useManifestoExtraction, type ChatMessage } from '@/hooks/useManifestoExtraction';
 import { flattenManifestoJSON, countCargas, type ManifestoJSON } from '@/services/manifestExtractor';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/utils';
 
 interface Props { isOpen: boolean; onClose: () => void }
@@ -142,6 +143,8 @@ export function ManifestoChatModal({ isOpen, onClose }: Props) {
   const [input, setInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
 
   const {
     messages,
@@ -190,8 +193,14 @@ export function ManifestoChatModal({ isOpen, onClose }: Props) {
   const cargoCount = extractedJSON ? countCargas(extractedJSON) : 0;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-main border-2 border-subtle rounded-[2.5rem] w-full max-w-3xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-main border-2 border-subtle rounded-[2.5rem] w-full max-w-3xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200"
+      >
         {/* Top accent */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-primary via-indigo-500 to-brand-primary z-50" />
 
@@ -201,7 +210,7 @@ export function ManifestoChatModal({ isOpen, onClose }: Props) {
             <Bot size={20} className="text-brand-primary" />
           </div>
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-lg font-black text-primary tracking-tighter uppercase leading-none">Assistente de Importação</h2>
+            <h2 id={titleId} className="text-lg font-black text-primary tracking-tighter uppercase leading-none">Assistente de Importação</h2>
             <p className="text-[9px] font-black text-secondary uppercase tracking-[0.3em] opacity-80">Extração Inteligente de Manifestos</p>
           </div>
           <div className="ml-auto flex items-center gap-3">

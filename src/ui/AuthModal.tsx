@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useNotificationStore } from '@/features/notificationStore';
 
 const SUPABASE_CONFIGURED = !!(import.meta.env?.VITE_SUPABASE_URL || 'https://vdjrfoxnibufxqntwrkr.supabase.co');
 
@@ -11,6 +13,9 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const titleId = useId();
+  const { showAlert } = useNotificationStore();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
 
   if (!isOpen) return null;
 
@@ -26,7 +31,11 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        alert("Conta criada! Verifique seu e-mail.");
+        await showAlert({
+          title: 'Conta Criada',
+          message: 'Verifique seu e-mail para confirmar o cadastro antes de fazer login.',
+          variant: 'success',
+        });
       }
       onClose();
     } catch (err: unknown) {
@@ -38,8 +47,14 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-header border-2 border-subtle rounded-[3.5rem] w-full max-w-md shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-header border-2 border-subtle rounded-[3.5rem] w-full max-w-md shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass"
+      >
         <div className="absolute top-0 left-0 w-full h-2 bg-brand-primary z-50 shadow-glow" />
         
         {/* Header Section */}
@@ -50,7 +65,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
             <div className="inline-flex p-6 bg-brand-primary/10 rounded-[2.5rem] mb-8 shadow-medium border-2 border-brand-primary/20 scale-110">
                 <ShieldCheck size={48} className="text-brand-primary" />
             </div>
-            <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">
+            <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">
                 {isLogin ? 'Acesso ao Sistema' : 'Criar Conta'}
             </h2>
             <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] mt-5 opacity-90 leading-relaxed">

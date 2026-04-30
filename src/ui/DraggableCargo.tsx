@@ -1,6 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
+import { useNotificationStore } from '@/features/notificationStore';
 import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
 import { getCargoFontSize } from '@/lib/scaling';
@@ -30,6 +31,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
     id: cargo.id,
   });
   const { deleteCargo } = useCargoStore();
+  const ask = useNotificationStore(s => s.ask);
   const { isDragging: dragStoreIsDragging } = useDragStore();
   const [isRotated, setIsRotated] = useState(cargo.isRotated ?? false);
   const [isHovered, setIsHovered] = useState(false);
@@ -70,7 +72,8 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
   } : undefined;
 
   const handleDelete = async () => {
-    if (window.confirm(`Você tem certeza que deseja deletar a carga "${cargo.identifier}" definitivamente?`)) {
+    const ok = await ask('Excluir Carga', `Tem certeza que deseja deletar a carga "${cargo.identifier}" definitivamente?`);
+    if (ok) {
       await deleteCargo(cargo.id);
     }
   };
@@ -146,7 +149,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             top: `${tooltipPos.top}px`,
             left: `${tooltipPos.left}px`,
             transform: `translate(${tooltipAlign === 'center' ? '-50%' : tooltipAlign === 'right' ? '-100%' : '0'}, ${tooltipPlacement === 'top' ? '-100%' : '0'})`,
-            zIndex: 9999
+            zIndex: 1200
           }}
           className="w-72 p-5 bg-slate-950/80 backdrop-blur-xl text-white text-xs rounded-3xl shadow-high pointer-events-none flex flex-col gap-3 border border-white/20 animate-in fade-in zoom-in-95 duration-200"
         >

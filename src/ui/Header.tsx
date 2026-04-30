@@ -3,6 +3,7 @@ import {
   Sun, Moon, Plus
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
+import { useNotificationStore } from '@/features/notificationStore';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
 import { CsvGeneratorService } from '@/infrastructure/CsvGeneratorService';
 import { useEffect, useState, useMemo } from 'react';
@@ -18,6 +19,7 @@ export function Header() {
     manifestAtendimento,
     manifestShipName, setShipName
   } = useCargoStore();
+  const { notify, ask, showAlert } = useNotificationStore();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -97,9 +99,9 @@ export function Header() {
      setSaving(true);
      try {
        await DatabaseService.saveStowagePlan();
-       alert('Manifesto Salvo!');
+       notify('Manifesto salvo com sucesso!', 'success');
       } catch(err: unknown) {
-        alert('Erro ao salvar: ' + String(err));
+        notify('Erro ao salvar: ' + String(err), 'error');
       } finally {
        setSaving(false);
      }
@@ -183,8 +185,9 @@ export function Header() {
           <div className="flex items-center gap-2">
             <button
               className="p-3 text-muted hover:text-[#ef4444] hover:bg-red-500/10 rounded-2xl transition-all active:scale-95 hover:rotate-12 group"
-              onClick={() => {
-                if (window.confirm('Limpar manifestos?')) useCargoStore.getState().clearAllCargoes();
+              onClick={async () => {
+                const ok = await ask('Limpar Manifestos', 'Deseja limpar todos os manifestos? Esta ação não pode ser desfeita.');
+                if (ok) useCargoStore.getState().clearAllCargoes();
               }}
               title="Zerar Plano de Carga"
             >
@@ -281,7 +284,7 @@ export function Header() {
                     if (showDirectoryPicker) {
                       try { setDirHandle(await showDirectoryPicker()); } catch {}
                     } else {
-                      alert('Browser não suporta seleção de pasta local.');
+                      await showAlert({ title: 'Recurso Indisponível', message: 'Seu navegador não suporta seleção de pasta local. Use o Chrome ou Edge mais recentes.', variant: 'warning' });
                     }
                   } } 
                   className="px-6 py-4 bg-sidebar border border-subtle text-primary rounded-2xl text-xs font-black hover:bg-main transition-all flex items-center justify-center gap-2"
@@ -303,8 +306,8 @@ export function Header() {
                         const writable = await fileHandle.createWritable();
                         await writable.write(blob);
                         await writable.close();
-                        alert('Salvo com sucesso!');
-                      } catch (e) { alert('Erro: ' + (e as Error).message); }
+                        notify('Arquivo salvo com sucesso!', 'success');
+                      } catch (e) { notify('Erro: ' + (e as Error).message, 'error'); }
                     } else {
                       if (exportFormat === 'pdf') PdfGeneratorService.executeExport(locations, exportFilename, manifestShipName, manifestAtendimento);
                       else CsvGeneratorService.executeExport(locations, exportFilename, manifestShipName, manifestAtendimento);

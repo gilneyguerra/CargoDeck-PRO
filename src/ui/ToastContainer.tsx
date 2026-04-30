@@ -1,8 +1,9 @@
 import { useNotificationStore } from '@/features/notificationStore';
 import { StandardToast, StandardBanner, StandardModal } from './standard/UIComponents';
+import { AlertDialog } from './AlertDialog';
 
 export function ToastContainer() {
-  const { notifications, removeNotification, banner, confirm } = useNotificationStore();
+  const { notifications, removeNotification, banner, confirm, alert } = useNotificationStore();
 
   return (
     <>
@@ -50,6 +51,15 @@ export function ToastContainer() {
       >
         <p className="text-primary font-medium text-center py-4">{confirm.message}</p>
       </StandardModal>
+
+      {/* 4. Alert Dialog Global — Erros Críticos / Sucesso Destacado (Z-1100) */}
+      <AlertDialog
+        isOpen={alert.isOpen}
+        title={alert.title}
+        message={alert.message}
+        variant={alert.variant}
+        onConfirm={alert.onConfirm}
+      />
     </>
   );
 }

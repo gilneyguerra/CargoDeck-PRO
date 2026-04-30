@@ -1,5 +1,6 @@
 import { useState, memo, useMemo } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
+import { useNotificationStore } from '@/features/notificationStore';
 import { Settings, Plus, Search, Trash2, Edit, CheckCircle2, Scale, Users } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
@@ -168,6 +169,7 @@ return (
 
 export function DeckArea() {
      const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, setEditingCargo, editLocation, deleteLocation } = useCargoStore();
+     const ask = useNotificationStore(s => s.ask);
     const activeLocation = locations.find(l => l.id === activeLocationId);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
@@ -274,8 +276,9 @@ export function DeckArea() {
                             editLocation(editLoc.id, { name: name.trim() });
                           }
                         }}
-                        onDelete={(locId) => {
-                          if (window.confirm('Tem certeza que deseja excluir este local?')) {
+                        onDelete={async (locId) => {
+                          const ok = await ask('Excluir Local', 'Tem certeza que deseja excluir este local? Todas as suas cargas alocadas serão movidas para o estoque.');
+                          if (ok) {
                             deleteLocation(locId);
                           }
                         }}

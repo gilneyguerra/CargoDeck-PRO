@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { ArrowRight, Ship, Layers, Shuffle, Plus, Minus, X } from 'lucide-react';
 
 interface BatchMoveModalProps {
@@ -12,6 +13,8 @@ type DistributionMode = 'single-bay' | 'distribute';
 
 export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClose, onSuccess }: BatchMoveModalProps) {
   const { locations } = useCargoStore();
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
   const [targetLocationId, setTargetLocationId] = useState<string>('');
   const [targetBayId, setTargetBayId] = useState<string>('');
   const [targetSide, setTargetSide] = useState<Side>('center');
@@ -74,8 +77,14 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
   ];
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-lg shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-lg shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass"
+      >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 z-50" />
         
         {/* Header Section */}
@@ -84,7 +93,7 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Mover em Lote</h2>
+                <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Mover em Lote</h2>
                 <div className="flex items-center gap-3">
                     <span className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-brand-primary/20">
                        {selectedCount} unidade(s) selecionada(s)

@@ -1,7 +1,8 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCargoStore } from '@/features/cargoStore';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { X, Box, Settings, Palette, Info } from 'lucide-react';
 import type { Cargo } from '@/domain/Cargo';
 import type { CargoCategory } from '@/domain/Cargo';
@@ -13,6 +14,8 @@ interface EditCargoModalProps {
 
 export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) {
   const { updateCargo } = useCargoStore();
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
   const [description, setDescription] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [weightTonnes, setWeightTonnes] = useState<number | string>('');
@@ -47,8 +50,14 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
   if (!isOpen || !cargo) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 glass">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 glass"
+      >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-primary via-indigo-500 to-brand-primary z-50 shadow-glow shadow-brand-primary/10" />
         
         {/* Header Section */}
@@ -57,7 +66,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Editar Carga</h2>
+                <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Editar Carga</h2>
                 <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] opacity-90 leading-relaxed">Atualização de Configuração da Carga</p>
             </div>
         </div>

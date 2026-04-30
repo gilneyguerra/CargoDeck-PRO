@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { X, Box, Settings, Palette, Info } from 'lucide-react';
 import type { CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
@@ -8,6 +9,8 @@ import { cn } from '@/lib/utils';
 
 export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const { addManualCargo } = useCargoStore();
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
 
   const [description, setDescription] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -54,8 +57,14 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-main border-2 border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-main border-2 border-subtle rounded-[2.5rem] w-full max-w-2xl shadow-high relative max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+      >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-primary via-indigo-500 to-brand-primary z-50" />
 
         {/* Cabeçalho */}
@@ -64,7 +73,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
             <X className="w-6 h-6" />
           </button>
           <div className="flex flex-col gap-2">
-            <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Nova Carga Manual</h2>
+            <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Nova Carga Manual</h2>
             <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] opacity-90">Cadastro de Carga no Inventário</p>
           </div>
         </div>

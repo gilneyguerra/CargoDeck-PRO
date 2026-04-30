@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
+import { useNotificationStore } from '@/features/notificationStore';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { Cargo } from '@/domain/Cargo';
 import { logger } from '../utils/logger';
 
@@ -11,9 +13,12 @@ interface BackloadResolutionModalProps {
 
 export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }: BackloadResolutionModalProps) {
   const { getAllCargo, deleteCargo } = useCargoStore();
+  const { showAlert } = useNotificationStore();
   const allCargoOnBoard = useMemo(() => isOpen ? getAllCargo() : [], [getAllCargo, isOpen]);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
 
   const resolutionItems = useMemo(() => {
     return extractedBackloads.map(backload => {
@@ -39,7 +44,11 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
       const logDetails = currentMatches.map(item => `• ${item.backload.identifier} - ${item.backload.description}`).join('\n');
       for (const id of matchesToDelete) await deleteCargo(id);
       setDeletedIds(prev => { const next = new Set(prev); matchesToDelete.forEach(id => next.add(id)); return next; });
-      alert(`Protocolo concluído: As seguintes cargas foram desembarcadas:\n\n${logDetails}`);
+      await showAlert({
+        title: 'Protocolo Concluído',
+        message: `Cargas desembarcadas com sucesso:\n${logDetails}`,
+        variant: 'success',
+      });
     } catch (err) { logger.error('Erro na remoção automática de backload:', err); } finally { setIsProcessing(false); }
   };
 
@@ -51,8 +60,14 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-header border-2 border-subtle rounded-[3rem] w-full max-w-3xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-header border-2 border-subtle rounded-[3rem] w-full max-w-3xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass"
+      >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 z-50 shadow-glow shadow-orange-500/20" />
         
         {/* Header Section */}
@@ -61,7 +76,7 @@ export function BackloadResolutionModal({ isOpen, onClose, extractedBackloads }:
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Reconciliação de Backload</h2>
+                <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Reconciliação de Backload</h2>
                 <div className="flex items-center gap-3">
                     <span className="px-4 py-1.5 bg-amber-500/10 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-amber-500/20">
                        Manifesto de Desembarque: {extractedBackloads.length} Itens

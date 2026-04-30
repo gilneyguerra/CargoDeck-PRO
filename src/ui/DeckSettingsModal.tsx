@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
+import { useNotificationStore } from '@/features/notificationStore';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { X, Layout, Maximize2, MoveVertical, GitCommitVertical } from 'lucide-react';
 
 export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const { locations, activeLocationId, updateActiveLocationConfig } = useCargoStore();
+  const { showAlert, ask } = useNotificationStore();
+  const titleId = useId();
+  const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
   const activeLocation = locations.find(l => l.id === activeLocationId);
 
   const [length, setLength] = useState<number | string>(0);
@@ -32,22 +37,37 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
 
   if (!isOpen || !activeLocation) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const tL = Number(length); const tW = Number(width); const sumW = Number(portWidth) + Number(centerWidth) + Number(starboardWidth); const sumL = Number(bayLength) * Number(baysCount);
-    if (sumW > tW) { alert(`Erro dimensional: A soma das larguras (${sumW}m) excede a Largura Total (${tW}m).`); return; }
-    if (sumL > tL) { alert(`Erro dimensional: O comprimento das baias (${sumL}m) excede o Comprimento Total (${tL}m).`); return; }
+    if (sumW > tW) {
+      await showAlert({ title: 'Erro Dimensional', message: `A soma das larguras (${sumW}m) excede a Largura Total (${tW}m).`, variant: 'error' });
+      return;
+    }
+    if (sumL > tL) {
+      await showAlert({ title: 'Erro Dimensional', message: `O comprimento das baias (${sumL}m) excede o Comprimento Total (${tL}m).`, variant: 'error' });
+      return;
+    }
     const newBaysCount = Number(baysCount);
     if (newBaysCount !== activeLocation.config.numberOfBays) {
       const totalAllocated = activeLocation.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
-      if (totalAllocated > 0) { if (!window.confirm(`Atenção: A mudança de baias retornará ${totalAllocated} cargas ao estoque. Continuar?`)) return; }
+      if (totalAllocated > 0) {
+        const ok = await ask('Atenção', `A mudança de baias retornará ${totalAllocated} cargas ao estoque. Continuar?`);
+        if (!ok) return;
+      }
     }
     updateActiveLocationConfig({ lengthMeters: tL, widthMeters: tW, numberOfBays: newBaysCount, bayLengthMeters: Number(bayLength), elevationMeters: Number(elevationMeters), portWidthMeters: Number(portWidth), centerWidthMeters: Number(centerWidth), starboardWidthMeters: Number(starboardWidth) });
     onClose();
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
-      <div className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300 font-sans">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-header border-2 border-subtle rounded-[2.5rem] w-full max-w-xl shadow-high relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 glass"
+      >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-brand-primary to-emerald-500 z-50 shadow-glow shadow-brand-primary/10" />
         
         {/* Header Section */}
@@ -56,7 +76,7 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
                 <X className="w-7 h-7" />
             </button>
             <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">{activeLocation.name}</h2>
+                <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">{activeLocation.name}</h2>
                 <p className="text-[10px] font-black text-secondary uppercase tracking-[0.4em] opacity-90">Configuração da Área de Carga</p>
             </div>
         </div>
