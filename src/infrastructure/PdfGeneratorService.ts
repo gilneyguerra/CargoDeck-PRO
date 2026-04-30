@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf';
 import type { CargoLocation } from '@/domain/Location';
 import type { Cargo } from '@/domain/Cargo';
 import { useReportSettings } from '@/features/reportSettingsStore';
@@ -34,6 +33,9 @@ export class PdfGeneratorService {
     shipName?: string | null,
     atendimento?: string | null
   ): Promise<Blob> {
+    // jsPDF é importado dinamicamente para que ~80 KB gz não pesem no LCP
+    // de quem nunca exporta PDF.
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = 297;
     const pageHeight = 210;

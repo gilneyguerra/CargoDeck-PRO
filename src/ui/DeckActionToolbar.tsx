@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Trash2, Download, CloudUpload, Plus, Settings as SettingsIcon } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
@@ -8,8 +8,13 @@ import { CsvGeneratorService } from '@/infrastructure/CsvGeneratorService';
 import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { AuthModal } from './AuthModal';
-import { ReportSettingsModal } from './ReportSettingsModal';
 import type { User } from '@supabase/supabase-js';
+
+// Lazy: ReportSettingsModal só é necessário quando o usuário acessa o
+// botão de configuração de relatório — fora do bundle inicial.
+const ReportSettingsModal = lazy(() =>
+  import('./ReportSettingsModal').then(m => ({ default: m.ReportSettingsModal }))
+);
 
 /**
  * Barra de ações operacionais do convés:
@@ -146,7 +151,11 @@ export function DeckActionToolbar() {
       </div>
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      <ReportSettingsModal isOpen={isReportSettingsOpen} onClose={() => setIsReportSettingsOpen(false)} />
+      {isReportSettingsOpen && (
+        <Suspense fallback={null}>
+          <ReportSettingsModal isOpen={isReportSettingsOpen} onClose={() => setIsReportSettingsOpen(false)} />
+        </Suspense>
+      )}
 
       {exportModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-300">

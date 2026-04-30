@@ -4,7 +4,7 @@ import { Layout } from '@/ui/Layout';
 import { DeckArea } from '@/ui/DeckArea';
 import { ModalGenerationPage } from '@/ui/ModalGenerationPage';
 import { useCargoStore } from '@/features/cargoStore';
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import type { Cargo } from '@/domain/Cargo';
 import { useAuthAndHydration } from '@/hooks/useAuthAndHydration';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -15,8 +15,13 @@ import { cn } from '@/lib/utils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './ui/ToastContainer';
 import { ErrorReportTray } from '@/ui/ErrorReportTray';
-import { EditCargoModal } from '@/ui/EditCargoModal';
 import { LandingPage } from '@/ui/LandingPage';
+
+// Lazy-loaded para reduzir o bundle inicial — só baixa quando o usuário
+// realmente abre o modal de edição (editingCargo != null).
+const EditCargoModal = lazy(() =>
+  import('@/ui/EditCargoModal').then(m => ({ default: m.EditCargoModal }))
+);
 
 function AppWithProviders() {
   const {
@@ -153,12 +158,17 @@ function AppWithProviders() {
       </DragOverlay>
       <ToastContainer />
       <ErrorReportTray />
-      {/* Modal global de edição — abre quando editingCargo é setado em qualquer parte do app */}
-      <EditCargoModal
-        isOpen={editingCargo !== null}
-        cargo={editingCargo}
-        onClose={() => setEditingCargo(null)}
-      />
+      {/* Modal global de edição — só monta (e portanto só baixa o chunk) quando uma carga
+          é selecionada para edição. Suspense mantém UI viva durante o carregamento. */}
+      {editingCargo !== null && (
+        <Suspense fallback={null}>
+          <EditCargoModal
+            isOpen={true}
+            cargo={editingCargo}
+            onClose={() => setEditingCargo(null)}
+          />
+        </Suspense>
+      )}
     </DndContext>
   )
 }

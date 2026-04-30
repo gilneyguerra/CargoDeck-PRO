@@ -1,4 +1,4 @@
-import { useState, useMemo, useDeferredValue, useEffect } from 'react';
+import { useState, useMemo, useDeferredValue, useEffect, lazy, Suspense } from 'react';
 import {
   ArrowLeft, Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
@@ -6,14 +6,21 @@ import {
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
-import { CargoEditorModal } from './CargoEditorModal';
 import { ManualCargoModal } from './ManualCargoModal';
 import { AllocateCargoModal } from './AllocateCargoModal';
 import { PriorityModal } from './PriorityModal';
-import { CargoAssistant } from './CargoAssistant';
 import { GroupMoveModal } from './GroupMoveModal';
 import type { Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
+
+// Lazy: parsers Excel/CSV (SheetJS via CDN) e LLM Assistant ficam fora do
+// bundle inicial — só carregam quando o usuário abre cada modal.
+const CargoEditorModal = lazy(() =>
+  import('./CargoEditorModal').then(m => ({ default: m.CargoEditorModal }))
+);
+const CargoAssistant = lazy(() =>
+  import('./CargoAssistant').then(m => ({ default: m.CargoAssistant }))
+);
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 
@@ -678,7 +685,11 @@ export function ModalGenerationPage() {
       </div>
 
       {/* Modais */}
-      <CargoEditorModal isOpen={showEditor} onClose={() => setShowEditor(false)} />
+      {showEditor && (
+        <Suspense fallback={null}>
+          <CargoEditorModal isOpen={showEditor} onClose={() => setShowEditor(false)} />
+        </Suspense>
+      )}
       <ManualCargoModal isOpen={showManual} onClose={() => setShowManual(false)} />
       <AllocateCargoModal
         isOpen={showAllocate}
@@ -691,11 +702,15 @@ export function ModalGenerationPage() {
         onClose={() => setShowPriority(false)}
         selectedCargoIds={selectedIds}
       />
-      <CargoAssistant
-        isOpen={showAssistant}
-        onClose={() => setShowAssistant(false)}
-        selectedCargos={unallocatedCargoes.filter(c => selectedCargos.has(c.id))}
-      />
+      {showAssistant && (
+        <Suspense fallback={null}>
+          <CargoAssistant
+            isOpen={showAssistant}
+            onClose={() => setShowAssistant(false)}
+            selectedCargos={unallocatedCargoes.filter(c => selectedCargos.has(c.id))}
+          />
+        </Suspense>
+      )}
       <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
   );
