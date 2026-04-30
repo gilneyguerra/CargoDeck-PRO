@@ -2,7 +2,7 @@ import { useState, useMemo, useDeferredValue, useEffect } from 'react';
 import {
   ArrowLeft, Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
-  Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users
+  Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
@@ -12,23 +12,51 @@ import { AllocateCargoModal } from './AllocateCargoModal';
 import { PriorityModal } from './PriorityModal';
 import { CargoAssistant } from './CargoAssistant';
 import { GroupMoveModal } from './GroupMoveModal';
-import type { Cargo, CargoCategory } from '@/domain/Cargo';
+import type { Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'loose' | 'containers' | 'priority';
-
-const TAB_OPTIONS: { value: FilterTab; label: string; icon: typeof Boxes }[] = [
-  { value: 'all',        label: 'Todas',                icon: Layers },
-  { value: 'loose',      label: 'Cargas Soltas',        icon: Boxes },
-  { value: 'containers', label: 'Contentores / Módulos', icon: Package },
-  { value: 'priority',   label: 'Prioridade Máxima',     icon: Flame },
-];
-
-const CONTAINER_CATEGORIES: CargoCategory[] = ['CONTAINER'];
+// Tabs dinâmicas: 'all' e 'priority' são fixas. Outras tabs nascem de cada categoria
+// distinta presente nas cargas (Excel manda; manual respeita; Excel novo cria filtro novo).
+// O valor de cada tab dinâmica é um prefixo seguro: 'cat:CONTAINER', 'cat:HAZARDOUS', etc.
+type FilterTab = string;
 
 const FILTER_STORAGE_KEY = 'cargodeck-modal-generation-filter';
+
+// Mapa de ícone por categoria conhecida; categorias livres caem no fallback Layers.
+const CATEGORY_ICONS: Record<string, typeof Boxes> = {
+  CONTAINER: Package,
+  BASKET: Boxes,
+  TUBULAR: Layers,
+  EQUIPMENT: Package,
+  HAZARDOUS: Flame,
+  HEAVY: Boxes,
+  FRAGILE: Boxes,
+  GENERAL: Layers,
+  OTHER: Layers,
+};
+
+// Labels amigáveis (fallback: a própria string da categoria, capitalizada).
+const CATEGORY_LABELS: Record<string, string> = {
+  CONTAINER: 'Contentores',
+  BASKET: 'Cestas',
+  TUBULAR: 'Tubulares',
+  EQUIPMENT: 'Equipamentos',
+  HAZARDOUS: 'Perigosas',
+  HEAVY: 'Pesadas',
+  FRAGILE: 'Frágeis',
+  GENERAL: 'Gerais',
+  OTHER: 'Outros',
+};
+
+function categoryLabel(cat: string): string {
+  return CATEGORY_LABELS[cat] ?? (cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase());
+}
+
+function categoryIcon(cat: string): typeof Boxes {
+  return CATEGORY_ICONS[cat] ?? Layers;
+}
 
 // ─── CargoGridCard ─────────────────────────────────────────────────────────────
 
@@ -47,6 +75,20 @@ function CargoGridCard({ cargo, selected, onToggle, onEdit, onDelete }: CargoGri
   const visualHeight = ratio >= 1 ? Math.max(20, baseSize / ratio) : baseSize;
   const isUrgent = cargo.priority === 'urgent';
   const isHigh = cargo.priority === 'high';
+  const isHazardous = cargo.isHazardous || cargo.category === 'HAZARDOUS';
+
+  // Estilo inline em hazardous: borda + glow roxo pulsante (priority sobrepõe se também urgente)
+  const hazardousStyle = isHazardous && !selected ? {
+    borderColor: '#a855f7',
+    backgroundColor: '#a855f70a',
+    boxShadow: '0 0 0 1px #a855f740, 0 0 14px #a855f750',
+  } : undefined;
+
+  const urgentStyle = isUrgent && !selected ? {
+    borderColor: '#B71C1C',
+    backgroundColor: '#B71C1C10',
+    boxShadow: '0 0 0 1px #B71C1C40, 0 0 12px #B71C1C30',
+  } : undefined;
 
   return (
     <div
@@ -55,19 +97,24 @@ function CargoGridCard({ cargo, selected, onToggle, onEdit, onDelete }: CargoGri
         'group relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col gap-3 hover:shadow-md active:scale-[0.98]',
         selected
           ? 'border-brand-primary bg-brand-primary/5 shadow-md'
-          : isUrgent
+          : isHazardous || isUrgent
           ? 'animate-pulse'
           : 'border-subtle bg-sidebar/40 hover:border-strong'
       )}
-      style={isUrgent && !selected ? { borderColor: '#B71C1C', backgroundColor: '#B71C1C10', boxShadow: '0 0 0 1px #B71C1C40, 0 0 12px #B71C1C30' } : undefined}
+      style={hazardousStyle ?? urgentStyle}
     >
-      {/* Badge de prioridade */}
-      {isUrgent && (
+      {/* Badges de status — perigosa tem prioridade visual sobre urgente */}
+      {isHazardous && (
+        <div className="absolute -top-2 -right-2 bg-purple-500 text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/40 flex items-center gap-1">
+          <AlertOctagon size={9} /> Perigosa
+        </div>
+      )}
+      {!isHazardous && isUrgent && (
         <div className="absolute -top-2 -right-2 bg-[#B71C1C] text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
           <Zap size={9} /> Urgente
         </div>
       )}
-      {isHigh && (
+      {!isHazardous && isHigh && (
         <div className="absolute -top-2 -right-2 bg-status-warning text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1">
           <Flag size={9} /> Alta
         </div>
@@ -168,11 +215,11 @@ export function ModalGenerationPage() {
   const [showAssistant, setShowAssistant] = useState(false);
   const [showGroupMove, setShowGroupMove] = useState(false);
 
-  // Filtro persistido
+  // Filtro persistido (aceita qualquer string: 'all' | 'priority' | 'cat:<CATEGORIA>')
   const [filterTab, setFilterTab] = useState<FilterTab>(() => {
     try {
       const v = localStorage.getItem(FILTER_STORAGE_KEY);
-      if (v === 'all' || v === 'loose' || v === 'containers' || v === 'priority') return v;
+      if (v) return v;
     } catch { /* noop */ }
     return 'all';
   });
@@ -185,14 +232,35 @@ export function ModalGenerationPage() {
   const [searchInput, setSearchInput] = useState('');
   const deferredSearch = useDeferredValue(searchInput);
 
+  // Tabs dinâmicas: derivadas das categorias presentes nas cargas
+  const dynamicTabs = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of unallocatedCargoes) {
+      const k = c.category || 'OTHER';
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    // Ordena por quantidade decrescente, depois alfabético
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([cat, count]) => ({
+        value: `cat:${cat}` as FilterTab,
+        label: categoryLabel(cat),
+        icon: categoryIcon(cat),
+        count,
+        rawCategory: cat,
+      }));
+  }, [unallocatedCargoes]);
+
   // Filtragem completa
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
     return unallocatedCargoes.filter(c => {
       // Tab filter
-      if (filterTab === 'loose' && CONTAINER_CATEGORIES.includes(c.category)) return false;
-      if (filterTab === 'containers' && !CONTAINER_CATEGORIES.includes(c.category)) return false;
       if (filterTab === 'priority' && c.priority !== 'urgent') return false;
+      if (filterTab.startsWith('cat:')) {
+        const cat = filterTab.slice(4);
+        if ((c.category || 'OTHER') !== cat) return false;
+      }
 
       // Busca: ID, descrição, manifesto (numeroAtendimento ou observations)
       if (!q) return true;
@@ -216,13 +284,21 @@ export function ModalGenerationPage() {
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedCargos.has(c.id));
 
-  // Contadores por tab
-  const tabCounts = useMemo(() => ({
-    all: unallocatedCargoes.length,
-    loose: unallocatedCargoes.filter(c => !CONTAINER_CATEGORIES.includes(c.category)).length,
-    containers: unallocatedCargoes.filter(c => CONTAINER_CATEGORIES.includes(c.category)).length,
-    priority: unallocatedCargoes.filter(c => c.priority === 'urgent').length,
-  }), [unallocatedCargoes]);
+  // Contadores fixos
+  const totalCount = unallocatedCargoes.length;
+  const priorityCount = useMemo(
+    () => unallocatedCargoes.filter(c => c.priority === 'urgent').length,
+    [unallocatedCargoes]
+  );
+
+  // Resetar filterTab para 'all' se a categoria atual não existe mais
+  useEffect(() => {
+    if (filterTab === 'all' || filterTab === 'priority') return;
+    if (filterTab.startsWith('cat:')) {
+      const cat = filterTab.slice(4);
+      if (!dynamicTabs.some(t => t.rawCategory === cat)) setFilterTab('all');
+    }
+  }, [filterTab, dynamicTabs]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -319,9 +395,6 @@ export function ModalGenerationPage() {
           </div>
           <div>
             <h1 className="text-base font-montserrat font-black text-primary tracking-tighter uppercase leading-none">Geração Modal de Transporte</h1>
-            <p className="text-[9px] font-black text-secondary uppercase tracking-[0.3em] opacity-80 mt-1">
-              {filtered.length} de {unallocatedCargoes.length} carga(s) · /geracao-modal
-            </p>
           </div>
         </div>
 
@@ -468,14 +541,13 @@ export function ModalGenerationPage() {
 
       {/* Tabs de Filtragem */}
       <div className="px-6 py-3 border-b-2 border-subtle bg-main shrink-0 flex items-center gap-2 overflow-x-auto no-scrollbar">
-        {TAB_OPTIONS.map(tab => {
-          const Icon = tab.icon;
-          const count = tabCounts[tab.value];
-          const active = filterTab === tab.value;
+        {/* Tab fixa: Todas */}
+        {(() => {
+          const active = filterTab === 'all';
           return (
             <button
-              key={tab.value}
-              onClick={() => setFilterTab(tab.value)}
+              key="all"
+              onClick={() => setFilterTab('all')}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px] shrink-0',
                 active
@@ -483,17 +555,69 @@ export function ModalGenerationPage() {
                   : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar'
               )}
             >
-              <Icon size={13} />
+              <Layers size={13} />
+              Todas
+              <span className={cn('text-[9px] font-mono px-1.5 py-0.5 rounded-md', active ? 'bg-brand-primary text-white' : 'bg-subtle text-muted')}>
+                {totalCount}
+              </span>
+            </button>
+          );
+        })()}
+
+        {/* Tabs dinâmicas: uma por categoria presente */}
+        {dynamicTabs.map(tab => {
+          const Icon = tab.icon;
+          const active = filterTab === tab.value;
+          const isHazardousTab = tab.rawCategory === 'HAZARDOUS';
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setFilterTab(tab.value)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px] shrink-0',
+                active
+                  ? isHazardousTab
+                    ? 'border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/20'
+                    : 'border-brand-primary bg-brand-primary/10 text-brand-primary shadow-sm'
+                  : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar'
+              )}
+            >
+              <Icon size={13} className={isHazardousTab && !active ? 'text-purple-500' : ''} />
               {tab.label}
               <span className={cn(
                 'text-[9px] font-mono px-1.5 py-0.5 rounded-md',
-                active ? 'bg-brand-primary text-white' : 'bg-subtle text-muted'
+                active
+                  ? isHazardousTab ? 'bg-purple-500 text-white' : 'bg-brand-primary text-white'
+                  : 'bg-subtle text-muted'
               )}>
-                {count}
+                {tab.count}
               </span>
             </button>
           );
         })}
+
+        {/* Tab fixa: Prioridade Máxima — só aparece se houver urgentes */}
+        {priorityCount > 0 && (() => {
+          const active = filterTab === 'priority';
+          return (
+            <button
+              key="priority"
+              onClick={() => setFilterTab('priority')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px] shrink-0',
+                active
+                  ? 'border-status-error bg-status-error/10 text-status-error shadow-sm'
+                  : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar'
+              )}
+            >
+              <Flame size={13} className={active ? '' : 'text-status-error'} />
+              Prioridade Máxima
+              <span className={cn('text-[9px] font-mono px-1.5 py-0.5 rounded-md', active ? 'bg-status-error text-white' : 'bg-subtle text-muted')}>
+                {priorityCount}
+              </span>
+            </button>
+          );
+        })()}
 
         <div className="ml-auto flex items-center gap-2">
           <button

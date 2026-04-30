@@ -21,10 +21,10 @@ export function VesselIdentificationButton({ variant = 'deck' }: VesselIdentific
   }, [manifestShipName]);
 
   const sizeClasses = variant === 'header'
-    ? 'px-5 py-2.5 gap-4'
-    : 'px-5 py-3 gap-4 h-16';
+    ? 'px-4 py-2 gap-3 h-12'
+    : 'px-4 py-2 gap-3 h-12';
 
-  const inputSize = variant === 'header' ? 'py-2 text-sm' : 'py-2.5 text-sm h-16';
+  const inputSize = 'py-2 text-sm h-12';
 
   if (isEditing) {
     return (
@@ -60,20 +60,20 @@ export function VesselIdentificationButton({ variant = 'deck' }: VesselIdentific
       onClick={() => setIsEditing(true)}
       title="Identificar Embarcação: Clique para editar o nome do navio ou unidade offshore."
       className={cn(
-        'flex items-center rounded-2xl bg-sidebar/50 hover:bg-main transition-all border border-subtle group/btn shadow-low hover:shadow-medium shrink-0',
+        'flex items-center rounded-xl bg-sidebar/50 hover:bg-main hover:border-brand-primary/30 transition-all border-2 border-subtle group/btn shadow-sm hover:shadow-md shrink-0',
         sizeClasses
       )}
     >
       <div className="flex flex-col items-start">
-        <span className="text-[10px] font-black text-muted uppercase tracking-wider leading-none mb-1">Vessel Identification</span>
+        <span className="text-[9px] font-black text-muted uppercase tracking-wider leading-none mb-0.5">Vessel</span>
         <span className={cn(
-          'text-sm font-extrabold transition-colors leading-tight',
+          'text-[13px] font-extrabold transition-colors leading-tight',
           manifestShipName ? 'text-primary' : 'text-muted italic'
         )}>
           {manifestShipName || 'M/V DISCOVERY...'}
         </span>
       </div>
-      <div className="w-2.5 h-2.5 rounded-full bg-status-success shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+      <div className="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
     </button>
   );
 }

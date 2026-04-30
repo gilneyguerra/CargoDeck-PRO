@@ -19,6 +19,7 @@ interface EditorRow {
   lengthMeters: string;
   widthMeters: string;
   heightMeters: string;
+  isHazardous: boolean;
   errors: Partial<Record<RowField, string>>;
 }
 
@@ -63,7 +64,7 @@ function parseCsvCategory(raw: string, perigosa: string): CargoCategory {
 function mkId() { return Math.random().toString(36).slice(2, 9); }
 
 function emptyRow(): EditorRow {
-  return { id: mkId(), category: '', description: '', identifier: '', origin: '', destination: '', weightTonnes: '', lengthMeters: '', widthMeters: '', heightMeters: '', errors: {} };
+  return { id: mkId(), category: '', description: '', identifier: '', origin: '', destination: '', weightTonnes: '', lengthMeters: '', widthMeters: '', heightMeters: '', isHazardous: false, errors: {} };
 }
 
 // Converte decimal brasileiro (vírgula) para ponto
@@ -147,6 +148,7 @@ function sheetDataToRows(data: string[][]): EditorRow[] {
     colMap.forEach((key, idx) => { if (key && key !== 'skip') obj[key] = cells[idx] ?? ''; });
 
     const cat = parseCsvCategory(obj['category'] ?? '', obj['perigosa'] ?? '');
+    const isHaz = (obj['perigosa'] ?? '').trim().toUpperCase() === 'SIM' || cat === 'HAZARDOUS';
     rows.push({
       id: mkId(),
       category: cat,
@@ -158,6 +160,7 @@ function sheetDataToRows(data: string[][]): EditorRow[] {
       lengthMeters: (obj['lengthMeters'] ?? '').replace(',', '.'),
       widthMeters:  (obj['widthMeters']  ?? '').replace(',', '.'),
       heightMeters: (obj['heightMeters'] ?? '').replace(',', '.'),
+      isHazardous: isHaz,
       errors: {},
     });
   }
@@ -673,22 +676,26 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
       notify('Corrija os campos destacados antes de importar.', 'error');
       return;
     }
-    const cargoes: Cargo[] = withErrors.map(row => ({
-      id: crypto.randomUUID(),
-      identifier: row.identifier.trim(),
-      description: row.description.trim(),
-      category: row.category as CargoCategory,
-      weightTonnes: parseDecimal(row.weightTonnes),
-      lengthMeters: parseDecimal(row.lengthMeters),
-      widthMeters: parseDecimal(row.widthMeters),
-      heightMeters: row.heightMeters ? parseDecimal(row.heightMeters) : undefined,
-      quantity: 1,
-      status: 'UNALLOCATED',
-      color: row.category ? (CATEGORY_MAP[row.category as CargoCategory]?.color ?? '#3b82f6') : '#3b82f6',
-      format: 'Retangular',
-      origemCarga: row.origin.trim() || undefined,
-      destinoCarga: row.destination.trim() || undefined,
-    }));
+    const cargoes: Cargo[] = withErrors.map(row => {
+      const isHaz = row.isHazardous || row.category === 'HAZARDOUS';
+      return {
+        id: crypto.randomUUID(),
+        identifier: row.identifier.trim(),
+        description: row.description.trim(),
+        category: (isHaz ? 'HAZARDOUS' : row.category) as CargoCategory,
+        weightTonnes: parseDecimal(row.weightTonnes),
+        lengthMeters: parseDecimal(row.lengthMeters),
+        widthMeters: parseDecimal(row.widthMeters),
+        heightMeters: row.heightMeters ? parseDecimal(row.heightMeters) : undefined,
+        quantity: 1,
+        status: 'UNALLOCATED',
+        isHazardous: isHaz,
+        color: isHaz ? '#a855f7' : (row.category ? (CATEGORY_MAP[row.category as CargoCategory]?.color ?? '#3b82f6') : '#3b82f6'),
+        format: 'Retangular',
+        origemCarga: row.origin.trim() || undefined,
+        destinoCarga: row.destination.trim() || undefined,
+      };
+    });
     setExtractedCargoes(cargoes);
     notify(`${cargoes.length} carga${cargoes.length !== 1 ? 's' : ''} adicionada${cargoes.length !== 1 ? 's' : ''} ao inventário!`, 'success');
     handleClose();

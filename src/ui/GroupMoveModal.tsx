@@ -12,6 +12,7 @@ import { useNotificationStore } from '@/features/notificationStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
+import { DuplicatesAlertModal, type DuplicateEntry } from './DuplicatesAlertModal';
 
 // ─── StabilityGauge ─────────────────────────────────────────────────────────
 
@@ -115,12 +116,16 @@ interface Props {
 }
 
 export function GroupMoveModal({ isOpen, onClose }: Props) {
-    const { unallocatedCargoes, locations } = useCargoStore();
+    const { unallocatedCargoes, locations, removeUnallocatedByIds } = useCargoStore();
     const notify = useNotificationStore(s => s.notify);
     const ask = useNotificationStore(s => s.ask);
     const { execute, loading } = useCargoMovement();
     const titleId = useId();
     const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
+
+    // Modal de duplicatas (Tarefa 6)
+    const [duplicates, setDuplicates] = useState<DuplicateEntry[]>([]);
+    const [showDuplicates, setShowDuplicates] = useState(false);
 
     const [step, setStep] = useState<0 | 1>(0);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -189,27 +194,87 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
         setStep(1);
     };
 
+    /**
+     * Detecta cargas duplicadas: cargo selecionado (não alocado) cujo `identifier`
+     * já existe em uma bay alocada. Retorna os pares + localização de cada existente.
+     */
+    const detectDuplicates = useCallback((): DuplicateEntry[] => {
+        const dups: DuplicateEntry[] = [];
+        const candidates = unallocatedCargoes.filter(c => selectedIds.has(c.id));
+        for (const cand of candidates) {
+            const ident = (cand.identifier || '').trim();
+            if (!ident) continue;
+            for (const loc of locations) {
+                for (const bay of loc.bays) {
+                    const match = bay.allocatedCargoes.find(a => (a.identifier || '').trim() === ident);
+                    if (match) {
+                        dups.push({
+                            candidate: cand,
+                            existing: match,
+                            location: `${loc.name} — ${bay.name}`,
+                            side: match.positionInBay,
+                        });
+                        break; // primeira ocorrência basta
+                    }
+                }
+                if (dups.find(d => d.candidate.id === cand.id)) break;
+            }
+        }
+        return dups;
+    }, [unallocatedCargoes, locations, selectedIds]);
+
     const handleConfirm = async () => {
         if (stability.status === 'CRITICAL' || loading) return;
 
+        // 1. Detectar duplicatas ANTES de qualquer outra ação
+        const dups = detectDuplicates();
+        if (dups.length > 0) {
+            // Fechar este modal e abrir o modal de duplicatas em primeiro plano
+            setDuplicates(dups);
+            setShowDuplicates(true);
+            return;
+        }
+
+        // 2. Sem duplicatas: fechar este modal ANTES de chamar `ask` para
+        // que a confirmação apareça em primeiro plano (Tarefa 6).
         if (selectedWeight > 50) {
+            onClose();
             const ok = await ask(
                 'Confirmar Movimentação em Grupo',
                 `A seleção totaliza ${selectedWeight.toFixed(2)} TON. Confirmar a movimentação?`
             );
             if (!ok) return;
+            // Executa após confirmação
+            await execute({
+                cargoIds: Array.from(selectedIds),
+                targetLocationId,
+                targetBayId,
+                targetSide,
+            });
+            return;
         }
 
+        // Caminho leve (peso ≤ 50t) — executa direto
         const success = await execute({
             cargoIds: Array.from(selectedIds),
             targetLocationId,
             targetBayId,
             targetSide,
         });
+        if (success) onClose();
+    };
 
-        if (success) {
-            onClose();
-        }
+    const handleRemoveDuplicates = (candidateIds: string[]) => {
+        // Remove APENAS do grid de não alocadas; cargas alocadas permanecem onde estão.
+        removeUnallocatedByIds(candidateIds);
+        notify(`${candidateIds.length} carga(s) duplicada(s) removida(s) do grid. Originais alocadas mantidas.`, 'success');
+        // Limpa seleção das cargas duplicadas
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            candidateIds.forEach(id => next.delete(id));
+            return next;
+        });
+        setDuplicates([]);
     };
 
     const handleClose = () => {
@@ -222,7 +287,20 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
         onClose();
     };
 
-    if (!isOpen) return null;
+    if (!isOpen && !showDuplicates) return null;
+
+    // Render do modal de duplicatas — fica em primeiro plano (Z-1100), substituindo
+    // visualmente o GroupMoveModal (que escondemos via !isOpen abaixo).
+    if (showDuplicates) {
+        return (
+            <DuplicatesAlertModal
+                isOpen={showDuplicates}
+                onClose={() => { setShowDuplicates(false); setDuplicates([]); }}
+                duplicates={duplicates}
+                onRemoveDuplicates={handleRemoveDuplicates}
+            />
+        );
+    }
 
     return createPortal(
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm">

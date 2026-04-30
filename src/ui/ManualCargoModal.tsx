@@ -2,10 +2,23 @@ import { useState, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { X, Box, Settings, Palette, Info } from 'lucide-react';
+import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle } from 'lucide-react';
 import type { CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
 import { cn } from '@/lib/utils';
+
+// Categorias padrão sugeridas; usuário pode digitar qualquer string livre
+const CATEGORY_SUGGESTIONS: { value: CargoCategory; label: string }[] = [
+  { value: 'GENERAL',    label: 'Geral' },
+  { value: 'CONTAINER',  label: 'Container' },
+  { value: 'BASKET',     label: 'Cesta' },
+  { value: 'TUBULAR',    label: 'Tubular' },
+  { value: 'EQUIPMENT',  label: 'Equipamento' },
+  { value: 'HAZARDOUS',  label: 'Perigoso (Hazardous)' },
+  { value: 'HEAVY',      label: 'Pesado' },
+  { value: 'FRAGILE',    label: 'Frágil' },
+  { value: 'OTHER',      label: 'Outros' },
+];
 
 export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const { addManualCargo } = useCargoStore();
@@ -20,6 +33,9 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   const [heightMeters, setHeightMeters] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [category, setCategory] = useState<CargoCategory>('GENERAL');
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [isHazardous, setIsHazardous] = useState(false);
   const [observations, setObservations] = useState('');
   const [isRemovable, setIsRemovable] = useState(false);
   const [color, setColor] = useState('#3b82f6');
@@ -34,6 +50,10 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
     if (isNaN(w) || isNaN(l) || isNaN(wi)) return;
 
+    // Se categoria for HAZARDOUS, garantir flag isHazardous=true (e vice-versa: SIM ⇒ HAZARDOUS)
+    const finalCategory: CargoCategory = isHazardous ? 'HAZARDOUS' : category;
+    const finalIsHazardous = isHazardous || category === 'HAZARDOUS';
+
     addManualCargo({
       description: description.trim(),
       identifier: identifier.trim(),
@@ -42,15 +62,19 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
       widthMeters: wi,
       heightMeters: h,
       quantity,
-      category,
+      category: finalCategory,
+      isHazardous: finalIsHazardous,
+      origemCarga: origin.trim() || undefined,
+      destinoCarga: destination.trim() || undefined,
       observations: observations.trim() || undefined,
       isRemovable,
-      color,
-      format
+      color: finalIsHazardous ? '#a855f7' : color, // perigosa: roxo
+      format,
     });
 
     setDescription(''); setIdentifier(''); setWeightTonnes(''); setLengthMeters('');
-    setWidthMeters(''); setHeightMeters(''); setQuantity(1); setCategory('GENERAL'); setFormat('Retangular');
+    setWidthMeters(''); setHeightMeters(''); setQuantity(1); setCategory('GENERAL');
+    setOrigin(''); setDestination(''); setIsHazardous(false); setFormat('Retangular');
     onClose();
   };
 
@@ -146,26 +170,96 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
               </div>
             </div>
 
-            {/* Quantidade e Geometria */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Quantidade, Categoria, Geometria */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-3">
                 <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Quantidade</label>
                 <input
                   type="number" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all shadow-inner"
+                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-black text-primary outline-none focus:border-brand-primary transition-all shadow-inner"
                   min="1" required
                 />
               </div>
               <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
+                  <Layers size={12} className="text-brand-primary" /> Categoria
+                </label>
+                <select
+                  value={category}
+                  onChange={e => setCategory(e.target.value as CargoCategory)}
+                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-black text-primary outline-none focus:border-brand-primary appearance-none cursor-pointer shadow-inner"
+                >
+                  {CATEGORY_SUGGESTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-3">
                 <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Geometria</label>
                 <select
-                  value={format} onChange={e => setFormat(e.target.value as any)}
-                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4 text-sm font-black text-primary outline-none focus:border-brand-primary appearance-none cursor-pointer shadow-inner"
+                  value={format} onChange={e => setFormat(e.target.value as 'Retangular' | 'Quadrado' | 'Tubular')}
+                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-black text-primary outline-none focus:border-brand-primary appearance-none cursor-pointer shadow-inner"
                 >
                   <option value="Retangular">Retangular</option>
                   <option value="Quadrado">Quadrado (Caixa)</option>
                   <option value="Tubular">Tubular (Cilindro)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Origem e Destino */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
+                  <MapPin size={12} className="text-brand-primary" /> Origem
+                </label>
+                <input
+                  type="text" value={origin} onChange={e => setOrigin(e.target.value)}
+                  placeholder="Ex.: PACU"
+                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-bold text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/50"
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
+                  <MapPin size={12} className="text-brand-primary" /> Destino
+                </label>
+                <input
+                  type="text" value={destination} onChange={e => setDestination(e.target.value)}
+                  placeholder="Ex.: NS44"
+                  className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-bold text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/50"
+                />
+              </div>
+            </div>
+
+            {/* Toggle Carga Perigosa */}
+            <div
+              onClick={() => setIsHazardous(!isHazardous)}
+              className={cn(
+                'flex items-center justify-between p-5 border-2 rounded-3xl cursor-pointer transition-all shadow-low',
+                isHazardous
+                  ? 'border-purple-500 bg-purple-500/10 shadow-purple-500/20'
+                  : 'bg-sidebar border-subtle hover:border-purple-500/40'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle size={20} className={cn('shrink-0', isHazardous ? 'text-purple-500 animate-pulse' : 'text-muted')} />
+                <div className="flex flex-col gap-1">
+                  <span className={cn('text-xs font-black uppercase tracking-widest leading-none', isHazardous ? 'text-purple-600 dark:text-purple-400' : 'text-primary')}>
+                    Carga Perigosa? {isHazardous ? 'SIM' : 'NÃO'}
+                  </span>
+                  <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter opacity-80">
+                    Cargas perigosas exibem contorno roxo pulsante para identificação visual
+                  </span>
+                </div>
+              </div>
+              <div className={cn(
+                'w-14 h-7 rounded-full transition-all duration-500 relative shadow-inner',
+                isHazardous ? 'bg-purple-500 shadow-purple-500/40' : 'bg-strong/40'
+              )}>
+                <div className={cn(
+                  'absolute top-1 w-5 h-5 bg-white rounded-full shadow-high transition-all duration-300',
+                  isHazardous ? 'left-8' : 'left-1'
+                )} />
               </div>
             </div>
 

@@ -112,6 +112,7 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
   const requiresWeightFix = cargo.weightTonnes === 0 || isNaN(cargo.weightTonnes);
   const isLightBackground = isColorLight(cargo.color || '#3b82f6');
   const textColorClass = isLightBackground ? "text-neutral-950" : "text-white/95";
+  const isHazardous = cargo.isHazardous || cargo.category === 'HAZARDOUS';
 
   // Desabilita as interações de drag and drop na peça ofuscada
   const dndListeners = isDimmed || requiresWeightFix ? {} : listeners;
@@ -132,13 +133,15 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
         cargo.status === 'ALLOCATED' ? "item" : "container-item",
         isDimmed ? "pointer-events-none opacity-20 grayscale brightness-50 contrast-50" : "cursor-grab",
         isDragging ? "opacity-50 shadow-none scale-95" : (requiresWeightFix || isDimmed ? "cursor-not-allowed opacity-80" : "active:cursor-grabbing hover:z-[1000]"),
-        cargo.status === 'ALLOCATED' 
+        cargo.status === 'ALLOCATED'
           ? "p-0 rounded-sm shadow-high border border-black/20 dark:border-white/10 shadow-black/50 transition-all hover-glow cargo-hitbox"
           : "glass rounded-2xl p-4 gap-4 w-full shadow-medium hover:shadow-high hover:border-brand-primary active:scale-[0.98] transition-all",
         !isDimmed && cargo.status === 'UNALLOCATED' ? "hover:scale-[1.02]" : "",
         cargo.isBackload && cargo.status === 'UNALLOCATED' ? "border-status-warning/40 bg-status-warning/5" : "",
         isHighlight ? "ring-4 ring-status-warning shadow-glow z-50 transform scale-[1.05]" : "",
-        requiresWeightFix ? "border-status-error bg-status-error/10" : ""
+        requiresWeightFix ? "border-status-error bg-status-error/10" : "",
+        // Borda roxa pulsante para cargas perigosas (alocadas e não alocadas)
+        isHazardous && !isHighlight ? "ring-2 ring-purple-500 ring-offset-1 ring-offset-transparent animate-pulse shadow-[0_0_14px_rgba(168,85,247,0.5)]" : ""
       )}
     >
       {/* Tooltip Global (Hover) */}

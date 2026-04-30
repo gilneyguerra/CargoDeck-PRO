@@ -294,11 +294,9 @@ export function DeckArea() {
                   </button>
               </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 mb-8 px-2">
-                <div className="flex items-center gap-6 flex-1 min-w-fit flex-wrap">
-                    <div className="flex flex-col">
-                      <h2 className="deck-title text-3xl xl:text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
-                    </div>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-6 px-2">
+                <div className="flex items-center gap-4 flex-1 min-w-fit flex-wrap">
+                    <h2 className="deck-title text-2xl lg:text-3xl xl:text-4xl font-extrabold text-primary tracking-tighter uppercase leading-none drop-shadow-sm">{activeLocation.name}</h2>
 
                     <VesselIdentificationButton variant="deck" />
 
@@ -359,41 +357,37 @@ export function DeckArea() {
                     )}
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                     {/* Contador de Resultados da Busca GLOBAL */}
                     {searchTerm && (
-                      <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                         <div className="bg-status-warning/10 border border-status-warning/30 px-5 py-2 rounded-2xl flex items-center gap-3 shadow-low h-16">
-                            <CheckCircle2 className="w-5 h-5 text-status-warning" />
-                            <div className="flex flex-col items-start justify-center leading-none">
-                              <span className="text-[10px] font-black text-status-warning uppercase tracking-widest mb-1">
-                                 {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM' : 'ITENS'}
-                              </span>
-                              <div className="flex items-center gap-2 opacity-70">
-                                 <span className="text-[9px] font-bold text-status-warning uppercase">Deck: {globalSearchMatchCount - inventoryMatchCount}</span>
-                                 <div className="w-1.5 h-1.5 rounded-full bg-status-warning/40" />
-                                 <span className="text-[9px] font-bold text-status-warning uppercase">Inv: {inventoryMatchCount}</span>
-                              </div>
-                            </div>
-                         </div>
+                      <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300 h-12 px-4 bg-status-warning/10 border border-status-warning/30 rounded-xl shadow-low">
+                        <CheckCircle2 className="w-4 h-4 text-status-warning shrink-0" />
+                        <div className="flex flex-col items-start justify-center leading-none">
+                          <span className="text-[10px] font-black text-status-warning uppercase tracking-widest">
+                            {globalSearchMatchCount} {globalSearchMatchCount === 1 ? 'ITEM' : 'ITENS'}
+                          </span>
+                          <span className="text-[8px] font-bold text-status-warning uppercase opacity-70 mt-0.5">
+                            Deck {globalSearchMatchCount - inventoryMatchCount} · Inv {inventoryMatchCount}
+                          </span>
+                        </div>
                       </div>
                     )}
 
                     <div className="relative group">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted group-focus-within:text-brand-primary transition-all group-focus-within:rotate-12" />
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted group-focus-within:text-brand-primary transition-all group-focus-within:rotate-12" />
                       <input
                         type="text"
                         placeholder="BUSCAR NO DECK..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-56 xl:w-72 pl-12 pr-4 text-xs font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-2xl focus:outline-none focus:border-brand-primary transition-all focus:ring-4 focus:ring-brand-primary/10 placeholder:text-muted/60 text-primary uppercase shadow-low h-16"
+                        className="w-52 xl:w-64 pl-10 pr-3 text-[11px] font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-xl focus:outline-none focus:border-brand-primary transition-all focus:ring-2 focus:ring-brand-primary/20 placeholder:text-muted/60 text-primary uppercase shadow-low h-12"
                       />
                     </div>
 
                     <button
                       onClick={() => setShowGroupMoveModal(true)}
                       title="Movimentar Cargas em Grupo"
-                      className="flex items-center gap-2 bg-[#1A237E] hover:brightness-110 text-white px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-md active:scale-95 h-16 shrink-0"
+                      className="flex items-center gap-2 bg-[#1A237E] hover:brightness-110 text-white px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all shadow-md hover:shadow-lg active:scale-95 h-12 shrink-0"
                     >
                       <Users className="w-4 h-4" />
                       <span className="hidden 2xl:inline">MOVER EM GRUPO</span>
@@ -402,7 +396,7 @@ export function DeckArea() {
 
                     <button
                       onClick={() => setIsSettingsOpen(true)}
-                      className="flex items-center gap-2 bg-header border border-subtle text-primary hover:text-brand-primary hover:border-brand-primary px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-md active:scale-95 h-16"
+                      className="flex items-center gap-2 bg-header border-2 border-subtle text-primary hover:text-brand-primary hover:border-brand-primary hover:bg-brand-primary/5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all shadow-sm hover:shadow-md active:scale-95 h-12"
                       title="Configurar Deck"
                     >
                       <Settings className="w-4 h-4" />
@@ -411,7 +405,7 @@ export function DeckArea() {
                     </button>
 
                     {/* Separador visual entre controles do deck e ações de manifesto */}
-                    <div className="h-12 w-px bg-border-subtle hidden sm:block mx-1" />
+                    <div className="h-10 w-px bg-border-subtle hidden sm:block mx-1" />
 
                     {/* Ações operacionais movidas do Header global */}
                     <DeckActionToolbar />

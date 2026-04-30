@@ -77,55 +77,51 @@ export function DeckActionToolbar() {
     <>
       <div className="flex items-center gap-2 shrink-0">
         <button
-          className="p-3 text-muted hover:text-[#ef4444] hover:bg-red-500/10 rounded-2xl transition-all active:scale-95 hover:rotate-12 group h-16 w-16 flex items-center justify-center"
+          className="text-muted hover:text-[#ef4444] hover:bg-red-500/10 rounded-xl transition-all active:scale-95 hover:rotate-12 group h-12 w-12 flex items-center justify-center border-2 border-transparent hover:border-red-500/30"
           onClick={handleClearAll}
           title="Zerar Plano de Carga"
         >
-          <Trash2 size={20} className="group-hover:scale-110 transition-transform" />
+          <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
         </button>
 
-        <div className="hidden lg:flex items-center gap-2 p-1.5 bg-sidebar/20 border border-subtle rounded-2xl shadow-inner h-16">
+        <div className="hidden md:flex items-center gap-1.5 p-1 bg-sidebar/20 border border-subtle rounded-xl h-12">
           <button
             onClick={handleExportCsv}
             disabled={!manifestsLoaded}
-            className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
+            className="flex items-center gap-1.5 bg-sidebar/50 border border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
+            title="Exportar CSV"
           >
-            <Download size={14} /> CSV
+            <Download size={12} /> CSV
           </button>
           <button
             onClick={handleExportPdf}
             disabled={!manifestsLoaded}
-            className="flex items-center gap-2 bg-sidebar/50 border border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
+            className="flex items-center gap-1.5 bg-sidebar/50 border border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-sm hover:shadow-md active:scale-95 disabled:opacity-40"
+            title="Exportar PDF"
           >
-            <Download size={14} /> PDF
+            <Download size={12} /> PDF
           </button>
         </div>
 
-        {/* Versão compacta para telas menores: combo dropdown-like (apenas botão CSV / PDF empilhados) */}
-        <div className="flex lg:hidden flex-col gap-1 p-1 bg-sidebar/20 border border-subtle rounded-xl">
+        {/* Versão compacta para telas menores: ícone-só */}
+        <div className="flex md:hidden items-center gap-1">
           <button
             onClick={handleExportCsv}
             disabled={!manifestsLoaded}
-            className="flex items-center justify-center gap-1 bg-sidebar/50 border border-subtle text-primary hover:bg-main transition-all px-2 py-1 rounded text-[9px] font-black uppercase tracking-wide disabled:opacity-40"
+            className="h-12 w-12 flex items-center justify-center bg-sidebar/50 border-2 border-subtle text-primary hover:bg-main hover:border-brand-primary/30 transition-all rounded-xl active:scale-95 disabled:opacity-40"
+            title="Exportar CSV"
           >
-            <Download size={10} /> CSV
-          </button>
-          <button
-            onClick={handleExportPdf}
-            disabled={!manifestsLoaded}
-            className="flex items-center justify-center gap-1 bg-sidebar/50 border border-subtle text-primary hover:bg-main transition-all px-2 py-1 rounded text-[9px] font-black uppercase tracking-wide disabled:opacity-40"
-          >
-            <Download size={10} /> PDF
+            <Download size={14} />
           </button>
         </div>
 
         <button
           onClick={handleSaveToCloud}
           disabled={saving}
-          title="Sincronizar"
-          className="flex items-center gap-3 bg-gradient-to-br from-[#10b981] to-[#059669] text-white hover:brightness-110 disabled:opacity-40 px-6 py-3.5 rounded-2xl text-xs font-extrabold shadow-high shadow-status-success/30 active:scale-95 transition-all hover-lift h-16"
+          title="Sincronizar (SALVAR no servidor)"
+          className="flex items-center gap-2 bg-gradient-to-br from-[#10b981] to-[#059669] text-white hover:brightness-110 disabled:opacity-40 px-4 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-[0.15em] shadow-md hover:shadow-lg shadow-status-success/30 active:scale-95 transition-all h-12"
         >
-          <CloudUpload size={18} />
+          <CloudUpload size={16} />
           <span className="tracking-widest hidden sm:inline">{saving ? 'PROCESSANDO...' : 'SALVAR'}</span>
         </button>
       </div>

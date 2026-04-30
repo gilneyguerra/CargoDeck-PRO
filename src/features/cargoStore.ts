@@ -51,6 +51,8 @@ export interface CargoState {
     updateCargoPosition: (cargoId: string, x: number, y: number, isRotated?: boolean) => void;
     deleteCargo: (cargoId: string) => Promise<void>;
     deleteMultipleCargoes: (cargoIds: string[]) => Promise<void>;
+    /** Remove cargas APENAS do inventário não alocado (não toca em alocações em conveses). */
+    removeUnallocatedByIds: (cargoIds: string[]) => void;
     batchMoveCargoes: (cargoIds: string[], targetLocationId: string, targetBayId: string | 'distribute', targetSide: 'port' | 'center' | 'starboard') => void;
     batchMoveCargoesToSides: (cargoIds: string[], targetLocationId: string, targetBayId: string | 'distribute', sideCounts: { port: number, center: number, starboard: number }) => void;
     setSearchTerm: (term: string) => void;
@@ -694,6 +696,15 @@ export const useCargoStore = create<CargoState>()(
                         cargoIds
                     });
                 }
+            },
+
+            removeUnallocatedByIds: (cargoIds) => {
+                if (cargoIds.length === 0) return;
+                const idSet = new Set(cargoIds);
+                set((state) => ({
+                    unallocatedCargoes: state.unallocatedCargoes.filter(c => !idSet.has(c.id)),
+                    selectedCargos: new Set(Array.from(state.selectedCargos).filter(id => !idSet.has(id))),
+                }));
             },
 
             batchMoveCargoes: (cargoIds, targetLocationId, targetBayId, targetSide) => {

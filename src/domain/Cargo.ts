@@ -37,6 +37,7 @@ export interface Cargo {
 
   // Operational Properties
   isBackload?: boolean; // If true, cargo is being removed from ship (backload operation)
+  isHazardous?: boolean; // If true, cargo is dangerous (mapped from "Carga Perigosa? = SIM" in Excel)
 
   observations?: string;
   alerts?: string[];
