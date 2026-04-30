@@ -144,6 +144,28 @@ html, body {
   transition: background-color 0.3s, color 0.3s;
 }
 
+/* ─── Seleção de Texto Global ─────────────────────────────────────────────────
+   Claro: fundo brand-primary translúcido + texto primary mantido (preto)
+   Escuro: fundo brand-primary translúcido + texto primary mantido (claro)
+   Antes: a regra default do browser tornava fonte branca com fundo azul → ilegível
+   sobre conteúdos brancos. Agora preserva o contraste em ambos os temas. */
+::selection {
+  background-color: rgba(0, 86, 179, 0.30); /* brand-primary @ 30% no tema claro */
+  color: var(--text-primary);
+}
+::-moz-selection {
+  background-color: rgba(0, 86, 179, 0.30);
+  color: var(--text-primary);
+}
+.dark ::selection {
+  background-color: rgba(96, 165, 250, 0.40); /* brand-primary @ 40% no tema escuro (azul mais claro) */
+  color: var(--text-primary);
+}
+.dark ::-moz-selection {
+  background-color: rgba(96, 165, 250, 0.40);
+  color: var(--text-primary);
+}
+
 /* Utility classes for consistent theming */
 .bg-main { background-color: var(--bg-main); }
 .bg-sidebar { background-color: var(--bg-sidebar); }

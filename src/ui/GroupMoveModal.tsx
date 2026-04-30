@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X, Search, CheckCircle2, AlertTriangle, Scale,
-    Users, ChevronRight, ChevronLeft, Shuffle
+    ChevronRight, ChevronLeft, Shuffle, PackageCheck
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useStabilityCalculation } from '@/hooks/useStabilityCalculation';
@@ -329,7 +329,7 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-subtle shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-brand-primary/10 rounded-xl">
-                            <Users className="w-5 h-5 text-brand-primary" />
+                            <PackageCheck className="w-5 h-5 text-brand-primary" />
                         </div>
                         <div>
                             <h2 id={titleId} className="text-base font-black text-primary leading-none">Movimentação em Grupo</h2>

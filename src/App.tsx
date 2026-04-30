@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './ui/ToastContainer';
 import { ErrorReportTray } from '@/ui/ErrorReportTray';
+import { EditCargoModal } from '@/ui/EditCargoModal';
 import { LandingPage } from '@/ui/LandingPage';
 
 function AppWithProviders() {
@@ -23,6 +24,7 @@ function AppWithProviders() {
     activeLocationId, setActiveLocation,
     deleteCargo,
     setEditingCargo,
+    editingCargo,
     viewMode
   } = useCargoStore();
 
@@ -151,6 +153,12 @@ function AppWithProviders() {
       </DragOverlay>
       <ToastContainer />
       <ErrorReportTray />
+      {/* Modal global de edição — abre quando editingCargo é setado em qualquer parte do app */}
+      <EditCargoModal
+        isOpen={editingCargo !== null}
+        cargo={editingCargo}
+        onClose={() => setEditingCargo(null)}
+      />
     </DndContext>
   )
 }

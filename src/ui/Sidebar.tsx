@@ -1,8 +1,9 @@
 import {
-  LayoutGrid, Package, Anchor, Box, Flame, Truck, Layers, Flag, ArrowRight
+  LayoutGrid, Package, Anchor, Box, Flame, Truck, Flag, ArrowRight
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useMemo } from 'react';
+import { StabilityIndicator } from './StabilityIndicator';
 
 export default function Sidebar() {
   const {
@@ -25,16 +26,16 @@ export default function Sidebar() {
       return acc;
     }, {} as Record<string, number>);
 
-    const containers = allocatedCargoes.filter(c => c.category === 'CONTAINER').length;
-    const loose = allocatedCargoes.length - containers;
     const urgent = allocatedCargoes.filter(c => c.priority === 'urgent').length;
     const high = allocatedCargoes.filter(c => c.priority === 'high').length;
     const hazardous = allocatedCargoes.filter(c => c.isHazardous || c.category === 'HAZARDOUS').length;
 
     const allocated = allocatedCargoes.length;
 
-    return { total, totalWeight, byCategory, containers, loose, urgent, high, hazardous, allocated };
+    return { total, totalWeight, byCategory, urgent, high, hazardous, allocated };
   }, [unallocatedCargoes, locations]);
+
+  const categoryEntries = Object.entries(stats.byCategory).sort(([, a], [, b]) => b - a);
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -58,13 +59,10 @@ export default function Sidebar() {
           <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">GERAÇÃO MODAL</span>
           <ArrowRight className="relative w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
         </button>
-        <p className="text-[9px] font-bold text-secondary uppercase tracking-[0.2em] text-center opacity-60 mt-2">
-          módulo de transporte ↗
-        </p>
       </div>
 
       {/* Resumo Estatístico */}
-      <div className="p-5 border-b border-subtle flex flex-col gap-4">
+      <div className="p-5 border-b border-subtle flex flex-col gap-4 overflow-y-auto no-scrollbar">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
             <Package size={16} className="text-brand-primary" />
@@ -92,26 +90,6 @@ export default function Sidebar() {
             <p className="text-[10px] font-mono font-black text-secondary mt-1">a bordo</p>
           </div>
         </div>
-
-        {/* Breakdown soltas/contentores — refletindo carga A BORDO */}
-        {stats.allocated > 0 && (
-          <div className="bg-main border border-subtle rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <Layers size={10} className="text-muted" />
-                <span className="font-black text-secondary uppercase tracking-widest">Soltas (a bordo)</span>
-              </div>
-              <span className="font-mono font-black text-primary">{stats.loose}</span>
-            </div>
-            <div className="flex items-center justify-between text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <Package size={10} className="text-muted" />
-                <span className="font-black text-secondary uppercase tracking-widest">Contentores (a bordo)</span>
-              </div>
-              <span className="font-mono font-black text-primary">{stats.containers}</span>
-            </div>
-          </div>
-        )}
 
         {/* Prioridade / Hazardous a bordo */}
         {(stats.urgent > 0 || stats.high > 0 || stats.hazardous > 0) && (
@@ -146,25 +124,30 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Filtros dinâmicos de categorias — apenas cargas alocadas a bordo */}
-        {Object.keys(stats.byCategory).length > 0 && (
+        {/* Filtros dinâmicos de categorias — grid 2 colunas (mais compacto, mais filtros visíveis) */}
+        {categoryEntries.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-[9px] font-black text-muted uppercase tracking-widest">
-              Categorias a bordo · {Object.keys(stats.byCategory).length} tipo(s)
+              Categorias a bordo · {categoryEntries.length} tipo(s)
             </p>
-            {Object.entries(stats.byCategory)
-              .sort(([, a], [, b]) => b - a)
-              .map(([cat, count]) => (
-                <div key={cat} className="flex items-center justify-between text-[10px] bg-main/40 rounded-lg px-2 py-1.5 border border-subtle/50">
-                  <span className="font-black text-secondary uppercase tracking-widest truncate">{cat}</span>
-                  <span className="font-mono font-black text-primary">{count}</span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {categoryEntries.map(([cat, count]) => (
+                <div key={cat} className="flex items-center justify-between text-[10px] bg-main/40 rounded-lg px-2 py-1.5 border border-subtle/50 min-w-0">
+                  <span className="font-black text-secondary uppercase tracking-widest truncate" title={cat}>{cat}</span>
+                  <span className="font-mono font-black text-primary shrink-0 ml-1.5">{count}</span>
                 </div>
               ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Mensagem informativa */}
+      {/* Indicador de Estabilidade — migrado do header do DeckArea (Tarefa 3) */}
+      <div className="p-5 border-b border-subtle">
+        <StabilityIndicator variant="compact" />
+      </div>
+
+      {/* Mensagem informativa final */}
       <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto no-scrollbar">
         <div className="w-14 h-14 rounded-full bg-main border-2 border-subtle flex items-center justify-center mb-3 opacity-50">
           <Truck size={20} className="text-secondary" />
