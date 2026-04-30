@@ -1,6 +1,6 @@
 import {
   Plus, Upload, Trash2, Box, Package, Anchor, Truck,
-  Zap, MoveRight, Users, MessageSquare, Table2, ClipboardEdit
+  Zap, MoveRight, Users, MessageSquare, Table2, LayoutGrid
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '../hooks/usePDFUpload';
@@ -181,16 +181,16 @@ export default function Sidebar() {
                 </button>
             </div>
 
-            {/* Botão de Cadastro Detalhado (página dedicada) */}
+            {/* Botão para abrir página dedicada de Cargas Não Alocadas */}
             <button
-              onClick={() => setViewMode('creation')}
+              onClick={() => setViewMode('unallocated')}
               disabled={isProcessing}
-              title="Abrir página de cadastro detalhado de carga"
+              title="Abrir página dedicada de Cargas Não Alocadas (grid + alocação em lote)"
               className="w-full px-4 py-3 flex items-center justify-center gap-2 border-t border-subtle bg-main/20 hover:bg-brand-primary/10 transition-all duration-300 group disabled:opacity-40 cursor-pointer"
             >
-              <ClipboardEdit className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">CADASTRO DETALHADO</span>
-              <span className="text-[8px] font-bold text-muted">Página dedicada</span>
+              <LayoutGrid className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">CARGAS NÃO ALOCADAS</span>
+              <span className="text-[8px] font-bold text-muted">Grid + alocação em lote</span>
             </button>
 
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />

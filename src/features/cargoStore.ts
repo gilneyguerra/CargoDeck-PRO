@@ -23,7 +23,7 @@ import { findDuplicateOnboard, calculateBayStats } from '../utils/cargoUtils';
 /**
  * Define a estrutura do estado do store de cargas.
  */
-export type ViewMode = 'deck' | 'creation';
+export type ViewMode = 'deck' | 'unallocated';
 
 export interface CargoState {
     manifestsLoaded: boolean;
@@ -37,6 +37,7 @@ export interface CargoState {
     editingCargo: Cargo | null;
     isHydratedFromCloud: boolean;
     viewMode: ViewMode;
+    selectedCargos: Set<string>;
 
     setExtractedCargoes: (cargoes: Cargo[]) => void;
     setShipName: (name: string | null) => void;
@@ -61,6 +62,9 @@ export interface CargoState {
     hydrateFromDb: (payload: Partial<CargoState>) => void;
     setEditingCargo: (cargo: Cargo | null) => void;
     setViewMode: (mode: ViewMode) => void;
+    toggleCargoSelection: (id: string) => void;
+    selectMultipleCargos: (ids: string[]) => void;
+    clearCargoSelection: () => void;
     setHydrationStatus: (status: boolean) => void;
 }
 
@@ -98,6 +102,7 @@ export const useCargoStore = create<CargoState>()(
             editingCargo: null,
             isHydratedFromCloud: false,
             viewMode: 'deck' as ViewMode,
+            selectedCargos: new Set<string>(),
 
             getAllCargo: () => {
                 const state = get();
@@ -112,6 +117,17 @@ export const useCargoStore = create<CargoState>()(
 
             setEditingCargo: (cargo) => set({ editingCargo: cargo }),
             setViewMode: (mode) => set({ viewMode: mode }),
+
+            toggleCargoSelection: (id) => set((state) => {
+                const next = new Set(state.selectedCargos);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return { selectedCargos: next };
+            }),
+
+            selectMultipleCargos: (ids) => set({ selectedCargos: new Set(ids) }),
+
+            clearCargoSelection: () => set({ selectedCargos: new Set<string>() }),
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
 
             setSearchTerm: (term) => set({ searchTerm: term }),

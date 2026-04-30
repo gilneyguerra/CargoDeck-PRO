@@ -2,7 +2,7 @@ import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from '@
 import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { Layout } from '@/ui/Layout';
 import { DeckArea } from '@/ui/DeckArea';
-import { ContainerCreationPage } from '@/ui/ContainerCreationPage';
+import { UnallocatedCargoPage } from '@/ui/UnallocatedCargoPage';
 import { useCargoStore } from '@/features/cargoStore';
 import { useState } from 'react';
 import type { Cargo } from '@/domain/Cargo';
@@ -85,7 +85,7 @@ function AppWithProviders() {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <Layout>
-        {viewMode === 'creation' ? <ContainerCreationPage /> : <DeckArea />}
+        {viewMode === 'unallocated' ? <UnallocatedCargoPage /> : <DeckArea />}
       </Layout>
       <DragOverlay>
         {activeCargo ? (
