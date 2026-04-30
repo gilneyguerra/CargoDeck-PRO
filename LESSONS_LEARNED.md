@@ -76,3 +76,10 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Causa**: Em projetos com React 17+, o compilador não exige o import global do `React` para processar JSX. Mantê-lo no topo do arquivo sem chamadas explícitas (como `React.useState`) gera um alerta de variável não utilizada.
 - **Solução**: Remova o `import React from 'react'` e utilize apenas os hooks necessários (`import { useState } from 'react'`). 
 - **Contexto**: Ocorrido durante o deploy da `LandingPage.tsx` no Vercel.
+
+## 13. Throw em Módulo de Infra-Estrutura Quebra a Árvore Inteira
+- **Problema**: Tela em branco no Vercel após hardening do `src/lib/supabase.ts` que passou a fazer `throw new Error(...)` no top-level quando `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` estavam ausentes.
+- **Causa**: `App.tsx` importa estaticamente `useAuthAndHydration`, que importa `cargoStore`, que importa `supabase`. Um throw na carga do módulo `supabase.ts` é executado **antes** de qualquer componente React ser instanciado — incluindo a `LandingPage` e o `ErrorBoundary`. O `ErrorBoundary` só captura erros lançados durante o **render** de componentes, não erros de **module load** (parse/exec do JS).
+- **Solução**: Validar configuração crítica no **primeiro uso real** (ex.: dentro de `getSession()`, `signIn()`), não no `import`. Se for absolutamente necessário falhar cedo, usar `Proxy` para diferir a falha até a primeira chamada — mas mesmo isso pode bubbling para o `ErrorBoundary` se a chamada estiver em `useEffect`. Caminho mais seguro: fallback sensato + `console.warn` claro.
+- **Regra geral**: nunca lançar exceções no top-level de um módulo de infraestrutura compartilhado (`lib/`, `services/`, `infrastructure/`). Se a env é obrigatória, falhe na primeira chamada acionável, com mensagem explicando qual env definir e onde.
+- **Contexto**: Ocorrido em `src/lib/supabase.ts` durante a Fase 0 da refatoração v2.0 (commit 22a723f). Revertido em c3fc7ff com fallback de credenciais demo + warn.
