@@ -8,7 +8,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.tesseract.js; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.supabase.net; img-src 'self' data: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; object-src 'none';"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://*.supabase.co; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.supabase.net https://opencode.ai; img-src 'self' data: blob: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
 
         },
         {
