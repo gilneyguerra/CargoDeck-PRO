@@ -14,6 +14,7 @@ import { getCargoFontSize, getCargoIconSize } from '@/lib/scaling';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './ui/ToastContainer';
+import { ErrorReportTray } from '@/ui/ErrorReportTray';
 import { LandingPage } from '@/ui/LandingPage';
 
 function AppWithProviders() {
@@ -149,6 +150,7 @@ function AppWithProviders() {
         ) : null}
       </DragOverlay>
       <ToastContainer />
+      <ErrorReportTray />
     </DndContext>
   )
 }

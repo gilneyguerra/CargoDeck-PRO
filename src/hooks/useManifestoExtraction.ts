@@ -13,6 +13,7 @@ import { routeTask } from '@/services/llmRouter';
 import { saveExtractionLog } from '@/services/auditLog';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
+import { reportException } from '@/features/errorReporter';
 
 export type ExtractionPhase = 'idle' | 'extracting' | 'validating' | 'awaiting_confirmation' | 'importing' | 'done';
 
@@ -140,7 +141,14 @@ export function useManifestoExtraction(onClose: () => void) {
     } catch (err) {
       hideBanner();
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-      updateMessage(loadingId, `❌ Erro na extração: ${msg}\n\nVerifique se a chave VITE_GEMINI_API_KEY está configurada e tente novamente.`);
+      updateMessage(loadingId, `❌ Erro na extração: ${msg}\n\nVerifique se a chave VITE_OPENCODE_ZEN_KEY está configurada e tente novamente.`);
+      reportException(err, {
+        title: 'Falha na extração de manifesto via IA',
+        category: 'network',
+        severity: 'error',
+        source: 'manifest-llm-extraction',
+        suggestion: 'Verifique conexão de internet e a configuração da chave OpenCode Zen no .env. Como alternativa, use o Editor em Grade (Excel) para importar manualmente.',
+      });
       setState(prev => ({ ...prev, phase: 'idle', isProcessing: false }));
     }
   }, [addMessage, updateMessage, setBanner, hideBanner, buildSummaryMessage]);

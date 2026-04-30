@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useId, type KeyboardEvent, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, CheckCircle2, Table2, AlertCircle, Upload, Download } from 'lucide-react';
+import { X, Plus, Trash2, CheckCircle2, Table2, AlertCircle, Upload, Download, ChevronDown, ArrowRight } from 'lucide-react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
+import { reportException } from '@/features/errorReporter';
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
 
 // ─── Tipos internos ────────────────────────────────────────────────────────────
@@ -74,22 +75,71 @@ function parseDecimal(s: string): number {
 
 // ─── Validação ────────────────────────────────────────────────────────────────
 
+// Labels human-readable usados no painel de erros e mensagens de tooltip
+const FIELD_LABELS: Record<RowField, string> = {
+  category: 'Categoria',
+  description: 'Descrição',
+  identifier: 'Cód. Identificador',
+  weightTonnes: 'Peso (t)',
+  lengthMeters: 'Comprimento (m)',
+  widthMeters: 'Largura (m)',
+  heightMeters: 'Altura (m)',
+};
+
 function validateRow(row: EditorRow): Partial<Record<RowField, string>> {
   const e: Partial<Record<RowField, string>> = {};
   if (!row.category) e.category = 'Selecione uma categoria';
-  if (!row.description || row.description.trim().length < 2) e.description = 'Descrição obrigatória';
-  if (!row.identifier || row.identifier.trim().length < 2) e.identifier = 'Código inválido (mín. 2 chars)';
+  if (!row.description || row.description.trim().length < 2) e.description = 'Descrição vazia ou muito curta';
+  if (!row.identifier || row.identifier.trim().length < 2) e.identifier = 'Código vazio ou muito curto (mín. 2 caracteres)';
   const wt = parseDecimal(row.weightTonnes);
-  if (!row.weightTonnes || isNaN(wt) || wt <= 0 || wt > 500) e.weightTonnes = 'Peso inválido (0.1–500t)';
+  if (!row.weightTonnes || isNaN(wt)) e.weightTonnes = 'Peso ausente — informe valor em toneladas';
+  else if (wt <= 0) e.weightTonnes = `Peso deve ser maior que zero (atual: ${wt}t)`;
+  else if (wt > 1000) e.weightTonnes = `Peso muito alto (${wt}t) — verifique se está em toneladas, não kg`;
   const len = parseDecimal(row.lengthMeters);
-  if (!row.lengthMeters || isNaN(len) || len <= 0 || len > 50) e.lengthMeters = 'Comp. inválido (0.1–50m)';
+  if (!row.lengthMeters || isNaN(len)) e.lengthMeters = 'Comprimento ausente';
+  else if (len <= 0) e.lengthMeters = 'Comprimento deve ser maior que zero';
+  else if (len > 50) e.lengthMeters = `Comprimento muito alto (${len}m, máx 50m)`;
   const wid = parseDecimal(row.widthMeters);
-  if (!row.widthMeters || isNaN(wid) || wid <= 0 || wid > 50) e.widthMeters = 'Larg. inválida (0.1–50m)';
+  if (!row.widthMeters || isNaN(wid)) e.widthMeters = 'Largura ausente';
+  else if (wid <= 0) e.widthMeters = 'Largura deve ser maior que zero';
+  else if (wid > 50) e.widthMeters = `Largura muito alta (${wid}m, máx 50m)`;
   if (row.heightMeters) {
     const h = parseDecimal(row.heightMeters);
-    if (isNaN(h) || h <= 0 || h > 50) e.heightMeters = 'Alt. inválida (0.1–50m)';
+    if (isNaN(h)) e.heightMeters = 'Altura inválida';
+    else if (h <= 0) e.heightMeters = 'Altura deve ser maior que zero';
+    else if (h > 50) e.heightMeters = `Altura muito alta (${h}m, máx 50m)`;
   }
   return e;
+}
+
+// Lista achatada de erros (uma entrada por campo errado) — usada no painel navegável
+interface FlatError {
+  rowIdx: number;
+  rowNumber: number; // 1-based para exibição
+  field: RowField;
+  fieldLabel: string;
+  message: string;
+  identifier: string; // para localização rápida na lista
+  description: string;
+}
+
+function buildFlatErrors(rows: EditorRow[]): FlatError[] {
+  const out: FlatError[] = [];
+  rows.forEach((row, idx) => {
+    Object.entries(row.errors).forEach(([field, message]) => {
+      if (!message) return;
+      out.push({
+        rowIdx: idx,
+        rowNumber: idx + 1,
+        field: field as RowField,
+        fieldLabel: FIELD_LABELS[field as RowField],
+        message,
+        identifier: row.identifier || '—',
+        description: row.description || '(sem descrição)',
+      });
+    });
+  });
+  return out;
 }
 
 // ─── Mapeamento de cabeçalhos (CSV e Excel) ───────────────────────────────────
@@ -365,12 +415,23 @@ function TextCell({ value, field, rowIdx, error, numeric, colIdx, onChange, onTa
         onKeyDown={handleKey}
         data-row={rowIdx}
         data-col={colIdx}
-        className={`w-full h-full px-2.5 bg-transparent text-[12px] text-primary outline-none transition-colors
-          ${error ? 'border border-status-error/60 bg-status-error/5 text-status-error' : 'border-0 focus:bg-brand-primary/5 focus:border focus:border-brand-primary/40'}`}
+        title={error}
+        className={`w-full h-full px-2.5 bg-transparent text-[12px] outline-none transition-colors
+          ${error ? 'border-2 border-status-error bg-status-error/10 text-status-error pr-7' : 'text-primary border-0 focus:bg-brand-primary/5 focus:border focus:border-brand-primary/40'}`}
         placeholder={numeric ? '0.000' : '—'}
       />
+      {/* Indicador permanente de erro (✕ pulsante à direita) */}
       {error && (
-        <div className="absolute left-0 top-full mt-0.5 z-50 bg-status-error text-white text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap shadow-lg pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity">
+        <span
+          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-status-error text-white text-[9px] font-black flex items-center justify-center shadow-md animate-pulse"
+          aria-label={error}
+        >
+          !
+        </span>
+      )}
+      {/* Tooltip de erro — visível em focus E hover (group-hover) */}
+      {error && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-status-error text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg pointer-events-none opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition-opacity max-w-[280px] whitespace-normal">
           {error}
         </div>
       )}
@@ -393,7 +454,7 @@ function CategoryCell({ value, rowIdx, colIdx, error, onChange, onTab }: Categor
     if (e.key === 'Tab') { e.preventDefault(); onTab(rowIdx, colIdx, e.shiftKey); }
   };
   return (
-    <div className="relative h-full flex items-center">
+    <div className="relative group h-full flex items-center">
       {cat && <span className="absolute left-2 w-2 h-2 rounded-full shrink-0 pointer-events-none" style={{ backgroundColor: cat.color }} />}
       <select
         value={value}
@@ -401,12 +462,26 @@ function CategoryCell({ value, rowIdx, colIdx, error, onChange, onTab }: Categor
         onKeyDown={handleKey}
         data-row={rowIdx}
         data-col={colIdx}
-        className={`w-full h-full pl-6 pr-2 bg-transparent text-[12px] text-primary outline-none cursor-pointer appearance-none
-          ${error ? 'border border-status-error/60 bg-status-error/5 text-status-error' : 'border-0 focus:bg-brand-primary/5 focus:border focus:border-brand-primary/40'}`}
+        title={error}
+        className={`w-full h-full pl-6 pr-7 bg-transparent text-[12px] outline-none cursor-pointer appearance-none transition-colors
+          ${error ? 'border-2 border-status-error bg-status-error/10 text-status-error' : 'text-primary border-0 focus:bg-brand-primary/5 focus:border focus:border-brand-primary/40'}`}
       >
         <option value="">— Selecione —</option>
         {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
       </select>
+      {error && (
+        <>
+          <span
+            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-status-error text-white text-[9px] font-black flex items-center justify-center shadow-md animate-pulse"
+            aria-label={error}
+          >
+            !
+          </span>
+          <div className="absolute left-0 top-full mt-1 z-50 bg-status-error text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition-opacity max-w-[280px]">
+            {error}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -424,12 +499,24 @@ interface RowProps {
 // Ordem das colunas no grid (espelha a planilha CSV)
 // Categoria | Descrição | Cód.ID | Origem | Destino | Peso | Comp | Larg | Alt
 function GridRow({ row, rowIdx, onChange, onDelete, onTab }: RowProps) {
-  const hasError = Object.keys(row.errors).length > 0;
+  const errorCount = Object.keys(row.errors).length;
+  const hasError = errorCount > 0;
   return (
-    <tr className={`border-b border-subtle/40 hover:bg-brand-primary/[0.03] group/row transition-colors ${hasError ? 'bg-status-error/[0.02]' : ''}`}>
-      {/* # */}
-      <td className="sticky left-0 bg-sidebar border-r border-subtle/40 text-center w-9 shrink-0">
-        <span className="text-[10px] font-black text-muted">{rowIdx + 1}</span>
+    <tr
+      data-row-idx={rowIdx}
+      className={`border-b border-subtle/40 hover:bg-brand-primary/[0.03] group/row transition-colors ${hasError ? 'bg-status-error/5' : ''}`}
+    >
+      {/* # da linha — número em vermelho + ponto pulsante quando há erro */}
+      <td
+        className={`sticky left-0 bg-sidebar border-r-2 text-center w-9 shrink-0 ${hasError ? 'border-r-status-error' : 'border-subtle/40'}`}
+        title={hasError ? `${errorCount} erro(s) nesta linha` : undefined}
+      >
+        <div className="flex flex-col items-center justify-center gap-0.5">
+          <span className={`text-[10px] font-black ${hasError ? 'text-status-error' : 'text-muted'}`}>{rowIdx + 1}</span>
+          {hasError && (
+            <span className="w-1.5 h-1.5 rounded-full bg-status-error animate-pulse" />
+          )}
+        </div>
       </td>
       {/* Categoria — col 0 */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 140, minWidth: 140 }}>
@@ -570,6 +657,7 @@ interface Props { isOpen: boolean; onClose: () => void }
 export function CargoEditorModal({ isOpen, onClose }: Props) {
   const [rows, setRows] = useState<EditorRow[]>([emptyRow()]);
   const [validated, setValidated] = useState(false);
+  const [showErrorPanel, setShowErrorPanel] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
   const titleId = useId();
   const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
@@ -606,11 +694,34 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
     setRows(prev => {
       const updated = [...prev];
       const row = { ...updated[rowIdx], [field]: value };
+      // Re-valida em tempo real assim que a planilha foi importada (validated=true)
+      // ou após o usuário ter clicado em "Gerar" pelo menos uma vez.
       row.errors = validated ? validateRow(row) : {};
       updated[rowIdx] = row;
       return updated;
     });
   }, [validated]);
+
+  // Foca a primeira célula com erro de uma linha (campo específico)
+  const focusErrorCell = useCallback((rowIdx: number, field: RowField) => {
+    // Mapa de campos para colIdx no DOM (ordem definida em GridRow):
+    //  category=0, description=1, identifier=2, origin=3, destination=4,
+    //  weightTonnes=5, lengthMeters=6, widthMeters=7, heightMeters=8
+    const colMap: Record<RowField, number> = {
+      category: 0, description: 1, identifier: 2,
+      weightTonnes: 5, lengthMeters: 6, widthMeters: 7, heightMeters: 8,
+    };
+    const colIdx = colMap[field];
+    setTimeout(() => {
+      const inputs = tableRef.current?.querySelectorAll<HTMLElement>('[data-row]');
+      if (!inputs) return;
+      const target = Array.from(inputs).find(el => el.dataset.row === String(rowIdx) && el.dataset.col === String(colIdx));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.focus();
+      }
+    }, 50);
+  }, []);
 
   const handleTab = useCallback((rowIdx: number, colIdx: number, shift: boolean) => {
     const totalCols = 9;
@@ -635,31 +746,78 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
 
     const isExcel = /\.(xlsx|xls|xlsm)$/i.test(file.name);
 
+    // Helper para aplicar validação automática a todas as linhas após import
+    const applyImported = (parsed: EditorRow[], origem: 'Excel' | 'CSV') => {
+      const validatedRows = parsed.map(r => ({ ...r, errors: validateRow(r) }));
+      const errorCount = validatedRows.filter(r => Object.keys(r.errors).length > 0).length;
+      setRows(validatedRows);
+      setValidated(true); // habilita validação em tempo real para edições subsequentes
+      if (errorCount > 0) {
+        notify(`${parsed.length} linha(s) importada(s) do ${origem} — ${errorCount} linha(s) com erro detectado(s). Clique em "${errorCount} ERRO${errorCount !== 1 ? 'S' : ''}" para revisar.`, 'warning', 6000);
+      } else {
+        notify(`${parsed.length} linha(s) importada(s) do ${origem} sem erros.`, 'success');
+      }
+    };
+
     if (isExcel) {
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
           const buffer = ev.target?.result as ArrayBuffer;
           const parsed = await parseExcelToRows(buffer);
-          if (parsed.length === 0) { notify('Nenhuma linha válida encontrada na planilha.', 'error'); return; }
-          setRows(parsed);
-          setValidated(false);
-          notify(`${parsed.length} linha${parsed.length !== 1 ? 's' : ''} importada${parsed.length !== 1 ? 's' : ''} da planilha Excel.`, 'success');
+          if (parsed.length === 0) {
+            notify('Nenhuma linha válida encontrada na planilha.', 'error');
+            reportException(new Error('Planilha sem dados válidos'), {
+              title: 'Falha ao importar Excel',
+              category: 'import',
+              severity: 'warning',
+              source: 'cargo-editor-excel',
+              suggestion: 'Confirme que a primeira linha contém os cabeçalhos corretos (Categoria, Descrição, Código identificador, etc.) e que há ao menos uma linha de dados.',
+            });
+            return;
+          }
+          applyImported(parsed, 'Excel');
         } catch (err) {
           notify(err instanceof Error ? err.message : 'Erro ao ler arquivo Excel.', 'error');
+          reportException(err, {
+            title: 'Falha ao processar planilha Excel',
+            category: 'import',
+            severity: 'error',
+            source: 'cargo-editor-excel',
+            suggestion: 'Verifique se o arquivo é .xlsx válido. Se persistir, baixe o template oficial pelo botão "Modelo" e copie seus dados para ele.',
+          });
         }
       };
       reader.readAsArrayBuffer(file);
     } else {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const text = ev.target?.result as string;
-        if (!text) return;
-        const parsed = parseCsvToRows(text);
-        if (parsed.length === 0) { notify('Nenhuma linha válida encontrada no CSV.', 'error'); return; }
-        setRows(parsed);
-        setValidated(false);
-        notify(`${parsed.length} linha${parsed.length !== 1 ? 's' : ''} importada${parsed.length !== 1 ? 's' : ''} do arquivo CSV.`, 'success');
+        try {
+          const text = ev.target?.result as string;
+          if (!text) return;
+          const parsed = parseCsvToRows(text);
+          if (parsed.length === 0) {
+            notify('Nenhuma linha válida encontrada no CSV.', 'error');
+            reportException(new Error('CSV sem dados válidos'), {
+              title: 'Falha ao importar CSV',
+              category: 'import',
+              severity: 'warning',
+              source: 'cargo-editor-csv',
+              suggestion: 'Confirme o separador (; ou ,) e os cabeçalhos. Salve o arquivo com codificação UTF-8.',
+            });
+            return;
+          }
+          applyImported(parsed, 'CSV');
+        } catch (err) {
+          notify(err instanceof Error ? err.message : 'Erro ao ler CSV.', 'error');
+          reportException(err, {
+            title: 'Falha ao processar CSV',
+            category: 'import',
+            severity: 'error',
+            source: 'cargo-editor-csv',
+            suggestion: 'Salve o arquivo com codificação UTF-8 e separador ponto-e-vírgula (padrão BR).',
+          });
+        }
       };
       reader.readAsText(file, 'UTF-8');
     }
@@ -673,7 +831,30 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
     setRows(withErrors);
     const hasErrors = withErrors.some(r => Object.keys(r.errors).length > 0);
     if (hasErrors) {
-      notify('Corrija os campos destacados antes de importar.', 'error');
+      const totalErrCount = withErrors.filter(r => Object.keys(r.errors).length > 0).length;
+      notify(`${totalErrCount} linha(s) com erro. Clique no botão vermelho "ERROS" no topo para revisar.`, 'error', 6000);
+      // Auto-scroll para a primeira linha com erro
+      const firstErrorIdx = withErrors.findIndex(r => Object.keys(r.errors).length > 0);
+      if (firstErrorIdx >= 0) {
+        const firstField = Object.keys(withErrors[firstErrorIdx].errors)[0] as RowField;
+        setTimeout(() => {
+          // foca a célula do primeiro erro (a função focusErrorCell já faz scroll)
+          const colMap: Record<RowField, number> = {
+            category: 0, description: 1, identifier: 2,
+            weightTonnes: 5, lengthMeters: 6, widthMeters: 7, heightMeters: 8,
+          };
+          const colIdx = colMap[firstField];
+          const inputs = tableRef.current?.querySelectorAll<HTMLElement>('[data-row]');
+          if (!inputs) return;
+          const target = Array.from(inputs).find(el => el.dataset.row === String(firstErrorIdx) && el.dataset.col === String(colIdx));
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.focus();
+          }
+        }, 100);
+        // Também abre o painel de erros automaticamente
+        setShowErrorPanel(true);
+      }
       return;
     }
     const cargoes: Cargo[] = withErrors.map(row => {
@@ -704,6 +885,8 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
   const totalWeight = rows.reduce((s, r) => s + (parseDecimal(r.weightTonnes) || 0), 0);
   const filledRows = rows.filter(r => r.identifier || r.description).length;
   const errorCount = validated ? rows.filter(r => Object.keys(r.errors).length > 0).length : 0;
+  // Lista achatada de erros para o painel navegável (uma entrada por campo errado)
+  const flatErrors = validated ? buildFlatErrors(rows) : [];
 
   if (!isOpen) return null;
 
@@ -732,10 +915,91 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
+            {/* Badge clicável de erros — abre painel navegável */}
             {errorCount > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-status-error/10 border border-status-error/30 rounded-xl">
-                <AlertCircle size={12} className="text-status-error" />
-                <span className="text-[10px] font-black text-status-error uppercase">{errorCount} erro{errorCount !== 1 ? 's' : ''}</span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowErrorPanel(s => !s)}
+                  title="Clique para ver e navegar pelos erros"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-all min-h-[36px] ${
+                    showErrorPanel
+                      ? 'bg-status-error text-white border-status-error shadow-md'
+                      : 'bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20'
+                  }`}
+                >
+                  <AlertCircle size={12} className="animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{errorCount} erro{errorCount !== 1 ? 's' : ''}</span>
+                  <ChevronDown size={11} className={`transition-transform ${showErrorPanel ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown navegável de erros */}
+                {showErrorPanel && (
+                  <div className="absolute top-full mt-2 right-0 z-50 w-[440px] max-w-[90vw] bg-main border-2 border-status-error/40 rounded-2xl shadow-high overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 bg-status-error/10 border-b-2 border-status-error/30 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle size={14} className="text-status-error" />
+                        <span className="text-[11px] font-black text-status-error uppercase tracking-widest">
+                          {flatErrors.length} problema{flatErrors.length !== 1 ? 's' : ''} em {errorCount} linha{errorCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setShowErrorPanel(false)}
+                        className="p-1 rounded-md hover:bg-status-error/20 text-status-error transition-colors"
+                        title="Fechar"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto p-2 space-y-1.5">
+                      {flatErrors.slice(0, 100).map((err, i) => (
+                        <button
+                          key={`${err.rowIdx}-${err.field}-${i}`}
+                          onClick={() => {
+                            focusErrorCell(err.rowIdx, err.field);
+                            setShowErrorPanel(false);
+                          }}
+                          className="w-full text-left px-3 py-2 bg-sidebar/40 hover:bg-status-error/10 border border-subtle hover:border-status-error/40 rounded-xl transition-all group/err flex items-start gap-3"
+                        >
+                          <div className="flex flex-col items-center justify-center w-9 shrink-0 pt-0.5">
+                            <span className="text-[10px] font-black text-muted">LINHA</span>
+                            <span className="text-sm font-mono font-black text-status-error">{err.rowNumber}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-status-error/15 text-status-error">
+                                {err.fieldLabel}
+                              </span>
+                              {err.identifier !== '—' && (
+                                <span className="text-[10px] font-mono text-muted truncate">{err.identifier}</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-primary font-bold leading-snug">{err.message}</p>
+                            <p className="text-[10px] text-muted mt-0.5 truncate group-hover/err:text-secondary transition-colors">
+                              {err.description}
+                            </p>
+                          </div>
+                          <ArrowRight size={12} className="text-muted opacity-0 group-hover/err:opacity-100 group-hover/err:translate-x-0.5 transition-all mt-2 shrink-0" />
+                        </button>
+                      ))}
+                      {flatErrors.length > 100 && (
+                        <p className="text-center text-[10px] text-muted font-bold py-2">+ {flatErrors.length - 100} erro(s) adicionais</p>
+                      )}
+                    </div>
+                    <div className="px-4 py-2 bg-sidebar border-t border-subtle flex items-center justify-between gap-2">
+                      <p className="text-[9px] text-muted font-bold">
+                        Clique em um item para ir até a célula
+                      </p>
+                      {flatErrors.length > 0 && (
+                        <button
+                          onClick={() => { focusErrorCell(flatErrors[0].rowIdx, flatErrors[0].field); setShowErrorPanel(false); }}
+                          className="text-[10px] font-black text-status-error hover:underline uppercase tracking-widest"
+                        >
+                          Ir ao primeiro →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

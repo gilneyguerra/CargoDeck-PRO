@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trash2, Download, CloudUpload, Plus } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
+import { reportException } from '@/features/errorReporter';
 import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
 import { CsvGeneratorService } from '@/infrastructure/CsvGeneratorService';
 import { supabase } from '@/lib/supabase';
@@ -63,6 +64,14 @@ export function DeckActionToolbar() {
       notify('Manifesto salvo com sucesso!', 'success');
     } catch (err: unknown) {
       notify('Erro ao salvar: ' + String(err), 'error');
+      reportException(err, {
+        title: 'Falha ao salvar plano na nuvem',
+        category: 'storage',
+        severity: 'error',
+        source: 'cloud-save',
+        suggestion: 'Verifique sua conexão e se você está autenticado. Os dados estão salvos localmente — o app vai tentar sincronizar quando a conexão voltar.',
+        action: { label: 'Tentar novamente', onClick: () => { void handleSaveToCloud(); } },
+      });
     } finally {
       setSaving(false);
     }
