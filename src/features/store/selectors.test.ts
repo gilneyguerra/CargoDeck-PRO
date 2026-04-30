@@ -28,7 +28,7 @@ const mkCargo = (over: Partial<Cargo> = {}): Cargo => ({
 const mkLoc = (id: string, name: string, baysCargoes: Cargo[][] = []): CargoLocation => ({
   id,
   name,
-  config: {} as CargoLocation['config'],
+  config: {} as unknown as CargoLocation['config'],
   bays: baysCargoes.map((cargoes, i) => ({
     id: `${id}-bay-${i + 1}`,
     number: i + 1,

@@ -20,7 +20,7 @@ const makeCargo = (overrides: Partial<Cargo> = {}): Cargo => ({
 const makeLocation = (cargoes: Cargo[] = []): CargoLocation => ({
   id: 'loc-main',
   name: 'Convés Principal',
-  config: {} as CargoLocation['config'],
+  config: {} as unknown as CargoLocation['config'],
   bays: [
     {
       id: 'bay-1',
