@@ -49,7 +49,7 @@ export function MockBatchMove() {
 
         {/* Lista de items com checkbox sequencial */}
         <div className="flex-1 flex flex-col gap-1.5 overflow-hidden">
-          {ITEMS.map((item, i) => {
+          {ITEMS.map((item) => {
             const isSelected = item.selectedAt > 0;
             return (
               <div
