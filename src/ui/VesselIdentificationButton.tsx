@@ -58,19 +58,19 @@ export function VesselIdentificationButton({ variant = 'deck' }: VesselIdentific
   return (
     <button
       onClick={() => setIsEditing(true)}
-      title="Identificar Embarcação: Clique para editar o nome do navio ou unidade offshore."
+      title="Identifique a unidade. Onshore - (para controle de cargas em pátios) ou Offshore (para controle de cargas em embarcações)"
       className={cn(
         'flex items-center rounded-xl bg-sidebar/50 hover:bg-main hover:border-brand-primary/30 transition-all border-2 border-subtle group/btn shadow-sm hover:shadow-md shrink-0',
         sizeClasses
       )}
     >
       <div className="flex flex-col items-start">
-        <span className="text-[9px] font-black text-muted uppercase tracking-wider leading-none mb-0.5">Vessel</span>
+        <span className="text-[9px] font-black text-muted uppercase tracking-wider leading-none mb-0.5">Unidade</span>
         <span className={cn(
           'text-[13px] font-extrabold transition-colors leading-tight',
           manifestShipName ? 'text-primary' : 'text-muted italic'
         )}>
-          {manifestShipName || 'M/V DISCOVERY...'}
+          {manifestShipName || 'Onshore / Offshore...'}
         </span>
       </div>
       <div className="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_rgba(16,185,129,0.5)]" />

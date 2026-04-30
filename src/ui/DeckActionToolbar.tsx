@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Download, CloudUpload, Plus } from 'lucide-react';
+import { Trash2, Download, CloudUpload, Plus, Settings as SettingsIcon } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 import { reportException } from '@/features/errorReporter';
@@ -8,6 +8,7 @@ import { CsvGeneratorService } from '@/infrastructure/CsvGeneratorService';
 import { supabase } from '@/lib/supabase';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 import { AuthModal } from './AuthModal';
+import { ReportSettingsModal } from './ReportSettingsModal';
 import type { User } from '@supabase/supabase-js';
 
 /**
@@ -25,6 +26,7 @@ export function DeckActionToolbar() {
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isReportSettingsOpen, setIsReportSettingsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf');
@@ -110,6 +112,14 @@ export function DeckActionToolbar() {
           >
             <Download size={12} /> PDF
           </button>
+          <div className="w-px h-6 bg-border-subtle/40 mx-0.5" />
+          <button
+            onClick={() => setIsReportSettingsOpen(true)}
+            title="Configurar Relatório (logo + assinatura)"
+            className="flex items-center justify-center bg-sidebar/50 border border-subtle text-secondary hover:text-brand-primary hover:bg-main hover:border-brand-primary/30 transition-all w-9 h-9 rounded-lg shadow-sm hover:shadow-md active:scale-95"
+          >
+            <SettingsIcon size={13} />
+          </button>
         </div>
 
         {/* Versão compacta para telas menores: ícone-só */}
@@ -136,6 +146,7 @@ export function DeckActionToolbar() {
       </div>
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <ReportSettingsModal isOpen={isReportSettingsOpen} onClose={() => setIsReportSettingsOpen(false)} />
 
       {exportModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-300">

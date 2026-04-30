@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import type { CargoLocation } from '@/domain/Location';
 import type { Cargo } from '@/domain/Cargo';
+import { useReportSettings } from '@/features/reportSettingsStore';
 
 /**
  * Gera o relatório PDF do Plano de Carga Consolidado.
@@ -40,8 +41,37 @@ export class PdfGeneratorService {
     const contentWidth = pageWidth - margin * 2;
 
     // ── Cabeçalho ────────────────────────────────────────────────────────────
+    const HEADER_H = 28;
     doc.setFillColor(30, 30, 50);
-    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.rect(0, 0, pageWidth, HEADER_H, 'F');
+
+    // Logo customizada (PNG sem fundo) — canto superior esquerdo dimensionada
+    // automaticamente para caber dentro do header (margem vertical 3mm)
+    const settings = useReportSettings.getState();
+    if (settings.logoBase64) {
+      try {
+        // Calcula dimensões para caber no header com aspect ratio preservado
+        const maxLogoH = HEADER_H - 6; // 22mm de altura útil
+        const maxLogoW = 50; // limite horizontal seguro
+        // Carrega imagem dinamicamente para descobrir aspect ratio
+        const img = new Image();
+        img.src = settings.logoBase64;
+        // Síncronamente: assume já carregada no setLogoBase64. Se não tiver dimensões,
+        // jsPDF aceita largura/altura proporcional (passa só altura, jsPDF mantém aspect)
+        const ratio = img.naturalWidth && img.naturalHeight
+          ? img.naturalWidth / img.naturalHeight
+          : 2; // fallback para retangular horizontal
+        let logoW = maxLogoH * ratio;
+        let logoH = maxLogoH;
+        if (logoW > maxLogoW) {
+          logoW = maxLogoW;
+          logoH = maxLogoW / ratio;
+        }
+        doc.addImage(settings.logoBase64, 'PNG', margin, (HEADER_H - logoH) / 2, logoW, logoH);
+      } catch {
+        /* Falha ao adicionar logo — segue sem ela. Usuário será notificado em outro fluxo. */
+      }
+    }
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
@@ -224,15 +254,26 @@ export class PdfGeneratorService {
       doc.text(`Nº Atendimento: ${atendimento}`, margin, y);
     }
 
-    // Linhas de assinatura
+    // Assinatura única configurável (substitui Imediato + Comandante)
     y += 8;
     doc.setLineWidth(0.5);
-    doc.line(40, y, 110, y);
-    doc.line(185, y, 255, y);
+    const sigCenterX = pageWidth / 2;
+    const sigLineHalf = 45;
+    doc.line(sigCenterX - sigLineHalf, y, sigCenterX + sigLineHalf, y);
     y += 5;
     doc.setFontSize(9);
-    doc.text('Imediato (Chief Officer)', 75, y, { align: 'center' });
-    doc.text('Comandante (Master)', 220, y, { align: 'center' });
+    const signatoryName = settings.signatoryName.trim();
+    const signatoryRole = settings.signatoryRole.trim();
+    if (signatoryName || signatoryRole) {
+      const sigLabel = signatoryName && signatoryRole
+        ? `${signatoryName} — ${signatoryRole}`
+        : signatoryName || signatoryRole;
+      doc.text(sigLabel, sigCenterX, y, { align: 'center' });
+    } else {
+      doc.setTextColor(140, 140, 140);
+      doc.text('Responsável (configure em "Configurar Relatório")', sigCenterX, y, { align: 'center' });
+      doc.setTextColor(80, 80, 80);
+    }
 
     return doc.output('blob');
   }

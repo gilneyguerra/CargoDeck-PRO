@@ -1,4 +1,5 @@
 import type { CargoLocation } from '@/domain/Location';
+import { useReportSettings } from '@/features/reportSettingsStore';
 
 export class CsvGeneratorService {
     static generateCsv(
@@ -86,9 +87,22 @@ export class CsvGeneratorService {
             });
         });
 
+        // Rodapé com assinatura única configurável (substitui Imediato + Comandante)
+        const settings = useReportSettings.getState();
+        const sigName = settings.signatoryName.trim();
+        const sigRole = settings.signatoryRole.trim();
+        if (sigName || sigRole) {
+          rows.push([]); // linha em branco
+          rows.push([]);
+          const sigLabel = sigName && sigRole
+            ? `Assinatura: ${sigName} — ${sigRole}`
+            : `Assinatura: ${sigName || sigRole}`;
+          rows.push([sigLabel]);
+        }
+
         // Adicionar BOM (Byte Order Mark) para o Excel reconhecer os caracteres UTF-8 corretamente
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-        
+
         // Juntar colunas com ponto e vírgula (padrão Excel pt-BR) e linhas com CRLF
         const csvContent = rows.map(row => row.join(';')).join('\r\n');
 

@@ -39,6 +39,8 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
 
   const handleSave = async () => {
     const tL = Number(length); const tW = Number(width); const sumW = Number(portWidth) + Number(centerWidth) + Number(starboardWidth); const sumL = Number(bayLength) * Number(baysCount);
+    // Validações: usam showAlert (z-1100, fica acima do modal) — o usuário pode
+    // continuar editando após reconhecer o erro, então NÃO fechamos o modal.
     if (sumW > tW) {
       await showAlert({ title: 'Erro Dimensional', message: `A soma das larguras (${sumW}m) excede a Largura Total (${tW}m).`, variant: 'error' });
       return;
@@ -48,13 +50,20 @@ export function DeckSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClos
       return;
     }
     const newBaysCount = Number(baysCount);
-    if (newBaysCount !== activeLocation.config.numberOfBays) {
-      const totalAllocated = activeLocation.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
-      if (totalAllocated > 0) {
-        const ok = await ask('Atenção', `A mudança de baias retornará ${totalAllocated} cargas ao estoque. Continuar?`);
-        if (!ok) return;
-      }
+    const needsBayConfirm = newBaysCount !== activeLocation.config.numberOfBays
+      && activeLocation.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0) > 0;
+    const totalAllocated = activeLocation.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
+
+    // Caso terminal: fecha o modal ANTES do ask para que a confirmação fique
+    // em primeiro plano (regra aplicada também ao GroupMoveModal).
+    if (needsBayConfirm) {
+      onClose();
+      const ok = await ask('Atenção', `A mudança de baias retornará ${totalAllocated} cargas ao estoque. Continuar?`);
+      if (!ok) return; // se cancelar, o modal já está fechado — usuário pode reabrir
+      updateActiveLocationConfig({ lengthMeters: tL, widthMeters: tW, numberOfBays: newBaysCount, bayLengthMeters: Number(bayLength), elevationMeters: Number(elevationMeters), portWidthMeters: Number(portWidth), centerWidthMeters: Number(centerWidth), starboardWidthMeters: Number(starboardWidth) });
+      return;
     }
+
     updateActiveLocationConfig({ lengthMeters: tL, widthMeters: tW, numberOfBays: newBaysCount, bayLengthMeters: Number(bayLength), elevationMeters: Number(elevationMeters), portWidthMeters: Number(portWidth), centerWidthMeters: Number(centerWidth), starboardWidthMeters: Number(starboardWidth) });
     onClose();
   };
