@@ -175,19 +175,21 @@ function CargoGridCard({ cargo, selected, onToggle, onEdit, onDelete }: CargoGri
         )}
       </div>
 
-      {/* Ações (hover) */}
-      <div className="flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity -mt-1">
+      {/* Ações: hover no desktop, sempre visível em mobile, e foco do teclado revela (a11y) */}
+      <div className="flex items-center justify-between gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity -mt-1">
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-          className="flex-1 p-1.5 rounded-md hover:bg-brand-primary/10 text-muted hover:text-brand-primary transition-all text-[9px] font-black uppercase tracking-widest"
+          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-brand-primary/10 focus-visible:bg-brand-primary/10 text-muted hover:text-brand-primary focus-visible:text-brand-primary transition-all text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           title="Editar"
+          aria-label={`Editar ${cargo.identifier}`}
         >
           Editar
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(cargo); }}
-          className="flex-1 p-1.5 rounded-md hover:bg-status-error/10 text-muted hover:text-status-error transition-all"
+          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-status-error/10 focus-visible:bg-status-error/10 text-muted hover:text-status-error focus-visible:text-status-error transition-all outline-none focus-visible:ring-2 focus-visible:ring-status-error/40"
           title="Excluir"
+          aria-label={`Excluir ${cargo.identifier}`}
         >
           <Trash2 size={12} className="mx-auto" />
         </button>

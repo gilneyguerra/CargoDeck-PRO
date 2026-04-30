@@ -161,9 +161,9 @@ export function BatchMoveModal({ isOpen, selectedCount, selectedCargoIds, onClos
                                     <div key={s.key} className="flex flex-col items-center gap-3 p-4 bg-header rounded-2xl border-2 border-subtle shadow-low">
                                         <span className="text-[9px] font-black uppercase text-primary tracking-[0.15em] opacity-80">{s.label}</span>
                                         <div className="flex items-center justify-between w-full px-2">
-                                            <button onClick={() => updateSideCount(s.key, -1)} className="p-1 box-content h-4 w-4 bg-sidebar rounded-full hover:bg-brand-primary hover:text-white transition-all"><Minus size={14} strokeWidth={3}/></button>
+                                            <button aria-label={`Diminuir ${s.label}`} onClick={() => updateSideCount(s.key, -1)} className="h-11 w-11 flex items-center justify-center bg-sidebar rounded-full hover:bg-brand-primary hover:text-white transition-all"><Minus size={16} strokeWidth={3}/></button>
                                             <span className="text-sm font-black font-mono text-primary">{sideCounts[s.key]}</span>
-                                            <button onClick={() => updateSideCount(s.key, 1)} className="p-1 box-content h-4 w-4 bg-sidebar rounded-full hover:bg-brand-primary hover:text-white transition-all"><Plus size={14} strokeWidth={3}/></button>
+                                            <button aria-label={`Aumentar ${s.label}`} onClick={() => updateSideCount(s.key, 1)} className="h-11 w-11 flex items-center justify-center bg-sidebar rounded-full hover:bg-brand-primary hover:text-white transition-all"><Plus size={16} strokeWidth={3}/></button>
                                         </div>
                                     </div>
                                 ))}
