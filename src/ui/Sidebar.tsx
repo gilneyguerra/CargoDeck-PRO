@@ -1,6 +1,6 @@
 import {
   Plus, Upload, Trash2, Box, Package, Anchor, Truck,
-  Zap, MoveRight, Users, MessageSquare, Table2
+  Zap, MoveRight, Users, MessageSquare, Table2, ClipboardEdit
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { usePDFUpload } from '../hooks/usePDFUpload';
@@ -16,10 +16,10 @@ import { ManifestoChatModal } from './ManifestoChatModal';
 import { CargoEditorModal } from './CargoEditorModal';
 
 export default function Sidebar() {
-  const { 
+  const {
     unallocatedCargoes, clearUnallocatedCargoes,
     deleteMultipleCargoes, setEditingCargo, searchTerm,
-    setExtractedCargoes 
+    setExtractedCargoes, setViewMode
   } = useCargoStore();
 
   const { upload, loading: isProcessing } = usePDFUpload();
@@ -180,6 +180,19 @@ export default function Sidebar() {
                     </div>
                 </button>
             </div>
+
+            {/* Botão de Cadastro Detalhado (página dedicada) */}
+            <button
+              onClick={() => setViewMode('creation')}
+              disabled={isProcessing}
+              title="Abrir página de cadastro detalhado de carga"
+              className="w-full px-4 py-3 flex items-center justify-center gap-2 border-t border-subtle bg-main/20 hover:bg-brand-primary/10 transition-all duration-300 group disabled:opacity-40 cursor-pointer"
+            >
+              <ClipboardEdit className="w-4 h-4 text-brand-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">CADASTRO DETALHADO</span>
+              <span className="text-[8px] font-bold text-muted">Página dedicada</span>
+            </button>
+
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileUpload} />
         </div>
 

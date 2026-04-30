@@ -23,6 +23,8 @@ import { findDuplicateOnboard, calculateBayStats } from '../utils/cargoUtils';
 /**
  * Define a estrutura do estado do store de cargas.
  */
+export type ViewMode = 'deck' | 'creation';
+
 export interface CargoState {
     manifestsLoaded: boolean;
     unallocatedCargoes: Cargo[];
@@ -34,6 +36,7 @@ export interface CargoState {
     searchTerm: string;
     editingCargo: Cargo | null;
     isHydratedFromCloud: boolean;
+    viewMode: ViewMode;
 
     setExtractedCargoes: (cargoes: Cargo[]) => void;
     setShipName: (name: string | null) => void;
@@ -57,6 +60,7 @@ export interface CargoState {
     clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
     setEditingCargo: (cargo: Cargo | null) => void;
+    setViewMode: (mode: ViewMode) => void;
     setHydrationStatus: (status: boolean) => void;
 }
 
@@ -93,6 +97,7 @@ export const useCargoStore = create<CargoState>()(
             searchTerm: '',
             editingCargo: null,
             isHydratedFromCloud: false,
+            viewMode: 'deck' as ViewMode,
 
             getAllCargo: () => {
                 const state = get();
@@ -106,6 +111,7 @@ export const useCargoStore = create<CargoState>()(
             },
 
             setEditingCargo: (cargo) => set({ editingCargo: cargo }),
+            setViewMode: (mode) => set({ viewMode: mode }),
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
 
             setSearchTerm: (term) => set({ searchTerm: term }),
