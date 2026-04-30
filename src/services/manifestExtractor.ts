@@ -1,6 +1,8 @@
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
 import { routeTask } from './llmRouter';
 import { sha256 } from '@/lib/sha256';
+import { ManifestoJSONSchema } from '@/domain/schemas/manifest.schema';
+import { useErrorReporter } from '@/features/errorReporter';
 
 export interface ManifestoNaveData {
   nome: string;
@@ -99,12 +101,33 @@ export async function extractManifestoJSON(rawText: string): Promise<ManifestoJS
   const response = await routeTask('EXTRACTION', rawText);
   const parsed = parseJsonSafe<ManifestoJSON>(response.content);
 
-  // Aceita tanto o novo formato sections[] quanto o legado cargasArray[]
-  const hasSections = parsed?.sections && Array.isArray(parsed.sections) && parsed.sections.length > 0;
-  const hasLegacy = parsed?.cargasArray && Array.isArray(parsed.cargasArray);
-
-  if (!parsed || (!hasSections && !hasLegacy)) {
+  if (!parsed) {
     throw new Error('O modelo não retornou um JSON válido. Tente novamente ou cole o texto novamente.');
+  }
+
+  // Validação estrutural via Zod — falhas viram alertas no errorReporter mas
+  // não bloqueiam a importação se houver pelo menos uma carga reconhecível.
+  const result = ManifestoJSONSchema.safeParse(parsed);
+  if (!result.success) {
+    const firstIssues = result.error.issues.slice(0, 3).map(i =>
+      `${i.path.join('.') || 'root'}: ${i.message}`
+    ).join(' | ');
+    useErrorReporter.getState().report({
+      title: 'Manifesto extraído com inconsistências',
+      message: `O JSON do modelo passou no parse mas falhou validação estrita: ${firstIssues}`,
+      category: 'validation',
+      severity: 'warning',
+      source: 'manifest-extraction-zod',
+      suggestion: 'Revise o conteúdo extraído antes de confirmar — campos podem estar ausentes ou em formato inesperado.',
+      details: JSON.stringify(result.error.issues, null, 2),
+    });
+  }
+
+  // Aceita tanto o novo formato sections[] quanto o legado cargasArray[]
+  const hasSections = parsed.sections && Array.isArray(parsed.sections) && parsed.sections.length > 0;
+  const hasLegacy = parsed.cargasArray && Array.isArray(parsed.cargasArray);
+  if (!hasSections && !hasLegacy) {
+    throw new Error('O modelo não retornou cargas reconhecíveis. Tente novamente ou cole o texto novamente.');
   }
 
   parsed.metadadosExtracao = parsed.metadadosExtracao ?? {

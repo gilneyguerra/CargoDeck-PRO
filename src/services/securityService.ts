@@ -1,40 +1,48 @@
 /**
- * @file Serviço de segurança para sanitização e validação de dados.
+ * @file Serviço de segurança para sanitização de inputs.
+ *
+ * Usa DOMPurify (battle-tested) para remover qualquer marcação HTML/JS
+ * potencialmente perigosa antes de armazenar ou exibir conteúdo.
+ * React já escapa por padrão; isto é defesa em profundidade contra
+ * usos com `dangerouslySetInnerHTML` ou serialização para PDF/CSV.
  */
+import DOMPurify from 'dompurify';
+
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: [] as string[],
+  ALLOWED_ATTR: [] as string[],
+  KEEP_CONTENT: true,
+} as const;
 
 export class SecurityService {
   /**
-   * Sanitiza uma string removendo potenciais tags HTML para prevenir XSS simples.
-   * Nota: React já escapa strings por padrão, mas esta é uma camada extra de defesa.
+   * Remove tags HTML e atributos potencialmente executáveis, mantendo o texto.
+   * Ex.: `<script>alert(1)</script>foo` → `alert(1)foo`.
    */
   static sanitizeString(str: string): string {
     if (!str) return str;
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+    // DOMPurify retorna string quando o input é string; cast só para satisfazer
+    // a sobrecarga genérica.
+    return DOMPurify.sanitize(str, PURIFY_CONFIG) as unknown as string;
   }
 
   /**
-   * Sanitiza um objeto recursivamente.
+   * Sanitiza recursivamente strings dentro de objetos/arrays.
+   * Tipos primitivos não-string são devolvidos sem alteração.
    */
   static sanitizeObject<T>(obj: T): T {
-    if (typeof obj !== 'object' || obj === null) {
-      return typeof obj === 'string' ? (this.sanitizeString(obj) as any) : obj;
-    }
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'string') return this.sanitizeString(obj) as unknown as T;
+    if (typeof obj !== 'object') return obj;
 
     if (Array.isArray(obj)) {
-      return obj.map((item) => this.sanitizeObject(item)) as any;
+      return obj.map((item) => this.sanitizeObject(item)) as unknown as T;
     }
 
-    const sanitized: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        sanitized[key] = this.sanitizeObject((obj as any)[key]);
-      }
+    const sanitized: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      sanitized[key] = this.sanitizeObject((obj as Record<string, unknown>)[key]);
     }
-    return sanitized;
+    return sanitized as T;
   }
 }
