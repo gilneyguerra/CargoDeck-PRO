@@ -84,6 +84,27 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Regra geral**: nunca lançar exceções no top-level de um módulo de infraestrutura compartilhado (`lib/`, `services/`, `infrastructure/`). Se a env é obrigatória, falhe na primeira chamada acionável, com mensagem explicando qual env definir e onde.
 - **Contexto**: Ocorrido em `src/lib/supabase.ts` durante a Fase 0 da refatoração v2.0 (commit 22a723f). Revertido em c3fc7ff com fallback de credenciais demo + warn.
 
+## 18. Parser Estrutural Bate LLM em Documentos Regulamentados (DANFE, Boleto, NF-e)
+- **Problema arquitetural**: a primeira versão da extração de DANFE chamava direto o `routeTask('DANFE_EXTRACTION', rawText)` no LLM (OpenCode Zen / `minimax-m2.5`). Funcionava, mas trazia 5 desvantagens estruturais:
+  1. **Custo por chamada** — cada extração consome tokens; em volume cresce o budget do app sem necessidade.
+  2. **Latência 3–8 s** — vs ~100 ms de parser determinístico.
+  3. **Risco de alucinação fiscal** — LLMs ocasionalmente trocam dígitos, normalizam errado decimal pt-BR, ou inventam campos. Para dados regulatórios isso é inaceitável.
+  4. **Dependência de rede + 3rd party** — falha do upstream = feature quebrada.
+  5. **CORS / chave exposta** (lição #16) — só evitável via proxy serverless.
+- **Insight**: documentos regulamentados (DANFE pelo SEFAZ, boletos pelo FEBRABAN, NF-e XML pelo Padrão XSD, holerites pela CLT) **têm layout previsível por design**. A própria regulação garante que cabeçalhos, ordem de colunas e tipos de dados são iguais entre emissores. Isso torna o parsing determinístico altamente robusto: bem mais confiável que LLM no caso comum.
+- **Estratégia de duas camadas**: implementar parser estrutural como **primário** + LLM como **fallback opcional**:
+  - **Parser** (`src/services/danfeParser.ts`): lê PDF via pdfjs-dist com posições X/Y, agrupa em linhas por proximidade Y, recorta a região da tabela entre marcadores conhecidos ("DADOS DO PRODUTO" → "CÁLCULO DO ISSQN" / "DADOS ADICIONAIS"), e usa regex sobre a "cauda" característica de cada linha (NCM 8 dígitos + CST 3 + CFOP 4 + UNID + 9 decimais pt-BR) para identificar items. Tudo entre o COD.PROD anterior e essa cauda é a descrição (lida multi-linha).
+  - **Orquestrador** (`src/services/danfeExtractor.ts`): tenta `parseDanfeStructured()` primeiro; se retorna `null` ou `items.length === 0`, cai no `extractDanfeViaLLM`. Result exposes `strategy: 'parser' | 'llm'` para UI distinguir.
+  - **UI** (`ContainerInventoryModal.tsx`): toast diz *"N item(ns) extraído(s) via leitor PDF (NF-e XYZ série N)"* quando parser, *"... via IA (minimax-m2.5)"* quando fallback. Transparência sobre a fonte é importante.
+- **Regra geral**: antes de chamar LLM para extrair dados de documento estruturado, perguntar:
+  1. Esse documento tem layout **regulamentado** ou **convenção forte de mercado**? (DANFE sim; manifesto offshore Petrobras parcialmente; carta livre — não.)
+  2. Os campos têm **âncoras únicas** (regex distintivo, posição fixa, separadores explícitos)? (DANFE: NCM=8 dígitos é praticamente único; sim.)
+  3. O custo de "errar 1 em 1000 itens" é alto? (Dados fiscais → muito alto. Sumário de emails → baixo.)
+  
+  Se as três respostas forem sim, parser determinístico vence. LLM só vale para entrada **não-estruturada** (texto corrido, descrições livres, OCR de imagens).
+- **Manter LLM como fallback é importante**: cobre casos atípicos (ex.: emissor que reordena colunas, layout customizado de software ERP, ou DANFE OCRado de scanner com qualidade marginal). Mas é o **caminho secundário**, não o principal.
+- **Contexto**: ocorreu em 2026-05-01 quando o usuário, após validar a feature DANFE com LLM, observou: "Acredito que a escolha de extração via OPEN CODE API não tem sido a melhor escolha. Deveria existir um motor que utiliza bibliotecas PDF e retira exatamente a informação necessária". Refator do `danfeExtractor.ts` em orquestrador + criação de `danfeParser.ts` + `pdfjs-dist` para lidura estrutural.
+
 ## 17. "Failed to fetch dynamically imported module" Após Deploy
 - **Problema**: Usuário com aba aberta vê tela vermelha do ErrorBoundary com mensagem `Failed to fetch dynamically imported module: https://.../assets/ContainerInventoryModal-Daichbl6.js` ao tentar abrir uma rota lazy-loaded. Reproduz facilmente: deploy uma vez → manter aba aberta → fazer outro deploy → tentar acessar feature lazy-loaded.
 - **Causa**: o Vite gera **hash de conteúdo** em cada chunk (`assets/ContainerInventoryModal-{hash}.js`). A cada build o hash muda. O `index.html` aponta para o conjunto exato de hashes daquele build. Quando o browser tem `index.html` antigo em cache mas o Vercel CDN já purgou os chunks correspondentes (substituídos pelos novos), o `import('./containers/ContainerInventoryModal')` lança porque o arquivo não existe mais naquele hash.

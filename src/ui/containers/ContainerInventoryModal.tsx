@@ -327,8 +327,11 @@ export function ContainerInventoryModal({
         ? ` (NF-e ${result.header.numero}${result.header.serie ? ` série ${result.header.serie}` : ''})`
         : '';
       const warnSuffix = result.validationWarning ? ' — revise as células destacadas em vermelho' : '';
+      const sourceLabel = result.strategy === 'parser'
+        ? 'via leitor PDF'
+        : `via IA${result.modelUsed ? ` (${result.modelUsed})` : ''}`;
       notify(
-        `${imported.length} item(ns) extraído(s) via IA${headerInfo}${warnSuffix}.`,
+        `${imported.length} item(ns) extraído(s) ${sourceLabel}${headerInfo}${warnSuffix}.`,
         result.validationWarning ? 'warning' : 'success'
       );
     } catch (err) {
