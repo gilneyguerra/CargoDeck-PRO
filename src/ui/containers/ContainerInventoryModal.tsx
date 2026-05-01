@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useId, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import {
   X, Plus, Trash2, Save, FileSpreadsheet, FileText, AlertCircle, Package, Loader2,
+  CheckSquare, Square,
 } from 'lucide-react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useContainerStore } from '@/features/containerStore';
@@ -230,7 +231,18 @@ export function ContainerInventoryModal({
     setRows(prev => [...prev, emptyRow()]);
   };
 
-  const removeRow = (rowId: string) => {
+  const removeRow = async (rowId: string) => {
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+    const label = row.codProd?.trim() || row.descricao?.trim() || 'esta linha';
+    const ok = await ask('Excluir item', `Remover "${label}" do container? Esta ação não pode ser desfeita.`);
+    if (!ok) return;
+
+    // Se a linha já existe no banco, deleta também no Supabase. Sem isso o
+    // item reaparece quando o modal abre de novo (bug pré-correção).
+    if (row.persistedId) {
+      await removeItems([row.persistedId]);
+    }
     setRows(prev => prev.filter(r => r.id !== rowId));
   };
 
@@ -476,6 +488,21 @@ export function ContainerInventoryModal({
               {extractingPdf ? <Loader2 size={11} className="animate-spin" /> : <FileText size={11} />}
               {extractingPdf ? 'Extraindo…' : 'DANFE'}
             </button>
+            {rows.length > 0 && (
+              <button
+                onClick={toggleAllSelected}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition-all min-h-[36px]',
+                  allSelected
+                    ? 'bg-brand-primary/10 border-brand-primary text-brand-primary'
+                    : 'bg-main border-subtle text-secondary hover:border-brand-primary/40 hover:text-brand-primary'
+                )}
+                title={allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+              >
+                {allSelected ? <CheckSquare size={11} /> : <Square size={11} />}
+                {allSelected ? 'Desmarcar' : 'Selecionar Tudo'}
+              </button>
+            )}
             {selectedCount > 0 && (
               <button
                 onClick={handleDeleteSelected}
