@@ -84,6 +84,11 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
       notify('Selecione ao menos 1 container para exportar.', 'warning');
       return;
     }
+    const haveAnyItems = list.some(c => (itemCountByContainer.get(c.id) ?? 0) > 0);
+    if (!haveAnyItems) {
+      notify('Selecione ao menos 1 container com itens. RMD vazio não pode ser gerado.', 'warning');
+      return;
+    }
     onExportSelected(list);
   };
 
