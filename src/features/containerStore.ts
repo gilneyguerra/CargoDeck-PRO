@@ -21,6 +21,34 @@ import { reportException } from '@/features/errorReporter';
  * depois persistem no Supabase. Em caso de falha, recarregam do servidor.
  */
 
+/**
+ * Garante nome único entre os containers do usuário. Se `desired` colide
+ * com algum existente (case-insensitive, trim), apenda " (2)", " (3)", … até
+ * encontrar um livre. Resolve duplicatas mantendo ordem alfabética
+ * determinística no PDF e no grid.
+ *
+ * `excludeId` permite renomear o próprio container sem auto-colidir.
+ */
+export function dedupeContainerName(
+  desired: string,
+  existing: Container[],
+  excludeId?: string,
+): string {
+  const trimmed = desired.trim();
+  if (!trimmed) return trimmed;
+  const taken = new Set(
+    existing
+      .filter(c => c.id !== excludeId)
+      .map(c => c.name.trim().toLowerCase()),
+  );
+  if (!taken.has(trimmed.toLowerCase())) return trimmed;
+  for (let n = 2; n < 1000; n++) {
+    const candidate = `${trimmed} (${n})`;
+    if (!taken.has(candidate.toLowerCase())) return candidate;
+  }
+  return `${trimmed} (${Date.now()})`;
+}
+
 interface ContainerState {
   containers: Container[];
   items: ContainerItem[]; // todos os itens do usuário (filtrar por containerId conforme necessário)
@@ -91,13 +119,19 @@ export const useContainerStore = create<ContainerState>((set, get) => ({
   // ─── Container CRUD ────────────────────────────────────────────────────────
 
   addContainer: async (input) => {
+    // Sufixo " (N)" automático em colisões de nome — ordem alfabética
+    // no PDF/grid permanece determinística mesmo se o usuário cadastrar
+    // duas vezes "Caixa A".
+    const uniqueName = dedupeContainerName(input.name, get().containers);
+    const persistedInput = { ...input, name: uniqueName };
+
     // Optimistic: cria localmente com id temporário, substitui pelo persistido
     const tempId = uuidv4();
     const now = new Date().toISOString();
     const optimistic: Container = {
       id: tempId,
       userId: '',
-      name: input.name,
+      name: uniqueName,
       type: input.type,
       status: input.status,
       createdAt: now,
@@ -106,7 +140,7 @@ export const useContainerStore = create<ContainerState>((set, get) => ({
     set(s => ({ containers: [optimistic, ...s.containers] }));
 
     try {
-      const saved = await ContainerDatabaseService.saveContainer(input);
+      const saved = await ContainerDatabaseService.saveContainer(persistedInput);
       set(s => ({
         containers: s.containers.map(c => (c.id === tempId ? saved : c)),
       }));
@@ -127,9 +161,17 @@ export const useContainerStore = create<ContainerState>((set, get) => ({
     const previous = get().containers.find(c => c.id === id);
     if (!previous) return;
 
+    // Se o nome mudou, garante unicidade ignorando o próprio container
+    // na checagem (renomear "Caixa A" para "Caixa A" não vira "Caixa A (2)").
+    const nameChanged = patch.name !== undefined && patch.name !== previous.name;
+    const finalName = nameChanged
+      ? dedupeContainerName(patch.name as string, get().containers, id)
+      : previous.name;
+
     const updated: Container = {
       ...previous,
       ...patch,
+      name: finalName,
       updatedAt: new Date().toISOString(),
     };
     set(s => ({ containers: s.containers.map(c => (c.id === id ? updated : c)) }));
