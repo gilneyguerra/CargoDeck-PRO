@@ -1,92 +1,100 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Package, Plus, Search, CheckSquare, Square, Edit, Trash2,
-  X, FolderOpen, FileDown, Inbox,
+  Package, Search, CheckSquare, Square, X, FolderOpen, FileDown, Inbox,
 } from 'lucide-react';
+import { useCargoStore } from '@/features/cargoStore';
 import { useContainerStore } from '@/features/containerStore';
-import { useNotificationStore } from '@/features/notificationStore';
-import type { Container } from '@/domain/Container';
-import { CONTAINER_TYPE_LABELS } from '@/domain/Container';
+import type { Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  /** Quando o usuário clica num card, abre o modal de inventário desse container. */
-  onOpenInventory: (container: Container) => void;
-  /** Acionado pelo botão "Novo Container". */
-  onCreate: () => void;
-  /** Acionado pelo botão de editar metadados num card. */
-  onEdit: (container: Container) => void;
+  /** Quando o usuário clica num card, abre o inventário DANFE da carga. */
+  onOpenInventory: (cargo: Cargo) => void;
   /** Acionado quando o usuário pede para gerar PDF dos selecionados. */
-  onExportSelected: (containers: Container[]) => void;
+  onExportSelected: (cargos: Cargo[]) => void;
 }
 
-const TYPE_ACCENT: Record<Container['type'], { bg: string; text: string; border: string }> = {
-  container: { bg: 'bg-blue-500/10',    text: 'text-blue-500',    border: 'border-blue-400/30' },
-  cesta:     { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-400/30' },
-  skid:      { bg: 'bg-violet-500/10',  text: 'text-violet-500',  border: 'border-violet-400/30' },
-  caixa:     { bg: 'bg-amber-500/10',   text: 'text-amber-500',   border: 'border-amber-400/30' },
-  outro:     { bg: 'bg-slate-500/10',   text: 'text-slate-500',   border: 'border-slate-400/30' },
-};
-
 /**
- * Lista de containers do usuário com seleção múltipla, busca, e ações de
- * criar/editar/excluir/abrir inventário/exportar PDF em lote.
+ * Lista de cargas do tipo CONTENTOR (cargoStore.category === 'CONTAINER').
+ * Esta página é leitura + ponte para o inventário DANFE — não cria nem
+ * exclui contentores. Toda criação/edição/exclusão de cargas-CONTENTOR
+ * acontece na página de Geração Modal de Transporte.
  */
-export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelected }: Props) {
-  const {
-    containers, items, selectedContainerIds, loading, loaded,
-    fetchAll, deleteContainer, toggleSelection, clearSelection, selectAll,
-  } = useContainerStore();
-  const { notify, ask } = useNotificationStore();
+export function ContainerGrid({ onOpenInventory, onExportSelected }: Props) {
+  const unallocated = useCargoStore(s => s.unallocatedCargoes);
+  const locations = useCargoStore(s => s.locations);
+  const { items, fetchAll, loaded, loading } = useContainerStore();
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loaded && !loading) fetchAll();
   }, [loaded, loading, fetchAll]);
 
+  // União de cargas do tipo CONTENTOR (não alocadas + alocadas em qualquer baia).
+  const cargoContainers = useMemo<Cargo[]>(() => {
+    const all: Cargo[] = [];
+    for (const c of unallocated) {
+      if (c.category === 'CONTAINER') all.push(c);
+    }
+    for (const loc of locations) {
+      for (const bay of loc.bays) {
+        for (const c of bay.allocatedCargoes) {
+          if (c.category === 'CONTAINER') all.push(c);
+        }
+      }
+    }
+    return all;
+  }, [unallocated, locations]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return containers;
-    return containers.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      CONTAINER_TYPE_LABELS[c.type].toLowerCase().includes(q)
+    if (!q) return cargoContainers;
+    return cargoContainers.filter(c =>
+      (c.identifier ?? '').toLowerCase().includes(q) ||
+      (c.description ?? '').toLowerCase().includes(q)
     );
-  }, [containers, search]);
+  }, [cargoContainers, search]);
 
-  const itemCountByContainer = useMemo(() => {
+  const itemCountByCargo = useMemo(() => {
     const map = new Map<string, number>();
     for (const it of items) map.set(it.containerId, (map.get(it.containerId) ?? 0) + 1);
     return map;
   }, [items]);
 
-  const totalValueByContainer = useMemo(() => {
+  const totalValueByCargo = useMemo(() => {
     const map = new Map<string, number>();
     for (const it of items) map.set(it.containerId, (map.get(it.containerId) ?? 0) + it.vlTotal);
     return map;
   }, [items]);
 
-  const allSelected = filtered.length > 0 && filtered.every(c => selectedContainerIds.has(c.id));
-  const selectionCount = selectedContainerIds.size;
+  const allSelected = filtered.length > 0 && filtered.every(c => selectedIds.has(c.id));
+  const selectionCount = selectedIds.size;
 
-  const handleDelete = async (c: Container) => {
-    const ok = await ask(
-      'Excluir container',
-      `Excluir "${c.name}"? Todos os itens dentro dele também serão removidos. Esta ação não pode ser desfeita.`
-    );
-    if (!ok) return;
-    await deleteContainer(c.id);
-    notify(`Container "${c.name}" excluído.`, 'success');
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectAllVisible = () => setSelectedIds(new Set(filtered.map(c => c.id)));
+
+  const totalItemsTotal = items.length;
+
   const handleExport = () => {
-    const list = containers.filter(c => selectedContainerIds.has(c.id));
+    const list = cargoContainers.filter(c => selectedIds.has(c.id));
     if (list.length === 0) {
-      notify('Selecione ao menos 1 container para exportar.', 'warning');
+      // Reusa o componente de notificação global no chamador (ModalGenerationPage)
+      // através do callback. Aqui só validamos seleção mínima.
+      onExportSelected(list);
       return;
     }
-    const haveAnyItems = list.some(c => (itemCountByContainer.get(c.id) ?? 0) > 0);
+    const haveAnyItems = list.some(c => (itemCountByCargo.get(c.id) ?? 0) > 0);
     if (!haveAnyItems) {
-      notify('Selecione ao menos 1 container com itens. RMD vazio não pode ser gerado.', 'warning');
+      onExportSelected([]); // sinaliza ao chamador para emitir warning
       return;
     }
     onExportSelected(list);
@@ -105,7 +113,7 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
               Contentores
             </h1>
             <p className="text-[10px] font-mono text-muted mt-1">
-              {containers.length} {containers.length === 1 ? 'unidade' : 'unidades'} · {items.length} {items.length === 1 ? 'item' : 'itens'} totais
+              {cargoContainers.length} {cargoContainers.length === 1 ? 'carga' : 'cargas'} CONTENTOR · {totalItemsTotal} {totalItemsTotal === 1 ? 'item DANFE' : 'itens DANFE'} totais
             </p>
           </div>
         </div>
@@ -117,7 +125,7 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou tipo…"
+              placeholder="Buscar por ID ou descrição…"
               className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-all min-h-[40px]"
             />
             {search && (
@@ -131,17 +139,10 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
             )}
           </div>
 
-          <button
-            onClick={onCreate}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-all min-h-[40px] shadow-md"
-          >
-            <Plus size={12} /> Novo Container
-          </button>
-
           {selectionCount > 0 && (
             <div className="flex items-center gap-2 pl-2 ml-1 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
               <button
-                onClick={() => allSelected ? clearSelection() : selectAll()}
+                onClick={() => allSelected ? clearSelection() : selectAllVisible()}
                 className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar transition-all min-h-[36px]"
               >
                 {allSelected ? <CheckSquare size={12} /> : <Square size={12} />}
@@ -170,31 +171,27 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
       <div className="flex-1 overflow-y-auto p-6">
         {loading && !loaded ? (
           <div className="h-full flex items-center justify-center">
-            <span className="text-[11px] font-mono text-muted">Carregando containers…</span>
+            <span className="text-[11px] font-mono text-muted">Carregando inventário DANFE…</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-sidebar border-2 border-subtle flex items-center justify-center mb-4">
               <Inbox size={32} className="text-muted opacity-50" />
             </div>
-            {containers.length === 0 ? (
+            {cargoContainers.length === 0 ? (
               <>
-                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum container ainda</h3>
-                <p className="text-[11px] text-secondary leading-relaxed mb-6">
-                  Crie sua primeira unidade de transporte para começar a alocar cargas DANFE.
+                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum cargo CONTENTOR</h3>
+                <p className="text-[11px] text-secondary leading-relaxed">
+                  Volte para a página de Geração Modal de Transporte e crie cargas
+                  do tipo <strong>CONTENTOR</strong> via Excel, Manual ou IA. Elas aparecerão
+                  aqui automaticamente para receber inventário DANFE.
                 </p>
-                <button
-                  onClick={onCreate}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-all shadow-md"
-                >
-                  <Plus size={14} /> Criar Primeiro Container
-                </button>
               </>
             ) : (
               <>
                 <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum resultado</h3>
                 <p className="text-[11px] text-secondary leading-relaxed">
-                  Ajuste a busca para encontrar o container desejado.
+                  Ajuste a busca para encontrar o contentor desejado.
                 </p>
               </>
             )}
@@ -202,10 +199,10 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map(c => {
-              const accent = TYPE_ACCENT[c.type];
-              const itemCount = itemCountByContainer.get(c.id) ?? 0;
-              const totalValue = totalValueByContainer.get(c.id) ?? 0;
-              const selected = selectedContainerIds.has(c.id);
+              const itemCount = itemCountByCargo.get(c.id) ?? 0;
+              const totalValue = totalValueByCargo.get(c.id) ?? 0;
+              const selected = selectedIds.has(c.id);
+              const filled = itemCount > 0;
               return (
                 <div
                   key={c.id}
@@ -215,7 +212,7 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
                     selected ? 'border-brand-primary bg-brand-primary/5 shadow-md' : 'border-subtle bg-sidebar/40 hover:border-strong'
                   )}
                 >
-                  {/* Checkbox + ícone */}
+                  {/* Topo: checkbox + tag de carga */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       {selected ? (
@@ -223,25 +220,29 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
                       ) : (
                         <Square size={18} className="text-muted/50 shrink-0" />
                       )}
-                      <span className={cn(
-                        'text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border',
-                        accent.bg, accent.text, accent.border
-                      )}>
-                        {CONTAINER_TYPE_LABELS[c.type]}
+                      <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border bg-blue-500/10 text-blue-500 border-blue-400/30">
+                        Contentor
                       </span>
                     </div>
                     <span className={cn(
                       'text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md',
-                      c.status === 'Ativo' ? 'bg-status-success/10 text-status-success' : 'bg-muted/10 text-muted'
+                      filled
+                        ? 'bg-status-success/10 text-status-success'
+                        : 'bg-status-warning/10 text-status-warning'
                     )}>
-                      {c.status}
+                      {filled ? 'Preenchido' : 'Vazio'}
                     </span>
                   </div>
 
-                  {/* Nome */}
-                  <h4 className="text-sm font-black text-primary leading-tight line-clamp-2 min-h-[36px]" title={c.name}>
-                    {c.name}
-                  </h4>
+                  {/* Identificador + descrição */}
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-sm font-black text-primary leading-tight line-clamp-1" title={c.identifier}>
+                      {c.identifier || '— sem ID —'}
+                    </h4>
+                    <p className="text-[10px] font-mono text-secondary leading-tight line-clamp-2 min-h-[24px]" title={c.description}>
+                      {c.description || '— sem descrição —'}
+                    </p>
+                  </div>
 
                   {/* Métricas */}
                   <div className="flex items-center justify-between text-[10px] font-mono pt-2 border-t border-subtle/40">
@@ -256,28 +257,14 @@ export function ContainerGrid({ onOpenInventory, onCreate, onEdit, onExportSelec
                     )}
                   </div>
 
-                  {/* Ações: visível em mobile, hover/focus no desktop */}
-                  <div className="flex items-center justify-between gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity -mt-1">
+                  {/* Ação principal: abrir inventário DANFE */}
+                  <div className="flex items-center justify-stretch gap-1 -mt-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); onOpenInventory(c); }}
                       className="flex-1 min-h-[40px] p-1.5 rounded-md hover:bg-brand-primary/10 focus-visible:bg-brand-primary/10 text-muted hover:text-brand-primary focus-visible:text-brand-primary transition-all text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                      aria-label={`Abrir inventário de ${c.name}`}
+                      aria-label={`Abrir inventário DANFE de ${c.identifier}`}
                     >
-                      <FolderOpen size={11} /> Abrir
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onEdit(c); }}
-                      className="min-h-[40px] p-1.5 rounded-md hover:bg-status-warning/10 focus-visible:bg-status-warning/10 text-muted hover:text-status-warning focus-visible:text-status-warning transition-all outline-none focus-visible:ring-2 focus-visible:ring-status-warning/40"
-                      aria-label={`Editar ${c.name}`}
-                    >
-                      <Edit size={11} className="mx-auto" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(c); }}
-                      className="min-h-[40px] p-1.5 rounded-md hover:bg-status-error/10 focus-visible:bg-status-error/10 text-muted hover:text-status-error focus-visible:text-status-error transition-all outline-none focus-visible:ring-2 focus-visible:ring-status-error/40"
-                      aria-label={`Excluir ${c.name}`}
-                    >
-                      <Trash2 size={11} className="mx-auto" />
+                      <FolderOpen size={11} /> Alocar / Desalocar Itens
                     </button>
                   </div>
                 </div>

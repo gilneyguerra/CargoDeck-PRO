@@ -64,6 +64,13 @@ interface ContainerState {
   addContainer: (input: { name: string; type: ContainerType; status: ContainerStatus }) => Promise<Container>;
   updateContainer: (id: string, patch: Partial<Pick<Container, 'name' | 'type' | 'status'>>) => Promise<void>;
   deleteContainer: (id: string) => Promise<void>;
+  /**
+   * Lazy-create de um Container espelhando uma carga do tipo CONTENTOR (do
+   * cargoStore). Usa o próprio `cargo.id` como PK em `containers`, criando
+   * a relação 1:1 com a tabela DANFE `container_items`. Idempotente — se
+   * já existir, devolve o registro local sem novo round-trip.
+   */
+  ensureContainerRecord: (cargo: { id: string; identifier?: string; description?: string }) => Promise<Container>;
 
   // Selection
   toggleSelection: (id: string) => void;
@@ -191,6 +198,43 @@ export const useContainerStore = create<ContainerState>((set, get) => ({
         category: 'storage',
         source: 'container-update',
       });
+    }
+  },
+
+  ensureContainerRecord: async (cargo) => {
+    const existing = get().containers.find(c => c.id === cargo.id);
+    if (existing) return existing;
+
+    const name = (cargo.identifier?.trim() || cargo.description?.trim() || 'Contentor sem nome');
+    const now = new Date().toISOString();
+    const optimistic: Container = {
+      id: cargo.id,
+      userId: '',
+      name,
+      type: 'container',
+      status: 'Ativo',
+      createdAt: now,
+      updatedAt: now,
+    };
+    set(s => ({ containers: [optimistic, ...s.containers] }));
+
+    try {
+      const saved = await ContainerDatabaseService.saveContainer({
+        id: cargo.id,
+        name,
+        type: 'container',
+        status: 'Ativo',
+      });
+      set(s => ({ containers: s.containers.map(c => (c.id === cargo.id ? saved : c)) }));
+      return saved;
+    } catch (err) {
+      set(s => ({ containers: s.containers.filter(c => c.id !== cargo.id) }));
+      reportException(err, {
+        title: 'Falha ao preparar inventário do container',
+        category: 'storage',
+        source: 'container-ensure',
+      });
+      throw err;
     }
   },
 

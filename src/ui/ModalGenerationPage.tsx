@@ -30,9 +30,6 @@ const CargoAssistant = lazy(() =>
 const ContainerGrid = lazy(() =>
   import('./containers/ContainerGrid').then(m => ({ default: m.ContainerGrid }))
 );
-const ContainerModal = lazy(() =>
-  import('./containers/ContainerModal').then(m => ({ default: m.ContainerModal }))
-);
 const ContainerInventoryModal = lazy(() =>
   import('./containers/ContainerInventoryModal').then(m => ({ default: m.ContainerInventoryModal }))
 );
@@ -241,8 +238,6 @@ export function ModalGenerationPage() {
 
   // Containers (feature DANFE)
   const [containersView, setContainersView] = useState(false);
-  const [containerModalOpen, setContainerModalOpen] = useState(false);
-  const [editingContainer, setEditingContainer] = useState<Container | null>(null);
   const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
   const containerStore = useContainerStore();
 
@@ -391,34 +386,64 @@ export function ModalGenerationPage() {
     setContainersView(true);
   };
 
-  const handleCreateContainer = () => {
-    setEditingContainer(null);
-    setContainerModalOpen(true);
-  };
-
-  const handleEditContainer = (c: Container) => {
-    setEditingContainer(c);
-    setContainerModalOpen(true);
-  };
-
-  const handleOpenInventory = (c: Container) => {
-    setInventoryContainer(c);
-  };
-
-  const handleExportContainersPdf = async (containers: Container[]) => {
-    if (containers.length === 0) return;
+  const handleOpenInventory = async (cargo: Cargo) => {
     try {
+      const ensured = await containerStore.ensureContainerRecord(cargo);
+      setInventoryContainer(ensured);
+    } catch {
+      notify('Não foi possível abrir o inventário deste contentor.', 'error');
+    }
+  };
+
+  const handleExportContainersPdf = async (cargos: Cargo[]) => {
+    // ContainerGrid sinaliza problema (lista vazia ou sem itens) chamando
+    // onExportSelected com lista vazia — emitimos warning aqui para manter
+    // o useNotificationStore como única fonte de toasts.
+    if (cargos.length === 0) {
+      notify('Selecione ao menos 1 contentor com itens para gerar o RMD.', 'warning');
+      return;
+    }
+    try {
+      // Garante que cada cargo tenha um Container persistido (com mesmo id).
+      // Sem isso o PDF não consegue resolver itens — eles ficariam órfãos.
+      const ensured: Container[] = await Promise.all(
+        cargos.map(cargo => containerStore.ensureContainerRecord(cargo))
+      );
       const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
-      for (const c of containers) {
+      for (const c of ensured) {
         itemsByContainer.set(c.id, containerStore.getItemsByContainer(c.id));
       }
-      await PdfGeneratorService.executeContainersExport(containers, itemsByContainer);
-      notify(`Relatório PDF gerado com ${containers.length} container(s).`, 'success');
+      await PdfGeneratorService.executeContainersExport(ensured, itemsByContainer);
+      notify(`Relatório RMD gerado com ${ensured.length} contentor(es).`, 'success');
     } catch (err) {
       reportException(err, {
         title: 'Falha ao gerar PDF de containers',
         category: 'runtime',
         source: 'containers-pdf-export',
+      });
+      notify('Não foi possível gerar o PDF.', 'error');
+    }
+  };
+
+  /** Export PDF de um único container já hidratado (chamada a partir do
+   *  inventário aberto). Bypassa o passo de ensureContainerRecord — o
+   *  registro já existe porque o usuário abriu este inventário. */
+  const handleExportSingleContainer = async (c: Container) => {
+    try {
+      const items = containerStore.getItemsByContainer(c.id);
+      if (items.length === 0) {
+        notify('Adicione ao menos 1 item antes de exportar.', 'warning');
+        return;
+      }
+      const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
+      itemsByContainer.set(c.id, items);
+      await PdfGeneratorService.executeContainersExport([c], itemsByContainer);
+      notify('Relatório RMD gerado.', 'success');
+    } catch (err) {
+      reportException(err, {
+        title: 'Falha ao gerar PDF do contentor',
+        category: 'runtime',
+        source: 'container-single-pdf-export',
       });
       notify('Não foi possível gerar o PDF.', 'error');
     }
@@ -456,22 +481,10 @@ export function ModalGenerationPage() {
           </div>
         }>
           <ContainerGrid
-            onCreate={handleCreateContainer}
-            onEdit={handleEditContainer}
             onOpenInventory={handleOpenInventory}
             onExportSelected={handleExportContainersPdf}
           />
         </Suspense>
-
-        {containerModalOpen && (
-          <Suspense fallback={null}>
-            <ContainerModal
-              isOpen={containerModalOpen}
-              editing={editingContainer}
-              onClose={() => { setContainerModalOpen(false); setEditingContainer(null); }}
-            />
-          </Suspense>
-        )}
 
         {inventoryContainer && (
           <Suspense fallback={null}>
@@ -479,7 +492,7 @@ export function ModalGenerationPage() {
               isOpen={!!inventoryContainer}
               container={inventoryContainer}
               onClose={() => setInventoryContainer(null)}
-              onExportPdf={(c) => handleExportContainersPdf([c])}
+              onExportPdf={handleExportSingleContainer}
             />
           </Suspense>
         )}
