@@ -461,10 +461,18 @@ export function ModalGenerationPage() {
         cargos.map(cargo => containerStore.ensureContainerRecord(cargo))
       );
       const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
+      const empresaByContainer = new Map<string, string>();
       for (const c of ensured) {
         itemsByContainer.set(c.id, containerStore.getItemsByContainer(c.id));
       }
-      await PdfGeneratorService.executeContainersExport(ensured, itemsByContainer);
+      // Bridge cargo→container.empresa: container hoje não persiste empresa
+      // (sem migração SQL), então passamos via Map em runtime.
+      for (const cargo of cargos) {
+        if (cargo.empresa && cargo.empresa.trim()) {
+          empresaByContainer.set(cargo.id, cargo.empresa.trim());
+        }
+      }
+      await PdfGeneratorService.executeContainersExport(ensured, itemsByContainer, empresaByContainer);
       notify(`Relatório RMD gerado com ${ensured.length} contentor(es).`, 'success');
     } catch (err) {
       reportException(err, {
@@ -488,7 +496,21 @@ export function ModalGenerationPage() {
       }
       const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
       itemsByContainer.set(c.id, items);
-      await PdfGeneratorService.executeContainersExport([c], itemsByContainer);
+
+      // Resolve empresa via cargo.id === container.id (relação 1:1
+      // estabelecida em ensureContainerRecord). Lookup direto no cargoStore.
+      const empresaByContainer = new Map<string, string>();
+      const cargoState = useCargoStore.getState();
+      const allCargos: Cargo[] = [
+        ...cargoState.unallocatedCargoes,
+        ...cargoState.locations.flatMap(loc => loc.bays.flatMap(b => b.allocatedCargoes)),
+      ];
+      const matched = allCargos.find(cg => cg.id === c.id);
+      if (matched?.empresa && matched.empresa.trim()) {
+        empresaByContainer.set(c.id, matched.empresa.trim());
+      }
+
+      await PdfGeneratorService.executeContainersExport([c], itemsByContainer, empresaByContainer);
       notify('Relatório RMD gerado.', 'success');
     } catch (err) {
       reportException(err, {

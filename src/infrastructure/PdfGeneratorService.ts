@@ -170,8 +170,9 @@ export class PdfGeneratorService {
         doc.setTextColor(80, 80, 100);
         doc.text('ID / CÓDIGO',            margin + 5,   y + 4);
         doc.text('DESCRIÇÃO',              margin + 50,  y + 4);
-        doc.text('DIM (CxL m)',            margin + 175, y + 4);
-        doc.text('PESO',                   margin + 210, y + 4);
+        doc.text('EMPRESA',                margin + 130, y + 4);
+        doc.text('DIM (CxL m)',            margin + 170, y + 4);
+        doc.text('PESO',                   margin + 205, y + 4);
         doc.text('CAT',                    pageWidth - margin - 3, y + 4, { align: 'right' });
         y += 6;
         doc.setTextColor(0, 0, 0);
@@ -201,20 +202,28 @@ export class PdfGeneratorService {
           doc.setFont('helvetica', 'bold');
           doc.text(idText, margin + 5, y + 4);
 
-          // Descrição (com limite estendido)
+          // Descrição (com limite reduzido para abrir espaço para EMPRESA)
           doc.setFont('helvetica', 'normal');
-          const desc = (cargo.description || '').substring(0, 75);
+          const desc = (cargo.description || '').substring(0, 50);
           doc.text(desc, margin + 50, y + 4);
+
+          // Empresa proprietária (truncada)
+          const empresa = (cargo.empresa || '').substring(0, 22);
+          if (empresa) {
+            doc.setTextColor(60, 90, 140);
+            doc.text(empresa, margin + 130, y + 4);
+            doc.setTextColor(0, 0, 0);
+          }
 
           // Dimensões
           const dims = (cargo.lengthMeters && cargo.widthMeters)
             ? `${cargo.lengthMeters.toFixed(1)}x${cargo.widthMeters.toFixed(1)}`
             : '-';
-          doc.text(dims, margin + 175, y + 4);
+          doc.text(dims, margin + 170, y + 4);
 
           // Peso
           const weight = `${(cargo.weightTonnes * cargo.quantity).toFixed(2)} t`;
-          doc.text(weight, margin + 210, y + 4);
+          doc.text(weight, margin + 205, y + 4);
 
           // Categoria
           doc.setFont('helvetica', 'bold');
@@ -328,7 +337,8 @@ export class PdfGeneratorService {
    */
   static async generateContainersBlob(
     containers: Container[],
-    itemsByContainer: Map<string, ContainerItem[]>
+    itemsByContainer: Map<string, ContainerItem[]>,
+    empresaByContainer?: Map<string, string>
   ): Promise<Blob> {
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -474,7 +484,16 @@ export class PdfGeneratorService {
     for (const c of sortedContainers) {
       doc.addPage();
       y = 15;
-      this.renderContainerSection(doc, c, itemsByContainer.get(c.id) ?? [], pageWidth, pageHeight, margin, contentWidth);
+      this.renderContainerSection(
+        doc,
+        c,
+        itemsByContainer.get(c.id) ?? [],
+        pageWidth,
+        pageHeight,
+        margin,
+        contentWidth,
+        empresaByContainer?.get(c.id),
+      );
     }
 
     // ── Rodapé com assinatura ───────────────────────────────────────────────
@@ -537,13 +556,16 @@ export class PdfGeneratorService {
     pageWidth: number,
     pageHeight: number,
     margin: number,
-    contentWidth: number
+    contentWidth: number,
+    empresa?: string,
   ): void {
     let y = 15;
 
-    // Cabeçalho do container (estilo "pasta")
+    // Cabeçalho do container (estilo "pasta") — altura cresce para 14 quando
+    // há empresa (linha extra com a proprietária do material).
+    const headerH = empresa ? 14 : 10;
     doc.setFillColor(30, 60, 120); // navy mais claro
-    doc.rect(margin, y, contentWidth, 10, 'F');
+    doc.rect(margin, y, contentWidth, headerH, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
@@ -553,7 +575,12 @@ export class PdfGeneratorService {
     doc.setTextColor(180, 220, 255);
     const meta = `${CONTAINER_TYPE_LABELS[container.type]} - ${container.status} - ${items.length} item(ns)`;
     doc.text(meta, pageWidth - margin - 4, y + 7, { align: 'right' });
-    y += 14;
+    if (empresa) {
+      doc.setFontSize(7);
+      doc.setTextColor(200, 230, 255);
+      doc.text(`Empresa: ${empresa}`, margin + 4, y + 12);
+    }
+    y += headerH + 4;
     doc.setTextColor(0, 0, 0);
 
     if (items.length === 0) {
@@ -688,9 +715,10 @@ export class PdfGeneratorService {
    */
   static async executeContainersExport(
     containers: Container[],
-    itemsByContainer: Map<string, ContainerItem[]>
+    itemsByContainer: Map<string, ContainerItem[]>,
+    empresaByContainer?: Map<string, string>
   ): Promise<void> {
-    const blob = await this.generateContainersBlob(containers, itemsByContainer);
+    const blob = await this.generateContainersBlob(containers, itemsByContainer, empresaByContainer);
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
