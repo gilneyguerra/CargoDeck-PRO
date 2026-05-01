@@ -3,7 +3,7 @@ import {
   ArrowLeft, Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
   Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon,
-  FolderOpen,
+  FolderOpen, Building2,
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
@@ -185,6 +185,15 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
       <h4 className="text-[11px] font-black text-primary leading-tight line-clamp-2 min-h-[28px]" title={cargo.description}>
         {cargo.description}
       </h4>
+
+      {/* Empresa proprietária — exibido apenas quando informado. Linha discreta
+          em mono, não compete visualmente com a descrição. */}
+      {cargo.empresa && cargo.empresa.trim() && (
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-secondary -mt-1" title={`Empresa: ${cargo.empresa}`}>
+          <Building2 size={10} className="text-muted shrink-0" />
+          <span className="truncate">{cargo.empresa}</span>
+        </div>
+      )}
 
       {/* Métricas */}
       <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest pt-2 border-t border-subtle/40">

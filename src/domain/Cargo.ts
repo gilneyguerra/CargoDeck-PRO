@@ -80,6 +80,13 @@ export interface Cargo {
    * runtime via `canHoldItems()` quando undefined (sem migração no DB).
    */
   holdsItems?: boolean;
+
+  /**
+   * Empresa proprietária do material acondicionado neste modal.
+   * Texto livre — opcional, segue a carga em todo o fluxo (grid, deck,
+   * inventário DANFE, exportação PDF/RMD).
+   */
+  empresa?: string;
 }
 
 /**
