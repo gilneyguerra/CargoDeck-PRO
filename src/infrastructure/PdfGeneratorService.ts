@@ -389,7 +389,50 @@ export class PdfGeneratorService {
     let y = HEADER_H + 6;
     doc.setTextColor(0, 0, 0);
 
+    // ── Resumo executivo (3 KPIs) ───────────────────────────────────────────
+    // Calcula agregados uma única vez — alimenta tanto o resumo quanto o
+    // total geral no rodapé do sumário, evitando duplo loop.
+    const totalsByContainer = new Map<string, number>();
+    let grandTotal = 0;
+    let totalItems = 0;
+    for (const c of sortedContainers) {
+      const items = itemsByContainer.get(c.id) ?? [];
+      const totalC = items.reduce((s, it) => s + it.vlTotal, 0);
+      totalsByContainer.set(c.id, totalC);
+      grandTotal += totalC;
+      totalItems += items.length;
+    }
+
+    const KPI_H = 22;
+    const KPI_GAP = 4;
+    const KPI_W = (contentWidth - KPI_GAP * 2) / 3;
+    const kpis: { label: string; value: string }[] = [
+      { label: 'TOTAL DE UNIDADES', value: String(sortedContainers.length) },
+      { label: 'TOTAL DE ITENS', value: String(totalItems) },
+      {
+        label: 'VALOR TOTAL',
+        value: `R$ ${grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      },
+    ];
+
+    for (let i = 0; i < kpis.length; i++) {
+      const kx = margin + i * (KPI_W + KPI_GAP);
+      doc.setFillColor(230, 235, 255);
+      doc.roundedRect(kx, y, KPI_W, KPI_H, 2, 2, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(80, 90, 110);
+      doc.text(kpis[i].label, kx + KPI_W / 2, y + 7, { align: 'center' });
+
+      doc.setFontSize(13);
+      doc.setTextColor(20, 30, 60);
+      doc.text(kpis[i].value, kx + KPI_W / 2, y + 16, { align: 'center' });
+    }
+    y += KPI_H + 6;
+
     // ── Sumário ─────────────────────────────────────────────────────────────
+    doc.setTextColor(0, 0, 0);
     doc.setFillColor(230, 235, 255);
     doc.rect(margin, y, contentWidth, 8, 'F');
     doc.setFont('helvetica', 'bold');
@@ -399,11 +442,9 @@ export class PdfGeneratorService {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    let grandTotal = 0;
     for (const c of sortedContainers) {
       const items = itemsByContainer.get(c.id) ?? [];
-      const totalC = items.reduce((s, it) => s + it.vlTotal, 0);
-      grandTotal += totalC;
+      const totalC = totalsByContainer.get(c.id) ?? 0;
       if (y > pageHeight - 20) { doc.addPage(); y = 15; }
       // ASCII-only — emoji 📦 e middle-dot · viram mojibake na fonte default
       // do jsPDF (Helvetica não tem suporte UTF-8 multi-byte).
@@ -457,6 +498,21 @@ export class PdfGeneratorService {
       doc.setTextColor(140, 140, 140);
       doc.text('Responsável (configure em "Configurar Relatório")',
         sigCenterX, lastPageY + 5, { align: 'center' });
+    }
+
+    // ── Rodapé numerado em todas as páginas ─────────────────────────────────
+    // jsPDF não numera automático — pintamos depois que todas as páginas
+    // existem para conhecer o total. Coordena Y=pageHeight-6 fica abaixo
+    // da assinatura (pageHeight-18) sem conflitar.
+    const totalPages = doc.getNumberOfPages();
+    const emittedAt = new Date().toLocaleString('pt-BR');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.text(`Emitido em ${emittedAt}`, margin, pageHeight - 6);
+      doc.text(`Pág ${p} de ${totalPages}`, pageWidth - margin, pageHeight - 6, { align: 'right' });
     }
 
     return doc.output('blob');
