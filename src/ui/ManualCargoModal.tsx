@@ -2,7 +2,7 @@ import { useState, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle, FolderOpen } from 'lucide-react';
+import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle, FolderOpen, Building2 } from 'lucide-react';
 import { canHoldItems, type CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   const [heightMeters, setHeightMeters] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [category, setCategory] = useState<CargoCategory>('GENERAL');
+  const [empresa, setEmpresa] = useState('');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [isHazardous, setIsHazardous] = useState(false);
@@ -77,12 +78,13 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
       color: finalIsHazardous ? '#a855f7' : color, // perigosa: roxo
       format,
       holdsItems,
+      empresa: empresa.trim() || undefined,
     });
 
     setDescription(''); setIdentifier(''); setWeightTonnes(''); setLengthMeters('');
     setWidthMeters(''); setHeightMeters(''); setQuantity(1); setCategory('GENERAL');
     setOrigin(''); setDestination(''); setIsHazardous(false); setFormat('Retangular');
-    setHoldsItems(undefined);
+    setHoldsItems(undefined); setEmpresa('');
     onClose();
   };
 
@@ -237,6 +239,18 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                   className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-bold text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/50"
                 />
               </div>
+            </div>
+
+            {/* Empresa proprietária — linha separada (nomes podem ser longos). Opcional. */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
+                <Building2 size={12} className="text-brand-primary" /> Empresa Proprietária
+              </label>
+              <input
+                type="text" value={empresa} onChange={e => setEmpresa(e.target.value)}
+                placeholder="Ex.: Petrobras, Subsea7, Halliburton…  (opcional)"
+                className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-bold text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/50"
+              />
             </div>
 
             {/* Toggle Carga Perigosa */}

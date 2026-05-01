@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCargoStore } from '@/features/cargoStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { X, Box, Settings, Palette, Info, FolderOpen } from 'lucide-react';
+import { X, Box, Settings, Palette, Info, FolderOpen, Building2 } from 'lucide-react';
 import { canHoldItems, type Cargo } from '@/domain/Cargo';
 import type { CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
@@ -29,6 +29,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
   const [format, setFormat] = useState<'Retangular' | 'Quadrado' | 'Tubular'>('Retangular');
   const [color, setColor] = useState('#3b82f6');
   const [holdsItems, setHoldsItems] = useState<boolean | undefined>(undefined);
+  const [empresa, setEmpresa] = useState('');
 
   // Resolve estado efetivo do switch: respeita override explícito; senão
   // cai no default por categoria (CONTAINER/BASKET → true).
@@ -41,6 +42,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
       setQuantity(cargo.quantity); setCategory(cargo.category); setObservations(cargo.observations || '');
       setIsRemovable(cargo.isRemovable || false); setFormat(cargo.format || 'Retangular'); setColor(cargo.color || '#3b82f6');
       setHoldsItems(cargo.holdsItems);
+      setEmpresa(cargo.empresa || '');
     }
   }, [cargo]);
 
@@ -49,7 +51,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
     const w = Number(weightTonnes); const l = Number(lengthMeters); const wi = Number(widthMeters);
     const h = Number(heightMeters); const q = Number(quantity);
     if (!description.trim() || !identifier.trim() || isNaN(w) || isNaN(l) || isNaN(wi) || isNaN(h) || isNaN(q)) return;
-    updateCargo(cargo.id, { description: description.trim(), identifier: identifier.trim(), weightTonnes: w, lengthMeters: l, widthMeters: wi, heightMeters: h, quantity: q, category, observations: observations.trim() || undefined, isRemovable, format, color, holdsItems });
+    updateCargo(cargo.id, { description: description.trim(), identifier: identifier.trim(), weightTonnes: w, lengthMeters: l, widthMeters: wi, heightMeters: h, quantity: q, category, observations: observations.trim() || undefined, isRemovable, format, color, holdsItems, empresa: empresa.trim() || undefined });
     onClose();
   };
 
@@ -201,6 +203,18 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                             className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-bold text-primary outline-none focus:border-brand-primary shadow-inner"
                         />
                     </div>
+                </div>
+
+                {/* Empresa proprietária — linha separada (nomes podem ser longos). Opcional. */}
+                <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
+                        <Building2 size={14} className="text-brand-primary" /> Empresa Proprietária
+                    </label>
+                    <input
+                        type="text" value={empresa} onChange={e => setEmpresa(e.target.value)}
+                        placeholder="Ex.: Petrobras, Subsea7, Halliburton…  (opcional)"
+                        className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4.5 text-sm font-bold text-primary outline-none focus:border-brand-primary shadow-inner placeholder:text-muted/50"
+                    />
                 </div>
 
                 <div className="flex items-center justify-between p-6 bg-sidebar border-2 border-subtle rounded-3xl group cursor-pointer hover:border-brand-primary/40 transition-all shadow-low" onClick={() => setIsRemovable(!isRemovable)}>
