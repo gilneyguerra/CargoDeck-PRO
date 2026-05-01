@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Package, Search, CheckSquare, Square, X, FolderOpen, FileDown, Inbox,
+  Package, Search, CheckSquare, Square, X, FileDown, Inbox,
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useContainerStore } from '@/features/containerStore';
@@ -8,19 +8,22 @@ import type { Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  /** Quando o usuário clica num card, abre o inventário DANFE da carga. */
-  onOpenInventory: (cargo: Cargo) => void;
   /** Acionado quando o usuário pede para gerar PDF dos selecionados. */
   onExportSelected: (cargos: Cargo[]) => void;
 }
 
 /**
- * Lista de cargas do tipo CONTENTOR (cargoStore.category === 'CONTAINER').
- * Esta página é leitura + ponte para o inventário DANFE — não cria nem
- * exclui contentores. Toda criação/edição/exclusão de cargas-CONTENTOR
- * acontece na página de Geração Modal de Transporte.
+ * Lista das cargas do tipo CONTENTOR (cargoStore.category === 'CONTAINER').
+ *
+ * Esta página é apenas LEITURA + seleção em massa para gerar o RMD PDF.
+ * Não há botão "Alocar / Desalocar Itens" por card — esse botão vive nos
+ * cards da página Geração Modal de Transporte (Print 1) por exigência
+ * do fluxo: o usuário gerencia o inventário DANFE diretamente da carga.
+ *
+ * Toda criação/edição/exclusão de cargas-CONTENTOR também acontece em
+ * Print 1.
  */
-export function ContainerGrid({ onOpenInventory, onExportSelected }: Props) {
+export function ContainerGrid({ onExportSelected }: Props) {
   const unallocated = useCargoStore(s => s.unallocatedCargoes);
   const locations = useCargoStore(s => s.locations);
   const { items, fetchAll, loaded, loading } = useContainerStore();
@@ -257,16 +260,6 @@ export function ContainerGrid({ onOpenInventory, onExportSelected }: Props) {
                     )}
                   </div>
 
-                  {/* Ação principal: abrir inventário DANFE */}
-                  <div className="flex items-center justify-stretch gap-1 -mt-1">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onOpenInventory(c); }}
-                      className="flex-1 min-h-[40px] p-1.5 rounded-md hover:bg-brand-primary/10 focus-visible:bg-brand-primary/10 text-muted hover:text-brand-primary focus-visible:text-brand-primary transition-all text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                      aria-label={`Abrir inventário DANFE de ${c.identifier}`}
-                    >
-                      <FolderOpen size={11} /> Alocar / Desalocar Itens
-                    </button>
-                  </div>
                 </div>
               );
             })}

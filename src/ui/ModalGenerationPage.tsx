@@ -2,7 +2,8 @@ import { useState, useMemo, useDeferredValue, useEffect, lazy, Suspense } from '
 import {
   ArrowLeft, Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
-  Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon
+  Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon,
+  FolderOpen,
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
@@ -82,12 +83,16 @@ function categoryIcon(cat: string): typeof Boxes {
 interface CargoGridCardProps {
   cargo: Cargo;
   selected: boolean;
+  /** Quantidade de itens DANFE já alocados nesta carga (apenas relevante quando category==='CONTAINER'). */
+  danfeItemCount?: number;
   onToggle: (id: string) => void;
   onEdit: (cargo: Cargo) => void;
   onDelete: (cargo: Cargo) => void;
+  /** Acionado pelo botão "Alocar / Desalocar Itens" — apenas para cargas-CONTENTOR. */
+  onOpenInventory?: (cargo: Cargo) => void;
 }
 
-function CargoGridCard({ cargo, selected, onToggle, onEdit, onDelete }: CargoGridCardProps) {
+function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, onDelete, onOpenInventory }: CargoGridCardProps) {
   const ratio = (cargo.lengthMeters || 1) / (cargo.widthMeters || 1);
   const baseSize = 80;
   const visualWidth = ratio >= 1 ? baseSize : Math.max(20, baseSize * ratio);
@@ -213,6 +218,25 @@ function CargoGridCard({ cargo, selected, onToggle, onEdit, onDelete }: CargoGri
           <Trash2 size={12} className="mx-auto" />
         </button>
       </div>
+
+      {/* Inventário DANFE: visível apenas para cargas-CONTENTOR. Sempre exibido
+          (não escondido sob hover) por ser ação de fluxo principal. */}
+      {cargo.category === 'CONTAINER' && onOpenInventory && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onOpenInventory(cargo); }}
+          className="flex items-center justify-center gap-1.5 min-h-[36px] px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-2 border-brand-primary/30 bg-brand-primary/5 text-brand-primary hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+          title={danfeItemCount > 0 ? `${danfeItemCount} ${danfeItemCount === 1 ? 'item DANFE alocado' : 'itens DANFE alocados'}` : 'Sem itens DANFE'}
+          aria-label={`Alocar ou desalocar itens DANFE do contentor ${cargo.identifier}`}
+        >
+          <FolderOpen size={11} />
+          <span>Alocar / Desalocar Itens</span>
+          {danfeItemCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded bg-brand-primary text-white text-[8px] font-mono">
+              {danfeItemCount}
+            </span>
+          )}
+        </button>
+      )}
     </div>
   );
 }
@@ -240,6 +264,23 @@ export function ModalGenerationPage() {
   const [containersView, setContainersView] = useState(false);
   const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
   const containerStore = useContainerStore();
+  const danfeItems = useContainerStore(s => s.items);
+  const fetchAllContainers = useContainerStore(s => s.fetchAll);
+  const containerLoaded = useContainerStore(s => s.loaded);
+  const containerLoading = useContainerStore(s => s.loading);
+
+  // Hidrata containers/items do Supabase ao montar para que o badge de
+  // contagem DANFE no CargoGridCard fique correto desde o primeiro paint.
+  useEffect(() => {
+    if (!containerLoaded && !containerLoading) fetchAllContainers();
+  }, [containerLoaded, containerLoading, fetchAllContainers]);
+
+  // Mapa containerId(=cargo.id) → contagem de itens DANFE — usado pelo badge.
+  const danfeCountByCargoId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of danfeItems) map.set(it.containerId, (map.get(it.containerId) ?? 0) + 1);
+    return map;
+  }, [danfeItems]);
 
   // Filtro persistido (aceita qualquer string: 'all' | 'priority' | 'cat:<CATEGORIA>')
   const [filterTab, setFilterTab] = useState<FilterTab>(() => {
@@ -460,7 +501,8 @@ export function ModalGenerationPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    containersView ? (
+    <>
+    {containersView ? (
       <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
         {/* Toolbar fina com voltar */}
         <div className="px-6 py-3 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3">
@@ -481,21 +523,9 @@ export function ModalGenerationPage() {
           </div>
         }>
           <ContainerGrid
-            onOpenInventory={handleOpenInventory}
             onExportSelected={handleExportContainersPdf}
           />
         </Suspense>
-
-        {inventoryContainer && (
-          <Suspense fallback={null}>
-            <ContainerInventoryModal
-              isOpen={!!inventoryContainer}
-              container={inventoryContainer}
-              onClose={() => setInventoryContainer(null)}
-              onExportPdf={handleExportSingleContainer}
-            />
-          </Suspense>
-        )}
       </div>
     ) : (
     <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
@@ -799,9 +829,11 @@ export function ModalGenerationPage() {
                 key={c.id}
                 cargo={c}
                 selected={selectedCargos.has(c.id)}
+                danfeItemCount={danfeCountByCargoId.get(c.id) ?? 0}
                 onToggle={toggleCargoSelection}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onOpenInventory={handleOpenInventory}
               />
             ))}
           </div>
@@ -837,6 +869,19 @@ export function ModalGenerationPage() {
       )}
       <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
-    )
+    )}
+    {/* Inventário DANFE (Alocar/Desalocar Itens) — modal global, ativável tanto
+        a partir dos cards de Print 1 quanto da página de Contentores. */}
+    {inventoryContainer && (
+      <Suspense fallback={null}>
+        <ContainerInventoryModal
+          isOpen={!!inventoryContainer}
+          container={inventoryContainer}
+          onClose={() => setInventoryContainer(null)}
+          onExportPdf={handleExportSingleContainer}
+        />
+      </Suspense>
+    )}
+    </>
   );
 }
