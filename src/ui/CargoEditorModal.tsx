@@ -27,6 +27,9 @@ interface EditorRow {
   widthMeters: string;
   heightMeters: string;
   isHazardous: boolean;
+  /** Override de "modal unitizador" vindo da planilha (coluna `unitizador`).
+   *  undefined = "siga default por categoria" (resolvido via canHoldItems no import). */
+  holdsItems?: boolean;
   errors: Partial<Record<RowField, string>>;
 }
 
@@ -64,6 +67,16 @@ function parseCsvCategory(raw: string, perigosa: string): CargoCategory {
   };
   if (perigosa.trim().toUpperCase() === 'SIM' && !map[upper]) return 'HAZARDOUS';
   return map[upper] ?? 'GENERAL';
+}
+
+// Parse da célula "unitizador" em boolean | undefined.
+// Vazio → undefined (cai no default por categoria via canHoldItems).
+function parseUnitizadorCell(raw: string): boolean | undefined {
+  const v = raw.trim().toUpperCase();
+  if (!v) return undefined;
+  if (['SIM', 'S', 'Y', 'YES', 'TRUE', '1', 'V', 'VERDADEIRO'].includes(v)) return true;
+  if (['NÃO', 'NAO', 'N', 'NO', 'FALSE', '0', 'F', 'FALSO'].includes(v)) return false;
+  return undefined;
 }
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
@@ -145,7 +158,7 @@ function buildFlatErrors(rows: EditorRow[]): FlatError[] {
 
 // ─── Mapeamento de cabeçalhos (CSV e Excel) ───────────────────────────────────
 
-const HEADER_MAP: Record<string, ColKey | 'perigosa' | 'skip'> = {
+const HEADER_MAP: Record<string, ColKey | 'perigosa' | 'unitizador' | 'skip'> = {
   'descrição':              'description',
   'descricao':              'description',
   'description':            'description',
@@ -183,13 +196,19 @@ const HEADER_MAP: Record<string, ColKey | 'perigosa' | 'skip'> = {
   'altura(m)':              'heightMeters',
   'altura':                 'heightMeters',
   'height (m)':             'heightMeters',
+  'unitizador':             'unitizador',
+  'unitizadora':            'unitizador',
+  'modal unitizador':       'unitizador',
+  'modal unitizadora':      'unitizador',
+  'carries items':          'unitizador',
+  'holds items':            'unitizador',
 };
 
 // Converte array de arrays (headers + data) em EditorRow[]
 function sheetDataToRows(data: string[][]): EditorRow[] {
   if (data.length < 2) return [];
   const headers = data[0].map(h => String(h ?? '').trim().toLowerCase());
-  const colMap: (ColKey | 'perigosa' | 'skip' | null)[] = headers.map(h => HEADER_MAP[h] ?? null);
+  const colMap: (ColKey | 'perigosa' | 'unitizador' | 'skip' | null)[] = headers.map(h => HEADER_MAP[h] ?? null);
 
   const rows: EditorRow[] = [];
   for (let i = 1; i < data.length; i++) {
@@ -200,6 +219,7 @@ function sheetDataToRows(data: string[][]): EditorRow[] {
 
     const cat = parseCsvCategory(obj['category'] ?? '', obj['perigosa'] ?? '');
     const isHaz = (obj['perigosa'] ?? '').trim().toUpperCase() === 'SIM' || cat === 'HAZARDOUS';
+    const holds = parseUnitizadorCell(obj['unitizador'] ?? '');
     rows.push({
       id: mkId(),
       category: cat,
@@ -212,6 +232,7 @@ function sheetDataToRows(data: string[][]): EditorRow[] {
       widthMeters:  (obj['widthMeters']  ?? '').replace(',', '.'),
       heightMeters: (obj['heightMeters'] ?? '').replace(',', '.'),
       isHazardous: isHaz,
+      holdsItems: holds,
       errors: {},
     });
   }
@@ -716,6 +737,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
         format: 'Retangular',
         origemCarga: row.origin.trim() || undefined,
         destinoCarga: row.destination.trim() || undefined,
+        holdsItems: row.holdsItems,
       };
     });
     setExtractedCargoes(cargoes);
