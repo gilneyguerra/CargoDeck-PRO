@@ -84,6 +84,27 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Regra geral**: nunca lançar exceções no top-level de um módulo de infraestrutura compartilhado (`lib/`, `services/`, `infrastructure/`). Se a env é obrigatória, falhe na primeira chamada acionável, com mensagem explicando qual env definir e onde.
 - **Contexto**: Ocorrido em `src/lib/supabase.ts` durante a Fase 0 da refatoração v2.0 (commit 22a723f). Revertido em c3fc7ff com fallback de credenciais demo + warn.
 
+## 16. Chamadas LLM Direto do Browser Vazam a Chave + Quebram em CORS
+- **Problema duplo, mesmo bug arquitetural:**
+  1. **Segurança**: a chave `VITE_OPENCODE_ZEN_KEY` foi prefixada com `VITE_*`, o que faz o Vite **injetar o valor literal no bundle JavaScript do cliente**. Resultado: qualquer pessoa que visita o site, abre DevTools → Sources → `assets/llmRouter-*.js`, encontra a chave em texto puro e pode usá-la livremente até a cota acabar.
+  2. **Funcional**: o browser faz preflight CORS (OPTIONS) antes de POST com header `Authorization`. APIs LLM (OpenAI, Anthropic, OpenCode Zen) tipicamente **não enviam `Access-Control-Allow-Origin`** para origens arbitrárias, então o browser cancela a chamada e o `fetch()` falha com `TypeError: Failed to fetch` — sem stack útil, mascarando a causa real.
+- **Causa raiz comum**: tentar acessar API que requer `Authorization: Bearer` direto do cliente. Vite/CRA/Next-client-only obriga prefixo público (`VITE_*`/`NEXT_PUBLIC_*`) para a env aparecer em runtime no browser, e esse mesmo prefixo é o que vaza.
+- **Solução definitiva: API route serverless como proxy.** Criar `api/llm-zen.ts` (Vercel Edge / Next API / equivalente) que:
+  1. Lê a chave de `process.env.OPENCODE_ZEN_KEY` (**sem prefixo `VITE_*`** — assim Vite não vê e não bundla).
+  2. Recebe o body OAI-compatível do client e encaminha para o upstream com `Authorization: Bearer ...` injetado no servidor.
+  3. Devolve o JSON tal qual.
+  4. Rejeita métodos diferentes de POST e bodies não-JSON.
+
+  No client (`llmRouter.ts`), trocar `fetch('https://opencode.ai/...')` por `fetch('/api/llm-zen')` — relativo, mesmo origin, zero CORS.
+
+  Bonus: depois do proxy, é possível **estreitar o CSP** removendo `opencode.ai` do `connect-src` (o browser nunca mais fala com esse host).
+- **Ação obrigatória após implementar o proxy**: **revogar a chave que estava em `VITE_OPENCODE_ZEN_KEY`** no painel do provedor LLM e gerar uma nova com o nome correto (ex.: `cargodeck-pro-vercel-serverless`). A chave antiga já vazou para qualquer usuário que tenha aberto o site — assumi-la comprometida.
+- **Regra geral**:
+  - Toda chave de API que requer `Authorization: Bearer` SOMENTE no servidor.
+  - Env vars do cliente (`VITE_*`/`NEXT_PUBLIC_*`) reservadas para tokens públicos com escopo limitado (Supabase anon key com RLS, Stripe publishable key, etc.).
+  - Antes de adicionar qualquer `import.meta.env.VITE_X_KEY` ou `process.env.NEXT_PUBLIC_X_KEY`, perguntar: "essa string pode aparecer publicamente no DevTools de qualquer visitante?". Se a resposta é não, precisa de proxy server-side.
+- **Contexto**: ocorreu em 2026-05-01 com `VITE_OPENCODE_ZEN_KEY` da feature DANFE. O sintoma reportado pelo usuário foi `TypeError: Failed to fetch` ao tentar extrair um PDF — a chave estava configurada e o CSP correto, mas CORS bloqueava. Investigação revelou que o cenário sempre teria sido vulnerável mesmo se CORS fosse permitido. Solução: criado `api/llm-zen.ts` como Edge function proxy + chave migrada para `OPENCODE_ZEN_KEY` server-only.
+
 ## 15. Postgres NUMERIC Retornado como string pelo `supabase-js`
 - **Problema**: campos `numeric(15,2)` / `numeric(15,4)` no Postgres voltam para o JS às vezes como `string` (ex.: `"14200.89"`), não `number`. Atribuir direto a um campo tipado como `number` em TypeScript passa silenciosamente (porque o `supabase-js` retorna `any`/`unknown`) e quebra em runtime quando você tenta `.toFixed()`, somar com outros números, ou comparar com `>=`.
 - **Causa**: PostgreSQL `numeric` é arbitrário-precision; o driver não converte para `Number` automaticamente porque isso causaria perda de precisão em valores grandes. Comportamento documentado mas surpreende quem espera comportamento JSON-friendly.

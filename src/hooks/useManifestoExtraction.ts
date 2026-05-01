@@ -141,7 +141,7 @@ export function useManifestoExtraction(onClose: () => void) {
     } catch (err) {
       hideBanner();
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-      updateMessage(loadingId, `❌ Erro na extração: ${msg}\n\nVerifique se a chave VITE_OPENCODE_ZEN_KEY está configurada e tente novamente.`);
+      updateMessage(loadingId, `❌ Erro na extração: ${msg}\n\nVerifique se a env OPENCODE_ZEN_KEY está configurada nas variáveis do Vercel e tente novamente.`);
       reportException(err, {
         title: 'Falha na extração de manifesto via IA',
         category: 'network',

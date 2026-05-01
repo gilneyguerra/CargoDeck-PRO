@@ -45,7 +45,8 @@ CI (`.github/workflows/security.yml`) runs `npm ci` → `npm run lint` → `npm 
 - **DB**: `src/infrastructure/DatabaseService.ts` uses `.eq('user_id', session.user.id)` and `.upsert({ onConflict: 'user_id, ship_code' })`. RLS at the Postgres level (see `supabase-setup.sql`) is the actual security boundary.
 
 ### LLM extraction pipeline
-- **[`src/services/llmRouter.ts`](src/services/llmRouter.ts)** — task-typed router (`EXTRACTION` / `VALIDATION` / `CHAT` / `CORRECTION` / `FAQ`) → primary + fallback model on OpenCode Zen (OpenAI-compatible endpoint at `https://opencode.ai/zen/v1/chat/completions`). 3-attempt retry with exponential backoff, temperature ramp per task. Each task has its own system prompt baked in.
+- **[`src/services/llmRouter.ts`](src/services/llmRouter.ts)** — task-typed router (`EXTRACTION` / `VALIDATION` / `CHAT` / `CORRECTION` / `FAQ` / `DANFE_EXTRACTION`) → primary + fallback model on OpenCode Zen. 3-attempt retry with exponential backoff, temperature ramp per task. Each task has its own system prompt baked in.
+- **CRITICAL ARCHITECTURE:** the client NEVER calls OpenCode Zen directly. All requests go through the **Vercel Edge Function proxy** at [`api/llm-zen.ts`](api/llm-zen.ts), which injects the `Authorization: Bearer ...` header server-side from `process.env.OPENCODE_ZEN_KEY` (no `VITE_*` prefix). Two reasons: (1) the key never appears in the bundled JS — viewing the source in DevTools shows nothing; (2) eliminates CORS, since the browser only talks to its own origin. Lesson #16 documents the historical context (the key WAS leaking client-side until commit `a5f8e6f`).
 - **[`src/services/manifestExtractor.ts`](src/services/manifestExtractor.ts)** — orchestrates `EXTRACTION` → JSON parse with fence-stripping fallback → Zod `safeParse` (warning-only, doesn't bomb the flow) → `transformToCargoObjects` (SHA-256 dedup + ISO 6346 validation + category detection from description keywords). Supports both V2 `sections[]` (origin/destination groups) and legacy `cargasArray[]`.
 - **[`src/services/docIndex.ts`](src/services/docIndex.ts)** + **`SYSTEM_PROMPTS.FAQ`** — the FAQ tab in `CargoAssistant` indexes `/docs/**/*.md` + `LESSONS_LEARNED.md` at build time via `import.meta.glob({ query: '?raw', eager: true })`, scores against query tokens (diacritic-stripped), and prepends top-3 excerpts to the LLM prompt.
 
@@ -81,7 +82,7 @@ PDF parsing for OCR uses `pdfjs-dist` 5.x worker + `tesseract.js` 7 (both real n
 
 ## CSP
 
-`vercel.json` defines a strict CSP **without `'unsafe-eval'`**. `worker-src 'self' blob:` is required for Tesseract and pdf.js workers. `connect-src` must include `https://opencode.ai` for the LLM router. If you add a third-party endpoint, update CSP — silent failures look like "the IA stopped responding" with no obvious cause.
+`vercel.json` defines a strict CSP **without `'unsafe-eval'`**. `worker-src 'self' blob:` is required for Tesseract and pdf.js workers. `connect-src` is `'self'` + the Supabase domains only — **OpenCode Zen is NOT in the allowlist** because the browser never calls it directly (proxy via `/api/llm-zen`). If you add a third-party endpoint that the client must hit, update CSP — silent failures look like "the IA stopped responding" with no obvious cause.
 
 ## Workflow expectations
 

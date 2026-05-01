@@ -5,6 +5,14 @@
 //   VALIDATION  → nemotron-3-super-free (Reasoning & RCA)
 //   CHAT        → big-pickle    (UX & Orchestrator)
 //   CORRECTION  → minimax-m2.5  (structured editor)
+//
+// Arquitetura:
+// - O cliente NUNCA fala direto com opencode.ai. Toda chamada vai para o
+//   proxy serverless `/api/llm-zen` (Vercel Edge function), que injeta o
+//   header `Authorization: Bearer <chave>` server-side.
+// - Razões: (1) chave fica fora do bundle JS (zero exposição em DevTools);
+//   (2) elimina CORS — o browser fala apenas com o próprio domínio.
+// - Lição #16 documenta o motivo histórico desta arquitetura.
 
 export type LLMTask = 'EXTRACTION' | 'VALIDATION' | 'CHAT' | 'CORRECTION' | 'FAQ' | 'DANFE_EXTRACTION';
 
@@ -16,7 +24,12 @@ export interface LLMResponse {
 
 interface OAIMessage { role: 'system' | 'user' | 'assistant'; content: string }
 
-const ZEN_ENDPOINT = 'https://opencode.ai/zen/v1/chat/completions';
+/**
+ * Caminho relativo do proxy server-side. Mantemos relativo (sem origin)
+ * para funcionar tanto em dev (`npm run dev` com proxy do Vite, se vier
+ * a ser configurado) quanto em produção (Vercel Edge function).
+ */
+const ZEN_PROXY_PATH = '/api/llm-zen';
 const TIMEOUT_MS   = 30000;
 const MAX_RETRIES  = 3;
 
@@ -172,23 +185,15 @@ async function callZen(
   model: string,
   temperature: number
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_OPENCODE_ZEN_KEY;
-  if (!apiKey) {
-    throw new Error('VITE_OPENCODE_ZEN_KEY não configurada no .env — obtenha sua chave em https://opencode.ai');
-  }
-
-  const endpoint = import.meta.env.VITE_OPENCODE_ZEN_ENDPOINT || ZEN_ENDPOINT;
-
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const res = await fetch(endpoint, {
+    // Chamada para o proxy serverless (mesmo origin, sem CORS, sem chave no body).
+    // O Authorization é injetado server-side por api/llm-zen.ts.
+    const res = await fetch(ZEN_PROXY_PATH, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
         messages,
@@ -199,8 +204,14 @@ async function callZen(
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`OpenCode Zen [${model}] erro ${res.status}: ${errText}`);
+      let detail = '';
+      try {
+        const errJson = await res.json();
+        detail = errJson?.error?.message ?? JSON.stringify(errJson);
+      } catch {
+        detail = await res.text().catch(() => '');
+      }
+      throw new Error(`OpenCode Zen [${model}] erro ${res.status}: ${detail}`);
     }
 
     const data = await res.json();
