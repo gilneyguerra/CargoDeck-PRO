@@ -9,6 +9,7 @@ import { logger } from '../utils/logger';
 import { useCargoStore } from '@/features/cargoStore';
 import { useReportSettings } from '@/features/reportSettingsStore';
 import { useErrorReporter } from '@/features/errorReporter';
+import { useContainerStore } from '@/features/containerStore';
 import { DatabaseService } from '@/infrastructure/DatabaseService';
 
 // Chaves auxiliares de localStorage que pertencem ao usuário corrente
@@ -28,6 +29,7 @@ function clearAllUserState() {
     useCargoStore.getState().resetToDefault();
     useReportSettings.getState().resetAll();
     useErrorReporter.getState().clear();
+    useContainerStore.getState().reset();
 
     // Chaves auxiliares de localStorage
     for (const k of USER_SCOPED_LOCAL_STORAGE_KEYS) {
