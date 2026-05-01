@@ -20,6 +20,7 @@ interface EditorRow {
   category: CargoCategory | '';
   description: string;
   identifier: string;
+  empresa: string;
   origin: string;
   destination: string;
   weightTonnes: string;
@@ -36,8 +37,8 @@ interface EditorRow {
 // Campos obrigatórios para validação
 type RowField = 'category' | 'description' | 'identifier' | 'weightTonnes' | 'lengthMeters' | 'widthMeters' | 'heightMeters';
 
-// ColKey = todas as colunas editáveis (inclui origin/destination opcionais)
-type ColKey = 'category' | 'description' | 'identifier' | 'origin' | 'destination' | 'weightTonnes' | 'lengthMeters' | 'widthMeters' | 'heightMeters';
+// ColKey = todas as colunas editáveis (inclui origin/destination/empresa opcionais)
+type ColKey = 'category' | 'description' | 'identifier' | 'empresa' | 'origin' | 'destination' | 'weightTonnes' | 'lengthMeters' | 'widthMeters' | 'heightMeters';
 
 // ─── Mapeamento de categorias ─────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ function parseUnitizadorCell(raw: string): boolean | undefined {
 function mkId() { return Math.random().toString(36).slice(2, 9); }
 
 function emptyRow(): EditorRow {
-  return { id: mkId(), category: '', description: '', identifier: '', origin: '', destination: '', weightTonnes: '', lengthMeters: '', widthMeters: '', heightMeters: '', isHazardous: false, errors: {} };
+  return { id: mkId(), category: '', description: '', identifier: '', empresa: '', origin: '', destination: '', weightTonnes: '', lengthMeters: '', widthMeters: '', heightMeters: '', isHazardous: false, errors: {} };
 }
 
 // ─── Validação ────────────────────────────────────────────────────────────────
@@ -178,8 +179,15 @@ const HEADER_MAP: Record<string, ColKey | 'perigosa' | 'unitizador' | 'skip'> = 
   'destination':            'destination',
   'quantidade':             'skip',
   'quantity':               'skip',
-  'empresa':                'skip',
-  'company':                'skip',
+  'empresa':                'empresa',
+  'empresa proprietária':   'empresa',
+  'empresa proprietaria':   'empresa',
+  'company':                'empresa',
+  'company name':           'empresa',
+  'razão social':           'empresa',
+  'razao social':           'empresa',
+  'cliente':                'empresa',
+  'owner':                  'empresa',
   'peso (t)':               'weightTonnes',
   'peso(t)':                'weightTonnes',
   'peso':                   'weightTonnes',
@@ -225,6 +233,7 @@ function sheetDataToRows(data: string[][]): EditorRow[] {
       category: cat,
       description: obj['description'] ?? '',
       identifier: obj['identifier'] ?? '',
+      empresa: obj['empresa'] ?? '',
       origin: obj['origin'] ?? '',
       destination: obj['destination'] ?? '',
       weightTonnes: (obj['weightTonnes'] ?? '').replace(',', '.'),
@@ -392,29 +401,33 @@ function GridRow({ row, rowIdx, onChange, onDelete, onTab }: RowProps) {
       <td className="border-r border-subtle/30 h-9" style={{ width: 148, minWidth: 120 }}>
         <TextCell value={row.identifier} field="identifier" rowIdx={rowIdx} colIdx={2} error={row.errors.identifier} onChange={onChange} onTab={onTab} />
       </td>
-      {/* Origem — col 3 */}
+      {/* Empresa — col 3 (opcional) */}
+      <td className="border-r border-subtle/30 h-9" style={{ width: 160, minWidth: 120 }}>
+        <TextCell value={row.empresa} field="empresa" rowIdx={rowIdx} colIdx={3} onChange={onChange} onTab={onTab} />
+      </td>
+      {/* Origem — col 4 */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 100, minWidth: 80 }}>
-        <TextCell value={row.origin} field="origin" rowIdx={rowIdx} colIdx={3} onChange={onChange} onTab={onTab} />
+        <TextCell value={row.origin} field="origin" rowIdx={rowIdx} colIdx={4} onChange={onChange} onTab={onTab} />
       </td>
-      {/* Destino — col 4 */}
+      {/* Destino — col 5 */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 100, minWidth: 80 }}>
-        <TextCell value={row.destination} field="destination" rowIdx={rowIdx} colIdx={4} onChange={onChange} onTab={onTab} />
+        <TextCell value={row.destination} field="destination" rowIdx={rowIdx} colIdx={5} onChange={onChange} onTab={onTab} />
       </td>
-      {/* Peso (t) — col 5 */}
+      {/* Peso (t) — col 6 */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 90, minWidth: 72 }}>
-        <TextCell value={row.weightTonnes} field="weightTonnes" rowIdx={rowIdx} colIdx={5} error={row.errors.weightTonnes} numeric onChange={onChange} onTab={onTab} />
+        <TextCell value={row.weightTonnes} field="weightTonnes" rowIdx={rowIdx} colIdx={6} error={row.errors.weightTonnes} numeric onChange={onChange} onTab={onTab} />
       </td>
-      {/* Comp (m) — col 6 */}
+      {/* Comp (m) — col 7 */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 90, minWidth: 72 }}>
-        <TextCell value={row.lengthMeters} field="lengthMeters" rowIdx={rowIdx} colIdx={6} error={row.errors.lengthMeters} numeric onChange={onChange} onTab={onTab} />
+        <TextCell value={row.lengthMeters} field="lengthMeters" rowIdx={rowIdx} colIdx={7} error={row.errors.lengthMeters} numeric onChange={onChange} onTab={onTab} />
       </td>
-      {/* Larg (m) — col 7 */}
+      {/* Larg (m) — col 8 */}
       <td className="border-r border-subtle/30 h-9" style={{ width: 90, minWidth: 72 }}>
-        <TextCell value={row.widthMeters} field="widthMeters" rowIdx={rowIdx} colIdx={7} error={row.errors.widthMeters} numeric onChange={onChange} onTab={onTab} />
+        <TextCell value={row.widthMeters} field="widthMeters" rowIdx={rowIdx} colIdx={8} error={row.errors.widthMeters} numeric onChange={onChange} onTab={onTab} />
       </td>
-      {/* Alt (m) — col 8 */}
+      {/* Alt (m) — col 9 */}
       <td className="h-9" style={{ width: 90, minWidth: 72 }}>
-        <TextCell value={row.heightMeters} field="heightMeters" rowIdx={rowIdx} colIdx={8} error={row.errors.heightMeters} numeric onChange={onChange} onTab={onTab} />
+        <TextCell value={row.heightMeters} field="heightMeters" rowIdx={rowIdx} colIdx={9} error={row.errors.heightMeters} numeric onChange={onChange} onTab={onTab} />
       </td>
       {/* Delete */}
       <td className="sticky right-0 bg-sidebar border-l border-subtle/40 px-1">
@@ -437,6 +450,7 @@ function GridRow({ row, rowIdx, onChange, onDelete, onTab }: RowProps) {
 const TEMPLATE_HEADERS = [
   'Descrição',
   'Código identificador',
+  'Empresa',
   'Carga Perigosa?',
   'Categoria',
   'Origem',
@@ -451,6 +465,7 @@ const TEMPLATE_HEADERS = [
 const TEMPLATE_HINTS = [
   'Ex: CONTAINER HWOC 000030 ESL AC10/163',
   'Ex: HWOC 000030',
+  'Empresa proprietária do material (opcional). Ex: Petrobras',
   'SIM ou NÃO',
   'CONTAINER | BASKET | GENERAL | EQUIPMENT | TUBULAR | HAZARDOUS | HEAVY | FRAGILE | OTHER',
   'Ex: PACU',
@@ -465,6 +480,7 @@ const TEMPLATE_HINTS = [
 const TEMPLATE_EXAMPLE = [
   'CONTAINER U2 JF 0158 ESL 286-241',
   'U2 JF 0158',
+  'Petrobras',
   'NÃO',
   'CONTAINER',
   'PACU',
@@ -490,9 +506,10 @@ async function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, TEMPLATE_HINTS, TEMPLATE_EXAMPLE]);
 
-    // Larguras de coluna
+    // Larguras de coluna (12 colunas: descrição, id, empresa, perigosa,
+    // categoria, origem, destino, qtd, peso, comp, larg, alt).
     ws['!cols'] = [
-      { wch: 50 }, { wch: 24 }, { wch: 14 }, { wch: 52 },
+      { wch: 50 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 52 },
       { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
       { wch: 14 }, { wch: 12 }, { wch: 12 },
     ];
@@ -567,11 +584,12 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
   // Foca a primeira célula com erro de uma linha (campo específico)
   const focusErrorCell = useCallback((rowIdx: number, field: RowField) => {
     // Mapa de campos para colIdx no DOM (ordem definida em GridRow):
-    //  category=0, description=1, identifier=2, origin=3, destination=4,
-    //  weightTonnes=5, lengthMeters=6, widthMeters=7, heightMeters=8
+    //  category=0, description=1, identifier=2, empresa=3, origin=4,
+    //  destination=5, weightTonnes=6, lengthMeters=7, widthMeters=8,
+    //  heightMeters=9
     const colMap: Record<RowField, number> = {
       category: 0, description: 1, identifier: 2,
-      weightTonnes: 5, lengthMeters: 6, widthMeters: 7, heightMeters: 8,
+      weightTonnes: 6, lengthMeters: 7, widthMeters: 8, heightMeters: 9,
     };
     const colIdx = colMap[field];
     setTimeout(() => {
@@ -586,7 +604,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
   }, []);
 
   const handleTab = useCallback((rowIdx: number, colIdx: number, shift: boolean) => {
-    const totalCols = 9;
+    const totalCols = 10; // category, description, identifier, empresa, origin, destination, weight, length, width, height
     let nextRow = rowIdx;
     let nextCol = colIdx + (shift ? -1 : 1);
     if (nextCol >= totalCols) { nextCol = 0; nextRow = rowIdx + 1; if (nextRow >= rows.length) setRows(prev => [...prev, emptyRow()]); }
@@ -703,7 +721,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
           // foca a célula do primeiro erro (a função focusErrorCell já faz scroll)
           const colMap: Record<RowField, number> = {
             category: 0, description: 1, identifier: 2,
-            weightTonnes: 5, lengthMeters: 6, widthMeters: 7, heightMeters: 8,
+            weightTonnes: 6, lengthMeters: 7, widthMeters: 8, heightMeters: 9,
           };
           const colIdx = colMap[firstField];
           const inputs = tableRef.current?.querySelectorAll<HTMLElement>('[data-row]');
@@ -738,6 +756,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
         origemCarga: row.origin.trim() || undefined,
         destinoCarga: row.destination.trim() || undefined,
         holdsItems: row.holdsItems,
+        empresa: row.empresa.trim() || undefined,
       };
     });
     setExtractedCargoes(cargoes);
@@ -920,6 +939,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
                 <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest" style={{ width: 140 }}>Categoria</th>
                 <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest" style={{ width: 240 }}>Descrição</th>
                 <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest" style={{ width: 148 }}>Cód. Identificador</th>
+                <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest" style={{ width: 160 }}>Empresa</th>
                 <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest" style={{ width: 100 }}>Origem</th>
                 <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest" style={{ width: 100 }}>Destino</th>
                 <th className="border-r border-subtle/30 px-3 py-2.5 text-[9px] font-black text-muted uppercase tracking-widest text-center" style={{ width: 90 }}>Peso (t)</th>
@@ -934,7 +954,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
                 <GridRow key={row.id} row={row} rowIdx={idx} onChange={handleChange} onDelete={deleteRow} onTab={handleTab} />
               ))}
               <tr className="border-b border-subtle/20">
-                <td colSpan={11} className="py-1.5 px-12">
+                <td colSpan={12} className="py-1.5 px-12">
                   <button onClick={addRow} className="flex items-center gap-2 text-[11px] font-black text-muted hover:text-brand-primary transition-colors uppercase tracking-widest py-1">
                     <Plus size={13} />
                     Adicionar linha
