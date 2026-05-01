@@ -14,7 +14,7 @@ import { ManualCargoModal } from './ManualCargoModal';
 import { AllocateCargoModal } from './AllocateCargoModal';
 import { PriorityModal } from './PriorityModal';
 import { GroupMoveModal } from './GroupMoveModal';
-import type { Cargo } from '@/domain/Cargo';
+import { canHoldItems, type Cargo } from '@/domain/Cargo';
 import type { Container } from '@/domain/Container';
 import { cn } from '@/lib/utils';
 
@@ -219,9 +219,10 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
         </button>
       </div>
 
-      {/* Inventário DANFE: visível apenas para cargas-CONTENTOR. Sempre exibido
-          (não escondido sob hover) por ser ação de fluxo principal. */}
-      {cargo.category === 'CONTAINER' && onOpenInventory && (
+      {/* Inventário DANFE: visível apenas para modais unitizadores (flag
+          declarada na criação ou default por categoria). Sempre exibido,
+          pois é ação de fluxo principal. */}
+      {canHoldItems(cargo) && onOpenInventory && (
         <button
           onClick={(e) => { e.stopPropagation(); onOpenInventory(cargo); }}
           className="flex items-center justify-center gap-1.5 min-h-[36px] px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-2 border-brand-primary/30 bg-brand-primary/5 text-brand-primary hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"

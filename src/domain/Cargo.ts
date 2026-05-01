@@ -72,5 +72,23 @@ export interface Cargo {
   origemCarga?: string;        // Local de origem (ex: "PBD - Porto da Baía de Guanabara")
   destinoCarga?: string;       // Local de destino (ex: "NS63 - Tidal Action")
   roteiroPrevisto?: string[];  // Roteiro de portos (ex: ["PBG", "PACU", "NS63"])
+
+  /**
+   * "Modal unitizador" — quando true, este modal pode receber itens fiscais
+   * (DANFE) por dentro. Categoria sozinha não basta: cestas/skids podem
+   * unitizar; um container "ferramenta" pode não unitizar. Default por
+   * runtime via `canHoldItems()` quando undefined (sem migração no DB).
+   */
+  holdsItems?: boolean;
+}
+
+/**
+ * Resolve a capacidade de unitização: respeita `cargo.holdsItems` quando
+ * declarado explicitamente; caso contrário cai no default conservador
+ * (CONTAINER e BASKET por convenção).
+ */
+export function canHoldItems(c: Pick<Cargo, 'holdsItems' | 'category'>): boolean {
+  if (c.holdsItems !== undefined) return c.holdsItems;
+  return c.category === 'CONTAINER' || c.category === 'BASKET';
 }
 

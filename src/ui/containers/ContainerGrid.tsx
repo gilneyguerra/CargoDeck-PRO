@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useContainerStore } from '@/features/containerStore';
-import type { Cargo } from '@/domain/Cargo';
+import { canHoldItems, type Cargo } from '@/domain/Cargo';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -34,16 +34,19 @@ export function ContainerGrid({ onExportSelected }: Props) {
     if (!loaded && !loading) fetchAll();
   }, [loaded, loading, fetchAll]);
 
-  // União de cargas do tipo CONTENTOR (não alocadas + alocadas em qualquer baia).
+  // União de modais unitizadores (não alocados + alocados em qualquer baia).
+  // O critério é a capacidade declarada de carregar itens (canHoldItems),
+  // não a categoria visual — assim cestas/skids/equipamentos marcados como
+  // unitizadores também aparecem aqui.
   const cargoContainers = useMemo<Cargo[]>(() => {
     const all: Cargo[] = [];
     for (const c of unallocated) {
-      if (c.category === 'CONTAINER') all.push(c);
+      if (canHoldItems(c)) all.push(c);
     }
     for (const loc of locations) {
       for (const bay of loc.bays) {
         for (const c of bay.allocatedCargoes) {
-          if (c.category === 'CONTAINER') all.push(c);
+          if (canHoldItems(c)) all.push(c);
         }
       }
     }
@@ -116,7 +119,7 @@ export function ContainerGrid({ onExportSelected }: Props) {
               Contentores
             </h1>
             <p className="text-[10px] font-mono text-muted mt-1">
-              {cargoContainers.length} {cargoContainers.length === 1 ? 'carga' : 'cargas'} CONTENTOR · {totalItemsTotal} {totalItemsTotal === 1 ? 'item DANFE' : 'itens DANFE'} totais
+              {cargoContainers.length} {cargoContainers.length === 1 ? 'modal unitizador' : 'modais unitizadores'} · {totalItemsTotal} {totalItemsTotal === 1 ? 'item DANFE' : 'itens DANFE'} totais
             </p>
           </div>
         </div>
@@ -183,11 +186,11 @@ export function ContainerGrid({ onExportSelected }: Props) {
             </div>
             {cargoContainers.length === 0 ? (
               <>
-                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum cargo CONTENTOR</h3>
+                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum modal unitizador</h3>
                 <p className="text-[11px] text-secondary leading-relaxed">
                   Volte para a página de Geração Modal de Transporte e crie cargas
-                  do tipo <strong>CONTENTOR</strong> via Excel, Manual ou IA. Elas aparecerão
-                  aqui automaticamente para receber inventário DANFE.
+                  marcadas como <strong>Modal unitizador</strong> via Excel, Manual ou IA. Elas
+                  aparecerão aqui automaticamente para receber inventário DANFE.
                 </p>
               </>
             ) : (
