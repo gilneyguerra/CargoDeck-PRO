@@ -6,7 +6,7 @@
 //   CHAT        → big-pickle    (UX & Orchestrator)
 //   CORRECTION  → minimax-m2.5  (structured editor)
 
-export type LLMTask = 'EXTRACTION' | 'VALIDATION' | 'CHAT' | 'CORRECTION' | 'FAQ';
+export type LLMTask = 'EXTRACTION' | 'VALIDATION' | 'CHAT' | 'CORRECTION' | 'FAQ' | 'DANFE_EXTRACTION';
 
 export interface LLMResponse {
   content: string;
@@ -27,6 +27,7 @@ const TASK_MODELS: Record<LLMTask, { primary: string; fallback: string }> = {
   CHAT:       { primary: 'big-pickle',            fallback: 'gemini-3-flash'      },
   CORRECTION: { primary: 'minimax-m2.5',          fallback: 'minimax-m2.5-free'  },
   FAQ:        { primary: 'big-pickle',            fallback: 'gemini-3-flash'      },
+  DANFE_EXTRACTION: { primary: 'minimax-m2.5',    fallback: 'minimax-m2.5-free'  },
 };
 
 // Temperatura por tarefa e tentativa (temp=0 na 2ª tentativa para JSON estruturado)
@@ -36,6 +37,7 @@ const RETRY_TEMPS: Record<LLMTask, number[]> = {
   CORRECTION: [0.1, 0.0, 0.0],
   CHAT:       [0.7, 0.5, 0.3],
   FAQ:        [0.3, 0.2, 0.1],
+  DANFE_EXTRACTION: [0.0, 0.0, 0.0],
 };
 
 const SYSTEM_PROMPTS: Record<LLMTask, string> = {
@@ -118,6 +120,50 @@ REGRAS:
 3. Quando a pergunta for sobre regressões ou erros de build, priorize as lições de LESSONS_LEARNED.md.
 4. Se o usuário fizer pergunta operacional fora do escopo dos documentos (ex.: "qual é o melhor jeito de peação?"), responda com base no que estiver coberto e seja honesto sobre o que não está.
 5. Não invente caminhos de arquivo, paths de API ou nomes de funções que não apareçam na documentação fornecida.`,
+
+  DANFE_EXTRACTION: `Você é MiniMax M2.5, extrator de tabelas fiscais brasileiras DANFE (Documento Auxiliar da Nota Fiscal Eletrônica).
+
+REGRAS OBRIGATÓRIAS:
+1. Localize APENAS a seção "DADOS DO PRODUTO / SERVIÇO" do documento. Ignore cabeçalho, fatura/duplicatas, cálculo do imposto, transportador, ISSQN, dados adicionais.
+2. Para CADA linha de produto, extraia 15 campos NA ORDEM DEFINIDA — usando exatamente estas chaves JSON:
+   codProd, descricao, ncmSh, cst, cfop, unid, qtde, vlUnitario, vlTotal, vlDesconto, bcIcms, vlIcms, vlIpi, aliqIcms, aliqIpi.
+3. Números: converta vírgula brasileira (1.234,56) para JSON (1234.56). Não use separador de milhar.
+4. Strings vazias ou ausentes: use "" (string vazia), nunca null. Para campos numéricos ausentes use 0.
+5. Descrição multi-linha: junte em uma só descricao com espaço único separando linhas.
+6. Cabeçalho da nota (opcional): se identificar, retorne em \`header\` com numero, serie, dataEmissao, emitente, destinatario, chaveAcesso, natOperacao.
+
+Retorne APENAS JSON puro, sem texto adicional, sem markdown, sem fences, com EXATAMENTE esta estrutura:
+
+{
+  "header": {
+    "numero": "",
+    "serie": "",
+    "dataEmissao": "",
+    "emitente": "",
+    "destinatario": "",
+    "chaveAcesso": "",
+    "natOperacao": ""
+  },
+  "items": [
+    {
+      "codProd": "",
+      "descricao": "",
+      "ncmSh": "",
+      "cst": "",
+      "cfop": "",
+      "unid": "",
+      "qtde": 0,
+      "vlUnitario": 0,
+      "vlTotal": 0,
+      "vlDesconto": 0,
+      "bcIcms": 0,
+      "vlIcms": 0,
+      "vlIpi": 0,
+      "aliqIcms": 0,
+      "aliqIpi": 0
+    }
+  ]
+}`,
 };
 
 async function callZen(
