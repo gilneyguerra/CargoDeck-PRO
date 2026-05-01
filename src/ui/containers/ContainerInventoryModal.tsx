@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useId, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, Plus, Trash2, Save, FileSpreadsheet, FileText, AlertCircle, Package,
+  X, Plus, Trash2, Save, FileSpreadsheet, FileText, AlertCircle, Package, Loader2,
 } from 'lucide-react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useContainerStore } from '@/features/containerStore';
@@ -10,6 +10,7 @@ import { reportException } from '@/features/errorReporter';
 import {
   parseDecimalBR, parseExcelToMatrix, parseCsvToMatrix,
 } from '@/lib/spreadsheetParser';
+import { extractDanfeFromPdf } from '@/services/danfeExtractor';
 import { computeVlTotal, type Container, type ContainerItem } from '@/domain/Container';
 import { cn } from '@/lib/utils';
 
@@ -17,8 +18,6 @@ interface Props {
   isOpen: boolean;
   container: Container | null;
   onClose: () => void;
-  /** Disparado pelo botão "Importar PDF DANFE". Wiring real é Fase 7. */
-  onImportPdf?: (container: Container) => void;
   /** Disparado pelo botão "Exportar PDF". Wiring real é Fase 8. */
   onExportPdf?: (container: Container) => void;
 }
@@ -190,17 +189,18 @@ export function ContainerInventoryModal({
   isOpen,
   container,
   onClose,
-  onImportPdf,
   onExportPdf,
 }: Props) {
   const titleId = useId();
   const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
   const { items, addItems, removeItems, updateItem } = useContainerStore();
   const { notify, ask } = useNotificationStore();
 
   const [rows, setRows] = useState<EditorRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [extractingPdf, setExtractingPdf] = useState(false);
 
   // Carrega rows ao abrir / trocar de container
   useEffect(() => {
@@ -280,6 +280,68 @@ export function ContainerInventoryModal({
         suggestion: 'Confirme que o arquivo é XLSX ou CSV válido com cabeçalhos compatíveis (COD.PROD., DESCRIÇÃO, NCM/SH...).',
       });
       notify('Não foi possível ler o arquivo. Veja a bandeja de erros.', 'error');
+    }
+  };
+
+  const handleImportPdfDanfe = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      notify('Selecione um arquivo PDF.', 'warning');
+      return;
+    }
+
+    setExtractingPdf(true);
+    try {
+      const result = await extractDanfeFromPdf(file);
+      if (result.items.length === 0) {
+        notify('Nenhum item DANFE encontrado no PDF.', 'warning');
+        return;
+      }
+      // Converte ContainerItemImport[] em EditorRow[] já validados
+      const imported: EditorRow[] = result.items.map(it => validateRow({
+        id: mkId(),
+        codProd: it.codProd ?? '',
+        descricao: it.descricao ?? '',
+        ncmSh: it.ncmSh ?? '',
+        cst: it.cst ?? '',
+        cfop: it.cfop ?? '',
+        unid: it.unid ?? 'UN',
+        qtde: String(it.qtde ?? 0).replace('.', ','),
+        vlUnitario: String(it.vlUnitario ?? 0).replace('.', ','),
+        vlDesconto: String(it.vlDesconto ?? 0).replace('.', ','),
+        bcIcms: String(it.bcIcms ?? 0).replace('.', ','),
+        vlIcms: String(it.vlIcms ?? 0).replace('.', ','),
+        vlIpi: String(it.vlIpi ?? 0).replace('.', ','),
+        aliqIcms: String(it.aliqIcms ?? 0).replace('.', ','),
+        aliqIpi: String(it.aliqIpi ?? 0).replace('.', ','),
+        errors: {},
+        selected: false,
+        dirty: true,
+      }));
+
+      setRows(prev => [...prev, ...imported]);
+
+      const headerInfo = result.header?.numero
+        ? ` (NF-e ${result.header.numero}${result.header.serie ? ` série ${result.header.serie}` : ''})`
+        : '';
+      const warnSuffix = result.validationWarning ? ' — revise as células destacadas em vermelho' : '';
+      notify(
+        `${imported.length} item(ns) extraído(s) via IA${headerInfo}${warnSuffix}.`,
+        result.validationWarning ? 'warning' : 'success'
+      );
+    } catch (err) {
+      reportException(err, {
+        title: 'Falha ao extrair DANFE',
+        category: 'import',
+        source: 'container-inventory-pdf-danfe',
+        suggestion: 'Confirme que o PDF é uma NF-e digital (não escaneada) e que sua chave OpenCode Zen está válida.',
+      });
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+      notify(`Não foi possível extrair o DANFE: ${msg}`, 'error');
+    } finally {
+      setExtractingPdf(false);
     }
   };
 
@@ -402,14 +464,15 @@ export function ContainerInventoryModal({
             >
               <FileSpreadsheet size={11} /> Excel
             </button>
-            {onImportPdf && (
-              <button
-                onClick={() => onImportPdf(container)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[36px]"
-              >
-                <FileText size={11} /> DANFE
-              </button>
-            )}
+            <button
+              onClick={() => pdfInputRef.current?.click()}
+              disabled={extractingPdf}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Importar PDF DANFE (NF-e) via IA"
+            >
+              {extractingPdf ? <Loader2 size={11} className="animate-spin" /> : <FileText size={11} />}
+              {extractingPdf ? 'Extraindo…' : 'DANFE'}
+            </button>
             {selectedCount > 0 && (
               <button
                 onClick={handleDeleteSelected}
@@ -439,6 +502,13 @@ export function ContainerInventoryModal({
             type="file"
             accept=".xlsx,.xls,.csv"
             onChange={handleImportFile}
+            className="hidden"
+          />
+          <input
+            ref={pdfInputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={handleImportPdfDanfe}
             className="hidden"
           />
         </div>
