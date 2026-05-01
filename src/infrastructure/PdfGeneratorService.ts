@@ -337,6 +337,12 @@ export class PdfGeneratorService {
     const margin = 10;
     const contentWidth = pageWidth - margin * 2;
 
+    // Ordena containers por nome em ordem alfabética pt-BR. Sumário e
+    // páginas seguem a mesma ordem para a navegação ser previsível.
+    const sortedContainers = [...containers].sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+    );
+
     // ── Capa ────────────────────────────────────────────────────────────────
     const HEADER_H = 28;
     doc.setFillColor(15, 23, 42); // navy escuro #0F172A
@@ -372,7 +378,7 @@ export class PdfGeneratorService {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(180, 220, 255); // cyan claro
-    doc.text(`${containers.length} unidade(s) · ${this.countTotalItems(itemsByContainer)} item(ns) totais`,
+    doc.text(`${sortedContainers.length} unidade(s) - ${this.countTotalItems(itemsByContainer)} item(ns) totais`,
       pageWidth / 2, 18, { align: 'center' });
 
     doc.setTextColor(255, 255, 255);
@@ -394,12 +400,14 @@ export class PdfGeneratorService {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     let grandTotal = 0;
-    for (const c of containers) {
+    for (const c of sortedContainers) {
       const items = itemsByContainer.get(c.id) ?? [];
       const totalC = items.reduce((s, it) => s + it.vlTotal, 0);
       grandTotal += totalC;
       if (y > pageHeight - 20) { doc.addPage(); y = 15; }
-      const label = `📦 ${c.name}  ·  ${CONTAINER_TYPE_LABELS[c.type]}  ·  ${items.length} item(ns)`;
+      // ASCII-only — emoji 📦 e middle-dot · viram mojibake na fonte default
+      // do jsPDF (Helvetica não tem suporte UTF-8 multi-byte).
+      const label = `${c.name}  -  ${CONTAINER_TYPE_LABELS[c.type]}  -  ${items.length} item(ns)`;
       doc.text(label, margin + 3, y);
       doc.text(`R$ ${totalC.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         pageWidth - margin - 3, y, { align: 'right' });
@@ -422,7 +430,7 @@ export class PdfGeneratorService {
     doc.setTextColor(0, 0, 0);
 
     // ── Por container ───────────────────────────────────────────────────────
-    for (const c of containers) {
+    for (const c of sortedContainers) {
       doc.addPage();
       y = 15;
       this.renderContainerSection(doc, c, itemsByContainer.get(c.id) ?? [], pageWidth, pageHeight, margin, contentWidth);
@@ -483,11 +491,11 @@ export class PdfGeneratorService {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text(`📦 ${container.name}`, margin + 4, y + 7);
+    doc.text(container.name, margin + 4, y + 7);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(180, 220, 255);
-    const meta = `${CONTAINER_TYPE_LABELS[container.type]} · ${container.status} · ${items.length} item(ns)`;
+    const meta = `${CONTAINER_TYPE_LABELS[container.type]} - ${container.status} - ${items.length} item(ns)`;
     doc.text(meta, pageWidth - margin - 4, y + 7, { align: 'right' });
     y += 14;
     doc.setTextColor(0, 0, 0);
@@ -611,10 +619,10 @@ export class PdfGeneratorService {
     doc.rect(margin, y, contentWidth, 6, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
-    doc.text(`SUBTOTAL · ${items.length} item(ns)`, margin + 2, y + 4);
-    const totalLabel = `Qtde: ${subQtde.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} · `
-      + `Total: R$ ${subTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · `
-      + `ICMS: R$ ${subIcms.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · `
+    doc.text(`SUBTOTAL - ${items.length} item(ns)`, margin + 2, y + 4);
+    const totalLabel = `Qtde: ${subQtde.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} - `
+      + `Total: R$ ${subTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - `
+      + `ICMS: R$ ${subIcms.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - `
       + `IPI: R$ ${subIpi.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     doc.text(totalLabel, pageWidth - margin - 2, y + 4, { align: 'right' });
   }
