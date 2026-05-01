@@ -2,8 +2,8 @@ import { useState, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle } from 'lucide-react';
-import type { CargoCategory } from '@/domain/Cargo';
+import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle, FolderOpen } from 'lucide-react';
+import { canHoldItems, type CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +40,12 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   const [isRemovable, setIsRemovable] = useState(false);
   const [color, setColor] = useState('#3b82f6');
   const [format, setFormat] = useState<'Retangular' | 'Quadrado' | 'Tubular'>('Retangular');
+  // undefined = "siga o default da categoria"; true/false = override explícito.
+  const [holdsItems, setHoldsItems] = useState<boolean | undefined>(undefined);
+
+  // Resolve o estado efetivo do switch para a UI: respeita override do
+  // usuário, senão cai no default conservador por categoria.
+  const effectiveHoldsItems = canHoldItems({ holdsItems, category });
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -70,11 +76,13 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
       isRemovable,
       color: finalIsHazardous ? '#a855f7' : color, // perigosa: roxo
       format,
+      holdsItems,
     });
 
     setDescription(''); setIdentifier(''); setWeightTonnes(''); setLengthMeters('');
     setWidthMeters(''); setHeightMeters(''); setQuantity(1); setCategory('GENERAL');
     setOrigin(''); setDestination(''); setIsHazardous(false); setFormat('Retangular');
+    setHoldsItems(undefined);
     onClose();
   };
 
@@ -259,6 +267,41 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                 <div className={cn(
                   'absolute top-1 w-5 h-5 bg-white rounded-full shadow-high transition-all duration-300',
                   isHazardous ? 'left-8' : 'left-1'
+                )} />
+              </div>
+            </div>
+
+            {/* Toggle Modal Unitizador — declara explicitamente se este modal
+                pode receber itens fiscais (DANFE) por dentro. Default segue
+                a categoria via canHoldItems(); override do usuário grava no
+                campo holdsItems para a flag persistir. */}
+            <div
+              onClick={() => setHoldsItems(!effectiveHoldsItems)}
+              className={cn(
+                'flex items-center justify-between p-5 border-2 rounded-3xl cursor-pointer transition-all shadow-low',
+                effectiveHoldsItems
+                  ? 'border-brand-primary bg-brand-primary/10 shadow-brand-primary/20'
+                  : 'bg-sidebar border-subtle hover:border-brand-primary/40'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <FolderOpen size={20} className={cn('shrink-0', effectiveHoldsItems ? 'text-brand-primary' : 'text-muted')} />
+                <div className="flex flex-col gap-1">
+                  <span className={cn('text-xs font-black uppercase tracking-widest leading-none', effectiveHoldsItems ? 'text-brand-primary' : 'text-primary')}>
+                    Modal unitizador? {effectiveHoldsItems ? 'SIM' : 'NÃO'}
+                  </span>
+                  <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter opacity-80">
+                    Permite alocar itens fiscais (DANFE) por dentro deste modal
+                  </span>
+                </div>
+              </div>
+              <div className={cn(
+                'w-14 h-7 rounded-full transition-all duration-500 relative shadow-inner',
+                effectiveHoldsItems ? 'bg-brand-primary shadow-brand-primary/40' : 'bg-strong/40'
+              )}>
+                <div className={cn(
+                  'absolute top-1 w-5 h-5 bg-white rounded-full shadow-high transition-all duration-300',
+                  effectiveHoldsItems ? 'left-8' : 'left-1'
                 )} />
               </div>
             </div>
