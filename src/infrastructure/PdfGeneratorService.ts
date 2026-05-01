@@ -1,5 +1,7 @@
 import type { CargoLocation } from '@/domain/Location';
 import type { Cargo } from '@/domain/Cargo';
+import type { Container, ContainerItem } from '@/domain/Container';
+import { CONTAINER_TYPE_LABELS } from '@/domain/Container';
 import { useReportSettings } from '@/features/reportSettingsStore';
 
 /**
@@ -304,6 +306,335 @@ export class PdfGeneratorService {
     atendimento?: string | null
   ): Promise<void> {
     const blob = await this.generateBlob(locations, shipName, atendimento);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONTAINERS DANFE — Relatório estruturado em árvore
+  // (Container → Itens). Layout independente do plano de cargas offshore.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Gera Blob do PDF consolidado de containers DANFE. Cada container ocupa
+   * uma seção com cabeçalho destacado e tabela compacta das 15 colunas.
+   * Page break automático quando próximo do fim da página.
+   */
+  static async generateContainersBlob(
+    containers: Container[],
+    itemsByContainer: Map<string, ContainerItem[]>
+  ): Promise<Blob> {
+    const { default: jsPDF } = await import('jspdf');
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = 297;
+    const pageHeight = 210;
+    const margin = 10;
+    const contentWidth = pageWidth - margin * 2;
+
+    // ── Capa ────────────────────────────────────────────────────────────────
+    const HEADER_H = 28;
+    doc.setFillColor(15, 23, 42); // navy escuro #0F172A
+    doc.rect(0, 0, pageWidth, HEADER_H, 'F');
+
+    const settings = useReportSettings.getState();
+    if (settings.logoBase64) {
+      try {
+        const img = new Image();
+        img.src = settings.logoBase64;
+        const ratio = img.naturalWidth && img.naturalHeight
+          ? img.naturalWidth / img.naturalHeight
+          : 2;
+        const maxLogoH = HEADER_H - 6;
+        const maxLogoW = 50;
+        let logoW = maxLogoH * ratio;
+        let logoH = maxLogoH;
+        if (logoW > maxLogoW) {
+          logoW = maxLogoW;
+          logoH = maxLogoW / ratio;
+        }
+        doc.addImage(settings.logoBase64, 'PNG', margin, (HEADER_H - logoH) / 2, logoW, logoH);
+      } catch {
+        /* segue sem logo */
+      }
+    }
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('RELATÓRIO DE CONTAINERS', pageWidth / 2, 12, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(180, 220, 255); // cyan claro
+    doc.text(`${containers.length} unidade(s) · ${this.countTotalItems(itemsByContainer)} item(ns) totais`,
+      pageWidth / 2, 18, { align: 'center' });
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      pageWidth - margin, 21, { align: 'right' });
+
+    let y = HEADER_H + 6;
+    doc.setTextColor(0, 0, 0);
+
+    // ── Sumário ─────────────────────────────────────────────────────────────
+    doc.setFillColor(230, 235, 255);
+    doc.rect(margin, y, contentWidth, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('SUMÁRIO', margin + 3, y + 5.5);
+    y += 11;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    let grandTotal = 0;
+    for (const c of containers) {
+      const items = itemsByContainer.get(c.id) ?? [];
+      const totalC = items.reduce((s, it) => s + it.vlTotal, 0);
+      grandTotal += totalC;
+      if (y > pageHeight - 20) { doc.addPage(); y = 15; }
+      const label = `📦 ${c.name}  ·  ${CONTAINER_TYPE_LABELS[c.type]}  ·  ${items.length} item(ns)`;
+      doc.text(label, margin + 3, y);
+      doc.text(`R$ ${totalC.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        pageWidth - margin - 3, y, { align: 'right' });
+      y += 5;
+    }
+
+    // Total geral
+    if (y > pageHeight - 15) { doc.addPage(); y = 15; }
+    y += 3;
+    doc.setDrawColor(100, 100, 100);
+    doc.setLineWidth(0.2);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('TOTAL GERAL', margin + 3, y);
+    doc.setTextColor(20, 120, 80);
+    doc.text(`R$ ${grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      pageWidth - margin - 3, y, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+
+    // ── Por container ───────────────────────────────────────────────────────
+    for (const c of containers) {
+      doc.addPage();
+      y = 15;
+      this.renderContainerSection(doc, c, itemsByContainer.get(c.id) ?? [], pageWidth, pageHeight, margin, contentWidth);
+    }
+
+    // ── Rodapé com assinatura ───────────────────────────────────────────────
+    const lastPageY = pageHeight - 18;
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(100, 100, 100);
+    const sigCenterX = pageWidth / 2;
+    const sigLineHalf = 45;
+    doc.line(sigCenterX - sigLineHalf, lastPageY, sigCenterX + sigLineHalf, lastPageY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    const signatoryName = settings.signatoryName.trim();
+    const signatoryRole = settings.signatoryRole.trim();
+    if (signatoryName || signatoryRole) {
+      const sigLabel = signatoryName && signatoryRole
+        ? `${signatoryName} — ${signatoryRole}`
+        : signatoryName || signatoryRole;
+      doc.text(sigLabel, sigCenterX, lastPageY + 5, { align: 'center' });
+    } else {
+      doc.setTextColor(140, 140, 140);
+      doc.text('Responsável (configure em "Configurar Relatório")',
+        sigCenterX, lastPageY + 5, { align: 'center' });
+    }
+
+    return doc.output('blob');
+  }
+
+  /** Soma a contagem de itens em todos os containers. */
+  private static countTotalItems(itemsByContainer: Map<string, ContainerItem[]>): number {
+    let total = 0;
+    for (const items of itemsByContainer.values()) total += items.length;
+    return total;
+  }
+
+  /**
+   * Desenha a seção de um container individual no PDF: cabeçalho destacado +
+   * tabela compacta das 15 colunas + rodapé totalizador.
+   */
+  private static renderContainerSection(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    doc: any,
+    container: Container,
+    items: ContainerItem[],
+    pageWidth: number,
+    pageHeight: number,
+    margin: number,
+    contentWidth: number
+  ): void {
+    let y = 15;
+
+    // Cabeçalho do container (estilo "pasta")
+    doc.setFillColor(30, 60, 120); // navy mais claro
+    doc.rect(margin, y, contentWidth, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(`📦 ${container.name}`, margin + 4, y + 7);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(180, 220, 255);
+    const meta = `${CONTAINER_TYPE_LABELS[container.type]} · ${container.status} · ${items.length} item(ns)`;
+    doc.text(meta, pageWidth - margin - 4, y + 7, { align: 'right' });
+    y += 14;
+    doc.setTextColor(0, 0, 0);
+
+    if (items.length === 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('(Container vazio — sem itens cadastrados.)', margin + 4, y + 4);
+      doc.setTextColor(0, 0, 0);
+      return;
+    }
+
+    // Header da tabela — 15 colunas compactas + cód
+    const cols: { label: string; w: number; align?: 'right' | 'left' }[] = [
+      { label: 'COD.PROD',  w: 22 },
+      { label: 'DESCRIÇÃO', w: 70 },
+      { label: 'NCM',       w: 14 },
+      { label: 'CST',       w: 8 },
+      { label: 'CFOP',      w: 10 },
+      { label: 'UND',       w: 8 },
+      { label: 'QTDE',      w: 12, align: 'right' },
+      { label: 'VL.UNIT',   w: 16, align: 'right' },
+      { label: 'VL.TOTAL',  w: 18, align: 'right' },
+      { label: 'DESC',      w: 12, align: 'right' },
+      { label: 'BC.ICMS',   w: 14, align: 'right' },
+      { label: 'VL.ICMS',   w: 14, align: 'right' },
+      { label: 'V.IPI',     w: 12, align: 'right' },
+      { label: 'AL.IC',     w: 9,  align: 'right' },
+      { label: 'AL.IP',     w: 9,  align: 'right' },
+    ];
+
+    // Cabeçalho de colunas
+    doc.setFillColor(26, 40, 71);
+    doc.rect(margin, y, contentWidth, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    let x = margin + 1;
+    for (const col of cols) {
+      const tx = col.align === 'right' ? x + col.w - 1 : x + 1;
+      doc.text(col.label, tx, y + 4, { align: col.align ?? 'left' });
+      x += col.w;
+    }
+    y += 7;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+
+    // Linhas
+    let subQtde = 0;
+    let subTotal = 0;
+    let subIcms = 0;
+    let subIpi = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      // Page break se necessário
+      if (y > pageHeight - 25) {
+        doc.addPage();
+        y = 15;
+        // Re-renderiza cabeçalho da tabela na nova página
+        doc.setFillColor(26, 40, 71);
+        doc.rect(margin, y, contentWidth, 6, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        let xh = margin + 1;
+        for (const col of cols) {
+          const tx = col.align === 'right' ? xh + col.w - 1 : xh + 1;
+          doc.text(col.label, tx, y + 4, { align: col.align ?? 'left' });
+          xh += col.w;
+        }
+        y += 7;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+      }
+
+      // Zebra striping
+      if (i % 2 === 0) {
+        doc.setFillColor(245, 247, 252);
+        doc.rect(margin, y, contentWidth, 5, 'F');
+      }
+
+      doc.setFontSize(6);
+      let cx = margin + 1;
+      const cells = [
+        it.codProd,
+        (it.descricao ?? '').slice(0, 90),
+        it.ncmSh,
+        it.cst,
+        it.cfop,
+        it.unid,
+        it.qtde.toLocaleString('pt-BR', { maximumFractionDigits: 4 }),
+        it.vlUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+        it.vlTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        it.vlDesconto > 0 ? it.vlDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-',
+        it.bcIcms.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        it.vlIcms.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        it.vlIpi.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        it.aliqIcms.toFixed(2),
+        it.aliqIpi.toFixed(2),
+      ];
+      for (let c = 0; c < cols.length; c++) {
+        const col = cols[c];
+        const tx = col.align === 'right' ? cx + col.w - 1 : cx + 1;
+        doc.text(String(cells[c] ?? ''), tx, y + 3.5, { align: col.align ?? 'left' });
+        cx += col.w;
+      }
+      y += 5;
+
+      subQtde += it.qtde;
+      subTotal += it.vlTotal;
+      subIcms += it.vlIcms;
+      subIpi += it.vlIpi;
+    }
+
+    // Rodapé totalizador da tabela
+    if (y > pageHeight - 12) { doc.addPage(); y = 15; }
+    y += 1;
+    doc.setFillColor(220, 230, 255);
+    doc.rect(margin, y, contentWidth, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.text(`SUBTOTAL · ${items.length} item(ns)`, margin + 2, y + 4);
+    const totalLabel = `Qtde: ${subQtde.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} · `
+      + `Total: R$ ${subTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · `
+      + `ICMS: R$ ${subIcms.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · `
+      + `IPI: R$ ${subIpi.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    doc.text(totalLabel, pageWidth - margin - 2, y + 4, { align: 'right' });
+  }
+
+  /**
+   * Executa o download do relatório de containers. Filename pt-BR formatado.
+   */
+  static async executeContainersExport(
+    containers: Container[],
+    itemsByContainer: Map<string, ContainerItem[]>
+  ): Promise<void> {
+    const blob = await this.generateContainersBlob(containers, itemsByContainer);
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const filename = `Containers_${dd}${mm}${yyyy}_${hh}${min}.pdf`;
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
