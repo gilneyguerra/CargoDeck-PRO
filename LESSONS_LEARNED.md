@@ -84,6 +84,21 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Regra geral**: nunca lançar exceções no top-level de um módulo de infraestrutura compartilhado (`lib/`, `services/`, `infrastructure/`). Se a env é obrigatória, falhe na primeira chamada acionável, com mensagem explicando qual env definir e onde.
 - **Contexto**: Ocorrido em `src/lib/supabase.ts` durante a Fase 0 da refatoração v2.0 (commit 22a723f). Revertido em c3fc7ff com fallback de credenciais demo + warn.
 
+## 15. Postgres NUMERIC Retornado como string pelo `supabase-js`
+- **Problema**: campos `numeric(15,2)` / `numeric(15,4)` no Postgres voltam para o JS às vezes como `string` (ex.: `"14200.89"`), não `number`. Atribuir direto a um campo tipado como `number` em TypeScript passa silenciosamente (porque o `supabase-js` retorna `any`/`unknown`) e quebra em runtime quando você tenta `.toFixed()`, somar com outros números, ou comparar com `>=`.
+- **Causa**: PostgreSQL `numeric` é arbitrário-precision; o driver não converte para `Number` automaticamente porque isso causaria perda de precisão em valores grandes. Comportamento documentado mas surpreende quem espera comportamento JSON-friendly.
+- **Solução**: em todo boundary `Postgres → JS`, normalizar via helper:
+  ```typescript
+  function toNum(v: number | string | null | undefined): number {
+    if (v === null || v === undefined) return 0;
+    const n = typeof v === 'number' ? v : parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  ```
+  Aplicar em cada campo numérico no `rowToDomain` mapper (não confiar na coerce automática do TS).
+- **Regra geral**: nunca anote o tipo de retorno do Supabase como `number` direto. Tipe a interface `*Row` com `number | string` para os campos NUMERIC e converta no mapper. Isso captura o problema na compilação e força o tratamento explícito.
+- **Contexto**: Ocorreu durante a implementação da Fase 3 do DANFE — `container_items.qtde` (numeric 15,4) e `vl_unitario` (numeric 15,4) retornavam strings em alguns endpoints. `ContainerDatabaseService.rowToItem` foi escrito desde o início com `toNum()` para evitar a regressão.
+
 ## 14. Índice `i` Não Utilizado em `.map((item, i) => …)` (TS6133 — `noUnusedParameters`)
 - **Problema**: Erro `TS6133: 'i' is declared but its value is never read.` no Vercel build.
 - **Causa**: Com `tsconfig` em `strict: true` + `noUnusedParameters: true` (configuração atual desde a Fase 0 da v2.0), TypeScript marca **qualquer parâmetro nomeado** que não seja usado no corpo da função. O padrão clássico `array.map((item, i) => { … })` quebra quando `i` foi adicionado para um `key={i}` ou `animationDelay={i * X}` que depois foi removido durante refactor — mas ninguém apagou o `i` da assinatura. A lição #5 cobre TS6133 em geral; esta é a variante específica do segundo parâmetro de `.map`/`.forEach`/`.filter` que escapa em revisões rápidas porque "parece código padrão React".
