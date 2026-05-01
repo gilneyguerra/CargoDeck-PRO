@@ -84,6 +84,18 @@ Este documento registra erros técnicos recorrentes e suas soluções para evita
 - **Regra geral**: nunca lançar exceções no top-level de um módulo de infraestrutura compartilhado (`lib/`, `services/`, `infrastructure/`). Se a env é obrigatória, falhe na primeira chamada acionável, com mensagem explicando qual env definir e onde.
 - **Contexto**: Ocorrido em `src/lib/supabase.ts` durante a Fase 0 da refatoração v2.0 (commit 22a723f). Revertido em c3fc7ff com fallback de credenciais demo + warn.
 
+## 17. "Failed to fetch dynamically imported module" Após Deploy
+- **Problema**: Usuário com aba aberta vê tela vermelha do ErrorBoundary com mensagem `Failed to fetch dynamically imported module: https://.../assets/ContainerInventoryModal-Daichbl6.js` ao tentar abrir uma rota lazy-loaded. Reproduz facilmente: deploy uma vez → manter aba aberta → fazer outro deploy → tentar acessar feature lazy-loaded.
+- **Causa**: o Vite gera **hash de conteúdo** em cada chunk (`assets/ContainerInventoryModal-{hash}.js`). A cada build o hash muda. O `index.html` aponta para o conjunto exato de hashes daquele build. Quando o browser tem `index.html` antigo em cache mas o Vercel CDN já purgou os chunks correspondentes (substituídos pelos novos), o `import('./containers/ContainerInventoryModal')` lança porque o arquivo não existe mais naquele hash.
+- **Solução em duas camadas**:
+  1. **Cache headers no Vercel** (`vercel.json`):
+     - `index.html` → `Cache-Control: public, max-age=0, must-revalidate` (força browser a sempre validar com o servidor antes de servir).
+     - `assets/*` → `Cache-Control: public, max-age=31536000, immutable` (1 ano, imutável — cada hash é único, então cachear pra sempre é seguro e ainda traz performance).
+  2. **ErrorBoundary com auto-reload** (`src/components/ErrorBoundary.tsx`): detecta erros cujo `message` contenha `Failed to fetch dynamically imported module` ou `ChunkLoadError` ou `Loading chunk N failed`, e dispara `window.location.reload()` na primeira ocorrência da sessão (com flag em `sessionStorage` para evitar loop infinito se o problema persistir). Se o reload não resolver, mostra UI azul amigável "Versão atualizada disponível — Recarregar agora" em vez da tela vermelha de erro.
+- **Regra geral**: qualquer SPA com code splitting precisa dessas duas camadas. A primeira sozinha previne o problema no fluxo normal; a segunda é o salvação para usuários com aba aberta há horas/dias durante uma janela de deploy.
+- **Não fazer**: usar `Cache-Control: no-store` no `index.html` (zera o cache mas perde validação 304); cachear `index.html` por mais de alguns segundos; tentar versionar `index.html` no nome do arquivo (Vercel/Vite não suportam de forma idiomática).
+- **Contexto**: ocorreu em 2026-05-01 com `ContainerInventoryModal-Daichbl6.js` (commit `14d4ac6`) sendo requisitado pelo browser do usuário após o deploy de `01239e4` (que renomeou o chunk). Corrigido com headers no `vercel.json` + ErrorBoundary específico para chunk-load-error.
+
 ## 16. Chamadas LLM Direto do Browser Vazam a Chave + Quebram em CORS
 - **Problema duplo, mesmo bug arquitetural:**
   1. **Segurança**: a chave `VITE_OPENCODE_ZEN_KEY` foi prefixada com `VITE_*`, o que faz o Vite **injetar o valor literal no bundle JavaScript do cliente**. Resultado: qualquer pessoa que visita o site, abre DevTools → Sources → `assets/llmRouter-*.js`, encontra a chave em texto puro e pode usá-la livremente até a cota acabar.

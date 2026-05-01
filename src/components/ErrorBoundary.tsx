@@ -17,12 +17,31 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
     hasError: boolean;
     error: AppError | null;
+    isChunkLoadError: boolean;
 }
+
+/**
+ * Detecta erros de carregamento de chunk lazy — geralmente causados por
+ * deploy novo enquanto o usuário tem uma aba antiga aberta. O Vite gera
+ * hashes únicos para cada chunk; se o navegador tem o `index.html` antigo
+ * em cache mas o Vercel já purgou os chunks correspondentes, o `import()`
+ * dinâmico falha com a mensagem abaixo.
+ */
+function isChunkLoadError(error: unknown): boolean {
+    if (!error) return false;
+    const msg = error instanceof Error ? error.message : String(error);
+    return /Failed to fetch dynamically imported module/i.test(msg)
+        || /ChunkLoadError/i.test(msg)
+        || /Loading chunk \d+ failed/i.test(msg);
+}
+
+const RELOAD_FLAG = 'cargodeck-chunk-reload-attempted';
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     public state: ErrorBoundaryState = {
         hasError: false,
         error: null,
+        isChunkLoadError: false,
     };
 
     /**
@@ -30,8 +49,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
      * Ele atualiza o estado para que a próxima renderização exiba a UI de fallback.
      */
     public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-        // Atualiza o estado para que a próxima renderização mostre a UI de fallback.
-        return { hasError: true, error: handleApplicationError(error, { code: ErrorCodes.COMPONENT_RENDER_ERROR }) };
+        const chunk = isChunkLoadError(error);
+
+        // Auto-reload no primeiro chunk-load-error da sessão. Se já tentou
+        // recarregar e o erro persiste, mostra a UI manual (evita loop).
+        if (chunk) {
+            try {
+                if (!sessionStorage.getItem(RELOAD_FLAG)) {
+                    sessionStorage.setItem(RELOAD_FLAG, '1');
+                    window.location.reload();
+                }
+            } catch { /* sessionStorage indisponível: cai pra UI manual */ }
+        }
+
+        return {
+            hasError: true,
+            error: handleApplicationError(error, { code: ErrorCodes.COMPONENT_RENDER_ERROR }),
+            isChunkLoadError: chunk,
+        };
     }
 
     /**
@@ -47,12 +82,49 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         }
     }
 
+    private handleHardReload = () => {
+        try { sessionStorage.removeItem(RELOAD_FLAG); } catch { /* noop */ }
+        // location.reload() faz GET com cache normal. Se o problema persiste,
+        // o usuário pode usar Ctrl+Shift+R; aqui usamos reload simples para
+        // não confundir com mudanças de comportamento.
+        window.location.reload();
+    };
+
     public render(): ReactNode {
         if (this.state.hasError) {
             // Você pode renderizar qualquer UI de fallback customizada
             if (this.props.fallback) {
                 return this.props.fallback;
             }
+
+            // Caso especial: erro de carregamento de chunk → mensagem amigável
+            // explicando que é uma atualização do app, não um bug.
+            if (this.state.isChunkLoadError) {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-blue-50 text-slate-800 p-4 font-sans">
+                        <div className="max-w-md text-center space-y-4">
+                            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-3xl">
+                                🔄
+                            </div>
+                            <h1 className="text-2xl font-bold">Versão atualizada disponível</h1>
+                            <p className="text-base text-slate-600 leading-relaxed">
+                                Uma nova versão do CargoDeck Plan foi publicada enquanto você navegava.
+                                Recarregue para continuar.
+                            </p>
+                            <button
+                                onClick={this.handleHardReload}
+                                className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition-colors font-bold"
+                            >
+                                Recarregar agora
+                            </button>
+                            <p className="text-xs text-slate-500 mt-6">
+                                Se o problema persistir, pressione <kbd className="px-1.5 py-0.5 bg-slate-200 rounded text-[10px] font-mono">Ctrl + Shift + R</kbd>.
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 text-red-800 p-4">
                     <h1 className="text-3xl font-bold mb-4">Ocorreu um erro inesperado!</h1>
