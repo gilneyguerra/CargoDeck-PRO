@@ -6,11 +6,15 @@ import {
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
+import { reportException } from '@/features/errorReporter';
+import { useContainerStore } from '@/features/containerStore';
+import { PdfGeneratorService } from '@/infrastructure/PdfGeneratorService';
 import { ManualCargoModal } from './ManualCargoModal';
 import { AllocateCargoModal } from './AllocateCargoModal';
 import { PriorityModal } from './PriorityModal';
 import { GroupMoveModal } from './GroupMoveModal';
 import type { Cargo } from '@/domain/Cargo';
+import type { Container } from '@/domain/Container';
 import { cn } from '@/lib/utils';
 
 // Lazy: parsers Excel/CSV (SheetJS via CDN) e LLM Assistant ficam fora do
@@ -20,6 +24,17 @@ const CargoEditorModal = lazy(() =>
 );
 const CargoAssistant = lazy(() =>
   import('./CargoAssistant').then(m => ({ default: m.CargoAssistant }))
+);
+
+// Lazy: feature DANFE — só carrega quando o usuário entra na visão de containers.
+const ContainerGrid = lazy(() =>
+  import('./containers/ContainerGrid').then(m => ({ default: m.ContainerGrid }))
+);
+const ContainerModal = lazy(() =>
+  import('./containers/ContainerModal').then(m => ({ default: m.ContainerModal }))
+);
+const ContainerInventoryModal = lazy(() =>
+  import('./containers/ContainerInventoryModal').then(m => ({ default: m.ContainerInventoryModal }))
 );
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
@@ -224,6 +239,13 @@ export function ModalGenerationPage() {
   const [showAssistant, setShowAssistant] = useState(false);
   const [showGroupMove, setShowGroupMove] = useState(false);
 
+  // Containers (feature DANFE)
+  const [containersView, setContainersView] = useState(false);
+  const [containerModalOpen, setContainerModalOpen] = useState(false);
+  const [editingContainer, setEditingContainer] = useState<Container | null>(null);
+  const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
+  const containerStore = useContainerStore();
+
   // Filtro persistido (aceita qualquer string: 'all' | 'priority' | 'cat:<CATEGORIA>')
   const [filterTab, setFilterTab] = useState<FilterTab>(() => {
     try {
@@ -362,12 +384,44 @@ export function ModalGenerationPage() {
     setShowAllocate(true);
   };
 
-  const handleGroupContainer = () => {
-    if (selectedCount < 2) {
-      notify('Selecione pelo menos 2 cargas para agrupar em um contentor.', 'warning');
-      return;
+  // ─── Containers (DANFE) ─────────────────────────────────────────────────
+
+  const openContainersView = () => {
+    clearCargoSelection();
+    setContainersView(true);
+  };
+
+  const handleCreateContainer = () => {
+    setEditingContainer(null);
+    setContainerModalOpen(true);
+  };
+
+  const handleEditContainer = (c: Container) => {
+    setEditingContainer(c);
+    setContainerModalOpen(true);
+  };
+
+  const handleOpenInventory = (c: Container) => {
+    setInventoryContainer(c);
+  };
+
+  const handleExportContainersPdf = async (containers: Container[]) => {
+    if (containers.length === 0) return;
+    try {
+      const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
+      for (const c of containers) {
+        itemsByContainer.set(c.id, containerStore.getItemsByContainer(c.id));
+      }
+      await PdfGeneratorService.executeContainersExport(containers, itemsByContainer);
+      notify(`Relatório PDF gerado com ${containers.length} container(s).`, 'success');
+    } catch (err) {
+      reportException(err, {
+        title: 'Falha ao gerar PDF de containers',
+        category: 'runtime',
+        source: 'containers-pdf-export',
+      });
+      notify('Não foi possível gerar o PDF.', 'error');
     }
-    notify('Agrupamento em contentor — funcionalidade em planejamento.', 'info');
   };
 
   const handleChangePriority = () => {
@@ -381,6 +435,56 @@ export function ModalGenerationPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
+    containersView ? (
+      <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
+        {/* Toolbar fina com voltar */}
+        <div className="px-6 py-3 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3">
+          <button
+            onClick={() => setContainersView(false)}
+            title="Voltar para inventário de cargas offshore"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px]"
+          >
+            <ArrowLeft size={12} /> Cargas
+          </button>
+          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted">|</span>
+          <span className="text-[10px] font-mono text-muted">Módulo DANFE · containers fiscais</span>
+        </div>
+
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center text-[11px] font-mono text-muted">
+            Carregando módulo de contentores…
+          </div>
+        }>
+          <ContainerGrid
+            onCreate={handleCreateContainer}
+            onEdit={handleEditContainer}
+            onOpenInventory={handleOpenInventory}
+            onExportSelected={handleExportContainersPdf}
+          />
+        </Suspense>
+
+        {containerModalOpen && (
+          <Suspense fallback={null}>
+            <ContainerModal
+              isOpen={containerModalOpen}
+              editing={editingContainer}
+              onClose={() => { setContainerModalOpen(false); setEditingContainer(null); }}
+            />
+          </Suspense>
+        )}
+
+        {inventoryContainer && (
+          <Suspense fallback={null}>
+            <ContainerInventoryModal
+              isOpen={!!inventoryContainer}
+              container={inventoryContainer}
+              onClose={() => setInventoryContainer(null)}
+              onExportPdf={(c) => handleExportContainersPdf([c])}
+            />
+          </Suspense>
+        )}
+      </div>
+    ) : (
     <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
       {/* Toolbar Header */}
       <div className="px-6 py-4 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3 flex-wrap">
@@ -447,6 +551,13 @@ export function ModalGenerationPage() {
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-all min-h-[40px] shadow-md"
           >
             <Plus size={12} /> Manual
+          </button>
+          <button
+            onClick={openContainersView}
+            title="Gerenciar Contentores (cargas DANFE)"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px]"
+          >
+            <Package size={12} /> Contentores
           </button>
 
           {/* Toggle do Assistente IA */}
@@ -516,12 +627,12 @@ export function ModalGenerationPage() {
                 Mover
               </button>
               <button
-                onClick={handleGroupContainer}
+                onClick={openContainersView}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary transition-all min-h-[36px]"
-                title="Agrupar em Contentor"
+                title="Abrir gerenciamento de contentores DANFE"
               >
-                <Boxes size={12} />
-                Agrupar
+                <Package size={12} />
+                Contentores
               </button>
               <button
                 onClick={handleChangePriority}
@@ -713,5 +824,6 @@ export function ModalGenerationPage() {
       )}
       <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
+    )
   );
 }
