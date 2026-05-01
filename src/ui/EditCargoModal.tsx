@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCargoStore } from '@/features/cargoStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { X, Box, Settings, Palette, Info } from 'lucide-react';
-import type { Cargo } from '@/domain/Cargo';
+import { X, Box, Settings, Palette, Info, FolderOpen } from 'lucide-react';
+import { canHoldItems, type Cargo } from '@/domain/Cargo';
 import type { CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
 
@@ -28,6 +28,11 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
   const [isRemovable, setIsRemovable] = useState(false);
   const [format, setFormat] = useState<'Retangular' | 'Quadrado' | 'Tubular'>('Retangular');
   const [color, setColor] = useState('#3b82f6');
+  const [holdsItems, setHoldsItems] = useState<boolean | undefined>(undefined);
+
+  // Resolve estado efetivo do switch: respeita override explícito; senão
+  // cai no default por categoria (CONTAINER/BASKET → true).
+  const effectiveHoldsItems = canHoldItems({ holdsItems, category });
 
   useEffect(() => {
     if (cargo) {
@@ -35,6 +40,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
       setLengthMeters(cargo.lengthMeters); setWidthMeters(cargo.widthMeters); setHeightMeters(cargo.heightMeters || '');
       setQuantity(cargo.quantity); setCategory(cargo.category); setObservations(cargo.observations || '');
       setIsRemovable(cargo.isRemovable || false); setFormat(cargo.format || 'Retangular'); setColor(cargo.color || '#3b82f6');
+      setHoldsItems(cargo.holdsItems);
     }
   }, [cargo]);
 
@@ -43,7 +49,7 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
     const w = Number(weightTonnes); const l = Number(lengthMeters); const wi = Number(widthMeters);
     const h = Number(heightMeters); const q = Number(quantity);
     if (!description.trim() || !identifier.trim() || isNaN(w) || isNaN(l) || isNaN(wi) || isNaN(h) || isNaN(q)) return;
-    updateCargo(cargo.id, { description: description.trim(), identifier: identifier.trim(), weightTonnes: w, lengthMeters: l, widthMeters: wi, heightMeters: h, quantity: q, category, observations: observations.trim() || undefined, isRemovable, format, color });
+    updateCargo(cargo.id, { description: description.trim(), identifier: identifier.trim(), weightTonnes: w, lengthMeters: l, widthMeters: wi, heightMeters: h, quantity: q, category, observations: observations.trim() || undefined, isRemovable, format, color, holdsItems });
     onClose();
   };
 
@@ -209,6 +215,40 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
                         <div className={cn(
                             "absolute top-1 w-5 h-5 bg-white rounded-full shadow-high transition-all duration-300",
                             isRemovable ? "left-8" : "left-1"
+                        )} />
+                    </div>
+                </div>
+
+                {/* Toggle Modal Unitizador — declara se este modal carrega
+                    itens fiscais (DANFE) por dentro. Override do default
+                    de categoria persiste no campo holdsItems. */}
+                <div
+                    className={cn(
+                        "flex items-center justify-between p-6 border-2 rounded-3xl group cursor-pointer transition-all shadow-low",
+                        effectiveHoldsItems
+                            ? "border-brand-primary bg-brand-primary/10"
+                            : "bg-sidebar border-subtle hover:border-brand-primary/40"
+                    )}
+                    onClick={() => setHoldsItems(!effectiveHoldsItems)}
+                >
+                    <div className="flex items-center gap-3">
+                        <FolderOpen size={18} className={cn("shrink-0", effectiveHoldsItems ? "text-brand-primary" : "text-muted")} />
+                        <div className="flex flex-col gap-1">
+                            <span className={cn("text-xs font-black uppercase tracking-widest leading-none", effectiveHoldsItems ? "text-brand-primary" : "text-primary")}>
+                                Modal unitizador? {effectiveHoldsItems ? "SIM" : "NÃO"}
+                            </span>
+                            <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter opacity-80">
+                                Permite alocar itens fiscais (DANFE) por dentro deste modal
+                            </span>
+                        </div>
+                    </div>
+                    <div className={cn(
+                        "w-14 h-7 rounded-full transition-all duration-500 relative shadow-inner",
+                        effectiveHoldsItems ? "bg-brand-primary shadow-glow" : "bg-strong/40"
+                    )}>
+                        <div className={cn(
+                            "absolute top-1 w-5 h-5 bg-white rounded-full shadow-high transition-all duration-300",
+                            effectiveHoldsItems ? "left-8" : "left-1"
                         )} />
                     </div>
                 </div>
