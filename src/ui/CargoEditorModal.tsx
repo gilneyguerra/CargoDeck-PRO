@@ -6,6 +6,12 @@ import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 import { reportException } from '@/features/errorReporter';
 import type { Cargo, CargoCategory } from '@/domain/Cargo';
+import {
+  parseDecimalBR,
+  parseExcelToMatrix,
+  parseCsvToMatrix,
+  loadXlsx,
+} from '@/lib/spreadsheetParser';
 
 // ─── Tipos internos ────────────────────────────────────────────────────────────
 
@@ -68,11 +74,6 @@ function emptyRow(): EditorRow {
   return { id: mkId(), category: '', description: '', identifier: '', origin: '', destination: '', weightTonnes: '', lengthMeters: '', widthMeters: '', heightMeters: '', isHazardous: false, errors: {} };
 }
 
-// Converte decimal brasileiro (vírgula) para ponto
-function parseDecimal(s: string): number {
-  return parseFloat(s.replace(',', '.'));
-}
-
 // ─── Validação ────────────────────────────────────────────────────────────────
 
 // Labels human-readable usados no painel de erros e mensagens de tooltip
@@ -91,20 +92,20 @@ function validateRow(row: EditorRow): Partial<Record<RowField, string>> {
   if (!row.category) e.category = 'Selecione uma categoria';
   if (!row.description || row.description.trim().length < 2) e.description = 'Descrição vazia ou muito curta';
   if (!row.identifier || row.identifier.trim().length < 2) e.identifier = 'Código vazio ou muito curto (mín. 2 caracteres)';
-  const wt = parseDecimal(row.weightTonnes);
+  const wt = parseDecimalBR(row.weightTonnes);
   if (!row.weightTonnes || isNaN(wt)) e.weightTonnes = 'Peso ausente — informe valor em toneladas';
   else if (wt <= 0) e.weightTonnes = `Peso deve ser maior que zero (atual: ${wt}t)`;
   else if (wt > 1000) e.weightTonnes = `Peso muito alto (${wt}t) — verifique se está em toneladas, não kg`;
-  const len = parseDecimal(row.lengthMeters);
+  const len = parseDecimalBR(row.lengthMeters);
   if (!row.lengthMeters || isNaN(len)) e.lengthMeters = 'Comprimento ausente';
   else if (len <= 0) e.lengthMeters = 'Comprimento deve ser maior que zero';
   else if (len > 50) e.lengthMeters = `Comprimento muito alto (${len}m, máx 50m)`;
-  const wid = parseDecimal(row.widthMeters);
+  const wid = parseDecimalBR(row.widthMeters);
   if (!row.widthMeters || isNaN(wid)) e.widthMeters = 'Largura ausente';
   else if (wid <= 0) e.widthMeters = 'Largura deve ser maior que zero';
   else if (wid > 50) e.widthMeters = `Largura muito alta (${wid}m, máx 50m)`;
   if (row.heightMeters) {
-    const h = parseDecimal(row.heightMeters);
+    const h = parseDecimalBR(row.heightMeters);
     if (isNaN(h)) e.heightMeters = 'Altura inválida';
     else if (h <= 0) e.heightMeters = 'Altura deve ser maior que zero';
     else if (h > 50) e.heightMeters = `Altura muito alta (${h}m, máx 50m)`;
@@ -220,171 +221,11 @@ function sheetDataToRows(data: string[][]): EditorRow[] {
 // ─── Parser CSV ───────────────────────────────────────────────────────────────
 
 function parseCsvToRows(text: string): EditorRow[] {
-  const sep = text.split('\n')[0].includes(';') ? ';' : ',';
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  const data = lines.map(line => line.split(sep).map(c => c.replace(/^"|"$/g, '').trim()));
-  return sheetDataToRows(data);
-}
-
-// ─── Parser XLSX nativo (ZIP + XML, sem CDN, sem npm) ────────────────────────
-
-async function inflateRaw(compressed: Uint8Array): Promise<Uint8Array> {
-  const ds = new DecompressionStream('deflate-raw');
-  const writer = ds.writable.getWriter();
-  // new ArrayBuffer() garante tipo ArrayBuffer (nunca ArrayBufferLike/SharedArrayBuffer).
-  // TypeScript não estreita o generic <T> de Uint8Array via instanceof em .buffer,
-  // portanto a única forma segura é copiar para um ArrayBuffer explicitamente tipado.
-  const ab = new ArrayBuffer(compressed.byteLength);
-  new Uint8Array(ab).set(compressed);
-  writer.write(ab);
-  writer.close();
-  const chunks: Uint8Array[] = [];
-  const reader = ds.readable.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
-  let off = 0;
-  for (const c of chunks) { out.set(c, off); off += c.length; }
-  return out;
-}
-
-async function readZipEntry(buf: ArrayBuffer, target: string): Promise<string | null> {
-  const bytes = new Uint8Array(buf);
-  const dv = new DataView(buf);
-  const dec = new TextDecoder();
-
-  // Localizar EOCD (End of Central Directory)
-  let eocd = -1;
-  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65_556); i--) {
-    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) return null;
-
-  const cdOffset = dv.getUint32(eocd + 16, true);
-  const cdCount  = dv.getUint16(eocd + 8,  true);
-  let pos = cdOffset;
-
-  for (let e = 0; e < cdCount; e++) {
-    if (dv.getUint32(pos, true) !== 0x02014b50) break;
-    const method     = dv.getUint16(pos + 10, true);
-    const compSize   = dv.getUint32(pos + 20, true);
-    const nameLen    = dv.getUint16(pos + 28, true);
-    const extraLen   = dv.getUint16(pos + 30, true);
-    const commentLen = dv.getUint16(pos + 32, true);
-    const localOff   = dv.getUint32(pos + 42, true);
-    const name       = dec.decode(bytes.slice(pos + 46, pos + 46 + nameLen));
-    pos += 46 + nameLen + extraLen + commentLen;
-
-    if (name !== target) continue;
-
-    const lnLen = dv.getUint16(localOff + 26, true);
-    const leLen = dv.getUint16(localOff + 28, true);
-    const data  = bytes.slice(localOff + 30 + lnLen + leLen, localOff + 30 + lnLen + leLen + compSize);
-
-    if (method === 0) return dec.decode(data);
-    if (method === 8) return dec.decode(await inflateRaw(data));
-    return null;
-  }
-  return null;
-}
-
-function colIndex(letters: string): number {
-  let n = 0;
-  for (const ch of letters) n = n * 26 + ch.charCodeAt(0) - 64;
-  return n - 1;
-}
-
-function xlsxSharedStrings(xml: string): string[] {
-  return Array.from(new DOMParser().parseFromString(xml, 'text/xml').querySelectorAll('si'))
-    .map(si => Array.from(si.querySelectorAll('t')).map(t => t.textContent ?? '').join(''));
-}
-
-function xlsxSheet(xml: string, strings: string[]): string[][] {
-  const doc = new DOMParser().parseFromString(xml, 'text/xml');
-  const result: string[][] = [];
-  for (const row of Array.from(doc.querySelectorAll('row'))) {
-    const cells: string[] = [];
-    for (const c of Array.from(row.querySelectorAll('c'))) {
-      const ref = c.getAttribute('r') ?? '';
-      const idx = colIndex(ref.replace(/\d/g, ''));
-      while (cells.length <= idx) cells.push('');
-      const t = c.getAttribute('t');
-      const v = c.querySelector('v')?.textContent ?? '';
-      if (t === 's') cells[idx] = strings[parseInt(v)] ?? '';
-      else if (t === 'inlineStr') cells[idx] = c.querySelector('t')?.textContent ?? '';
-      else cells[idx] = v;
-    }
-    result.push(cells);
-  }
-  return result;
-}
-
-async function parseExcelNative(buffer: ArrayBuffer): Promise<EditorRow[]> {
-  const ssXml = await readZipEntry(buffer, 'xl/sharedStrings.xml');
-  const shXml  = await readZipEntry(buffer, 'xl/worksheets/sheet1.xml');
-  if (!shXml) throw new Error('Planilha não encontrada no arquivo XLSX.');
-  const strings = ssXml ? xlsxSharedStrings(ssXml) : [];
-  return sheetDataToRows(xlsxSheet(shXml, strings));
-}
-
-// ─── SheetJS via CDN (fallback caso o parser nativo falhe) ───────────────────
-
-interface XlsxSheet {
-  '!cols'?: { wch: number }[];
-  [key: string]: unknown;
-}
-interface XlsxWorkbook { SheetNames: string[]; Sheets: Record<string, XlsxSheet> }
-interface XlsxLib {
-  read: (data: ArrayBuffer, opts: { type: 'array' }) => XlsxWorkbook;
-  writeFile: (wb: XlsxWorkbook, filename: string) => void;
-  utils: {
-    sheet_to_json: <T>(sheet: XlsxSheet, opts: { header: 1; defval: string }) => T[];
-    book_new: () => XlsxWorkbook;
-    book_append_sheet: (wb: XlsxWorkbook, ws: XlsxSheet, name: string) => void;
-    aoa_to_sheet: (data: string[][]) => XlsxSheet;
-  };
-}
-
-let xlsxLib: XlsxLib | null = null;
-const XLSX_CDN_URLS = [
-  'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-];
-
-async function loadXlsx(): Promise<XlsxLib> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (xlsxLib || (window as any).XLSX) { xlsxLib = xlsxLib ?? (window as any).XLSX; return xlsxLib!; }
-  for (const url of XLSX_CDN_URLS) {
-    try {
-      await new Promise<void>((res, rej) => {
-        const s = document.createElement('script'); s.src = url;
-        s.onload = () => res(); s.onerror = () => rej();
-        document.head.appendChild(s);
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lib = (window as any).XLSX as XlsxLib | undefined;
-      if (lib && typeof lib.read === 'function') { xlsxLib = lib; return lib; }
-    } catch { /* try next */ }
-  }
-  throw new Error('SheetJS indisponível via CDN');
+  return sheetDataToRows(parseCsvToMatrix(text));
 }
 
 async function parseExcelToRows(buffer: ArrayBuffer): Promise<EditorRow[]> {
-  // Tenta parser nativo primeiro — sem CDN, sem dependências
-  try {
-    return await parseExcelNative(buffer);
-  } catch {
-    // Fallback: SheetJS via CDN
-    const XLSX = await loadXlsx();
-    const wb = XLSX.read(buffer, { type: 'array' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' });
-    return sheetDataToRows(data);
-  }
+  return sheetDataToRows(await parseExcelToMatrix(buffer));
 }
 
 // ─── Células ──────────────────────────────────────────────────────────────────
@@ -864,10 +705,10 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
         identifier: row.identifier.trim(),
         description: row.description.trim(),
         category: (isHaz ? 'HAZARDOUS' : row.category) as CargoCategory,
-        weightTonnes: parseDecimal(row.weightTonnes),
-        lengthMeters: parseDecimal(row.lengthMeters),
-        widthMeters: parseDecimal(row.widthMeters),
-        heightMeters: row.heightMeters ? parseDecimal(row.heightMeters) : undefined,
+        weightTonnes: parseDecimalBR(row.weightTonnes),
+        lengthMeters: parseDecimalBR(row.lengthMeters),
+        widthMeters: parseDecimalBR(row.widthMeters),
+        heightMeters: row.heightMeters ? parseDecimalBR(row.heightMeters) : undefined,
         quantity: 1,
         status: 'UNALLOCATED',
         isHazardous: isHaz,
@@ -882,7 +723,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
     handleClose();
   };
 
-  const totalWeight = rows.reduce((s, r) => s + (parseDecimal(r.weightTonnes) || 0), 0);
+  const totalWeight = rows.reduce((s, r) => s + (parseDecimalBR(r.weightTonnes) || 0), 0);
   const filledRows = rows.filter(r => r.identifier || r.description).length;
   const errorCount = validated ? rows.filter(r => Object.keys(r.errors).length > 0).length : 0;
   // Lista achatada de erros para o painel navegável (uma entrada por campo errado)
