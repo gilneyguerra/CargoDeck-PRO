@@ -2,7 +2,7 @@ import { useState, useMemo, useDeferredValue, useEffect, useRef, lazy, Suspense 
 import {
   Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
-  Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon,
+  Boxes, Flame, Layers, Flag, Zap, Users, AlertOctagon,
   FolderOpen, Building2,
 } from 'lucide-react';
 import {
@@ -32,9 +32,8 @@ import { cn } from '@/lib/utils';
 const CargoEditorModal = lazy(() =>
   import('./CargoEditorModal').then(m => ({ default: m.CargoEditorModal }))
 );
-const CargoAssistant = lazy(() =>
-  import('./CargoAssistant').then(m => ({ default: m.CargoAssistant }))
-);
+// CargoAssistant agora vive no ChatWidget global (FAB) — montado em
+// App.tsx, acessível em todas as rotas. Removido daqui.
 
 // Lazy: inventário DANFE — só carrega quando o usuário abre o popup de
 // alocar/desalocar itens em uma carga-CONTAINER.
@@ -352,7 +351,6 @@ export function ModalGenerationPage() {
   const [showManual, setShowManual] = useState(false);
   const [showAllocate, setShowAllocate] = useState(false);
   const [showPriority, setShowPriority] = useState(false);
-  const [showAssistant, setShowAssistant] = useState(false);
   const [showGroupMove, setShowGroupMove] = useState(false);
 
   // Container inventory (DANFE) — modal acessado via "Alocar/Desalocar
@@ -690,36 +688,8 @@ export function ModalGenerationPage() {
           >
             <Plus size={12} /> Criar Modal Manualmente
           </button>
-          {/* Toggle do Assistente IA */}
-          <button
-            onClick={() => setShowAssistant(s => !s)}
-            title="Assistente de Carga (IA)"
-            className={cn(
-              'relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]',
-              showAssistant
-                ? 'bg-brand-primary text-white border-brand-primary shadow-md'
-                : 'bg-main border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary'
-            )}
-          >
-            <Sparkles size={12} className={showAssistant ? '' : 'group-hover:rotate-12'} />
-            IA
-            <span className={cn(
-              'absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-main',
-              showAssistant ? 'bg-status-warning' : 'bg-status-success'
-            )} />
-          </button>
 
           {/* Gerenciar (vindo da sidebar) — re-aciona view atual; útil como atalho de scroll-to-top */}
-          <button
-            onClick={() => navigate('/modais')}
-            title="Gerenciar Cargas"
-            disabled={unallocatedCargoes.length === 0}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 border-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/15 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <LayoutGrid size={12} />
-            Gerenciar
-          </button>
-
           {/* Mover em Grupo (vindo da sidebar) */}
           <button
             onClick={() => setShowGroupMove(true)}
@@ -897,21 +867,25 @@ export function ModalGenerationPage() {
       {/* Grid */}
       <div className="flex-1 overflow-y-auto p-6">
         {filtered.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
-            <div className="w-20 h-20 rounded-full bg-sidebar border-2 border-subtle flex items-center justify-center mb-4">
-              <Package size={32} className="text-muted opacity-50" />
+          <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto">
+            <div className="w-24 h-24 rounded-full bg-sidebar border-2 border-subtle flex items-center justify-center mb-5 shadow-inner">
+              <Package size={36} className="text-primary opacity-40" />
             </div>
             {unallocatedCargoes.length === 0 ? (
               <>
-                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum Modal de Transporte no Inventário</h3>
-                <p className="text-[11px] text-secondary leading-relaxed">
-                  Use os botões acima para importar seus modais de transporte via Excel ou Crie seus modais de transporte manualmente.
+                <h3 className="text-lg font-black text-primary uppercase tracking-widest mb-3">
+                  Nenhum Modal de Transporte no Inventário
+                </h3>
+                <p className="text-[13px] font-medium text-primary leading-relaxed opacity-80 max-w-md">
+                  Use os botões acima para importar seus modais de transporte via Excel ou crie seus modais de transporte manualmente.
                 </p>
               </>
             ) : (
               <>
-                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum resultado nesta aba</h3>
-                <p className="text-[11px] text-secondary leading-relaxed">
+                <h3 className="text-lg font-black text-primary uppercase tracking-widest mb-3">
+                  Nenhum resultado nesta aba
+                </h3>
+                <p className="text-[13px] font-medium text-primary leading-relaxed opacity-80 max-w-md">
                   Ajuste a aba ou a busca para encontrar suas cargas.
                 </p>
               </>
@@ -956,15 +930,6 @@ export function ModalGenerationPage() {
         onClose={() => setShowPriority(false)}
         selectedCargoIds={selectedIds}
       />
-      {showAssistant && (
-        <Suspense fallback={null}>
-          <CargoAssistant
-            isOpen={showAssistant}
-            onClose={() => setShowAssistant(false)}
-            selectedCargos={unallocatedCargoes.filter(c => selectedCargos.has(c.id))}
-          />
-        </Suspense>
-      )}
       <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
     {/* Inventário DANFE — abre via "Alocar / Desalocar Itens" inline em
