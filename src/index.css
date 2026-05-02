@@ -36,6 +36,19 @@
   --shadow-glow: var(--shadow-glow);
 
   --font-sans: var(--font-main);
+
+  /* ── Motion Design Tokens (Emil Kowalski's design eng skill) ───────────────
+     Curvas mais "fortes" que as built-in (que são fracas demais) e durações
+     ancoradas no princípio "UI animations < 300ms". Use via `ease-[var(...)]`
+     ou `duration-[var(...)]` em classes Tailwind arbitrary values. */
+  --ease-out-fast: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --dur-press: 160ms;
+  --dur-tooltip: 180ms;
+  --dur-dropdown: 220ms;
+  --dur-modal: 280ms;
 }
 
 /* CSS Variables for Light and Dark Themes - Refined Maritime Design System */
@@ -329,4 +342,53 @@ html, body {
 
 .animate-modal {
   animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Motion design — global rules (Emil Kowalski's design eng skill)
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Press feedback universal: qualquer botão / link / role=button afunda
+     levemente em :active. Cobre ~80 botões que ainda não tinham active:scale.
+     Excluímos disabled e aria-disabled para não dar feedback de interação
+     em controles inativos. */
+  :where(button, [role="button"], a[href]):active:not(:disabled, [aria-disabled="true"]) {
+    transform: scale(0.97);
+    transition: transform var(--dur-press) var(--ease-out-fast);
+  }
+
+  /* Keyframe usado pelos cards do CargoGrid e ContainerGrid para entrada
+     em cascade (stagger via animation-delay inline). */
+  @keyframes cargoCardEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Respeita preferência do SO: neutraliza animações e transições. Mantém
+     opacity/color (preservam compreensão), remove movimento físico. */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Componentes utilitários compartilhados
+   ───────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+  /* Close-X dos modais — antes havia 3 estilos divergentes (top/right
+     diferentes, p-2 vs p-3, rounded-xl vs rounded-full). Padroniza o
+     posicionamento e o feedback hover/focus. O scale(0.97) :active vem
+     da regra global acima. */
+  .btn-close {
+    @apply absolute top-3 right-3 p-2 rounded-full text-muted hover:text-primary
+           hover:bg-main/80 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40
+           transition-[background-color,color] duration-200;
+  }
 }
