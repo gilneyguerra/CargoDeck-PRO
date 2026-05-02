@@ -2,7 +2,7 @@ import { useState, useId, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle, FolderOpen, Building2 } from 'lucide-react';
+import { X, Box, Settings, Palette, Info, Layers, MapPin, AlertTriangle, FolderOpen, Building2, ChevronDown, Check } from 'lucide-react';
 import { canHoldItems, type CargoCategory } from '@/domain/Cargo';
 import { CargoPreview } from './CargoPreview';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,31 @@ const CATEGORY_SUGGESTIONS: { value: CargoCategory; label: string }[] = [
   { value: 'OTHER',      label: 'Outros' },
 ];
 
+/** Paleta de cores para identificação visual da carga. Cobre o ciclo
+ *  cromático principal + tons industriais maritime. Cada cor tem nome
+ *  acessível em pt-BR. Renderizada em grid 4×N no popover, com chip
+ *  preview ao lado de cada nome. */
+const COLOR_PALETTE: { hex: string; label: string }[] = [
+  { hex: '#3b82f6', label: 'Azul Marítimo' },
+  { hex: '#0ea5e9', label: 'Ciano Tropical' },
+  { hex: '#14b8a6', label: 'Teal Profundo' },
+  { hex: '#10b981', label: 'Verde Segurança' },
+  { hex: '#84cc16', label: 'Lima Sinalização' },
+  { hex: '#eab308', label: 'Amarelo Atenção' },
+  { hex: '#f59e0b', label: 'Âmbar Atenção' },
+  { hex: '#f97316', label: 'Laranja Resgate' },
+  { hex: '#ef4444', label: 'Vermelho Crítico' },
+  { hex: '#dc2626', label: 'Vermelho Sinal' },
+  { hex: '#ec4899', label: 'Rosa Identificação' },
+  { hex: '#a855f7', label: 'Roxo Especial' },
+  { hex: '#8b5cf6', label: 'Violeta Náutico' },
+  { hex: '#6366f1', label: 'Índigo Corporativo' },
+  { hex: '#1e293b', label: 'Preto Naval' },
+  { hex: '#6b7280', label: 'Cinza Industrial' },
+  { hex: '#92400e', label: 'Marrom Couro' },
+  { hex: '#f1f5f9', label: 'Branco Gelo' },
+];
+
 export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const { addManualCargo } = useCargoStore();
   const titleId = useId();
@@ -33,13 +58,17 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
   const [heightMeters, setHeightMeters] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [category, setCategory] = useState<CargoCategory>('GENERAL');
+  /** Nome custom quando o usuário escolhe a opção 'OTHER' — fica como
+   *  o valor final de cargo.category (string livre) no payload. Permite
+   *  categorias além das 9 fixas do enum. */
+  const [categoryCustomName, setCategoryCustomName] = useState('');
   const [empresa, setEmpresa] = useState('');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [isHazardous, setIsHazardous] = useState(false);
   const [observations, setObservations] = useState('');
-  const [isRemovable, setIsRemovable] = useState(false);
   const [color, setColor] = useState('#3b82f6');
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [format, setFormat] = useState<'Retangular' | 'Quadrado' | 'Tubular'>('Retangular');
   // undefined = "siga o default da categoria"; true/false = override explícito.
   const [holdsItems, setHoldsItems] = useState<boolean | undefined>(undefined);
@@ -57,8 +86,14 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
     if (isNaN(w) || isNaN(l) || isNaN(wi)) return;
 
-    // Se categoria for HAZARDOUS, garantir flag isHazardous=true (e vice-versa: SIM ⇒ HAZARDOUS)
-    const finalCategory: CargoCategory = isHazardous ? 'HAZARDOUS' : category;
+    // Se categoria for HAZARDOUS, garantir flag isHazardous=true (e vice-versa: SIM ⇒ HAZARDOUS).
+    // Se for OTHER e o usuário digitou um nome custom, usa ele em vez de 'OTHER'.
+    let finalCategory: CargoCategory = isHazardous ? 'HAZARDOUS' : category;
+    if (!isHazardous && category === 'OTHER' && categoryCustomName.trim()) {
+      // O tipo Cargo.category aceita string em runtime — TS não estreita aqui
+      // pois CargoCategory é union literal; cast preserva a intenção.
+      finalCategory = categoryCustomName.trim() as CargoCategory;
+    }
     const finalIsHazardous = isHazardous || category === 'HAZARDOUS';
 
     addManualCargo({
@@ -74,7 +109,6 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
       origemCarga: origin.trim() || undefined,
       destinoCarga: destination.trim() || undefined,
       observations: observations.trim() || undefined,
-      isRemovable,
       color: finalIsHazardous ? '#a855f7' : color, // perigosa: roxo
       format,
       holdsItems,
@@ -83,6 +117,7 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
     setDescription(''); setIdentifier(''); setWeightTonnes(''); setLengthMeters('');
     setWidthMeters(''); setHeightMeters(''); setQuantity(1); setCategory('GENERAL');
+    setCategoryCustomName('');
     setOrigin(''); setDestination(''); setIsHazardous(false); setFormat('Retangular');
     setHoldsItems(undefined); setEmpresa('');
     onClose();
@@ -203,6 +238,19 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+                {/* Input condicional: aparece quando user escolhe 'Outros'.
+                    Permite digitar um nome de categoria custom (texto livre)
+                    que vira o valor final de cargo.category. */}
+                {category === 'OTHER' && (
+                  <input
+                    type="text"
+                    value={categoryCustomName}
+                    onChange={e => setCategoryCustomName(e.target.value)}
+                    placeholder="Digite o nome da categoria…"
+                    className="w-full bg-main border-2 border-brand-primary/30 rounded-2xl px-5 py-3 text-sm font-bold text-primary outline-none focus:border-brand-primary transition-all shadow-inner placeholder:text-muted/50 animate-in fade-in slide-in-from-top-1 duration-200"
+                    aria-label="Nome custom da categoria"
+                  />
+                )}
               </div>
               <div className="space-y-3">
                 <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Geometria</label>
@@ -344,19 +392,67 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
                 <label className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest ml-1">
                   <Palette size={14} className="text-brand-primary" /> Cor de Identificação
                 </label>
+                {/* Custom dropdown — <select> nativo não permite renderizar
+                    chip de cor ao lado do label em <option>. Substituímos
+                    por button + popover com grid de paleta expandida. */}
                 <div className="relative">
-                  <select
-                    value={color} onChange={e => setColor(e.target.value)}
-                    className="w-full bg-main border-2 border-strong/40 rounded-2xl px-6 py-4 text-sm font-black text-primary appearance-none focus:border-brand-primary cursor-pointer transition-all shadow-inner"
+                  <button
+                    type="button"
+                    onClick={() => setColorPickerOpen(s => !s)}
+                    className="w-full bg-main border-2 border-strong/40 rounded-2xl px-5 py-4 text-sm font-black text-primary outline-none focus:border-brand-primary cursor-pointer transition-all shadow-inner flex items-center justify-between gap-3"
+                    aria-haspopup="listbox"
+                    aria-expanded={colorPickerOpen}
                   >
-                    <option value="#3b82f6">Azul Marítimo (Padrão)</option>
-                    <option value="#10b981">Verde Segurança</option>
-                    <option value="#f59e0b">Âmbar Atenção</option>
-                    <option value="#ef4444">Vermelho Crítico</option>
-                    <option value="#8b5cf6">Roxo Especial</option>
-                    <option value="#6b7280">Cinza Industrial</option>
-                  </select>
-                  <div className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white/30 shadow-medium" style={{ backgroundColor: color }} />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className="w-6 h-6 rounded-full border-2 border-white/40 shadow-medium shrink-0"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="truncate">
+                        {COLOR_PALETTE.find(c => c.hex === color)?.label ?? 'Cor personalizada'}
+                      </span>
+                    </div>
+                    <ChevronDown size={16} className={cn('text-muted shrink-0 transition-transform duration-200', colorPickerOpen && 'rotate-180')} />
+                  </button>
+                  {colorPickerOpen && (
+                    <>
+                      {/* Backdrop transparente para fechar ao clicar fora */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setColorPickerOpen(false)}
+                      />
+                      <div
+                        className="absolute z-50 left-0 right-0 top-full mt-2 bg-main border-2 border-subtle rounded-2xl shadow-high overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+                        role="listbox"
+                      >
+                        <div className="grid grid-cols-2 gap-1 p-2 max-h-[280px] overflow-y-auto">
+                          {COLOR_PALETTE.map(c => {
+                            const isSelected = c.hex === color;
+                            return (
+                              <button
+                                key={c.hex}
+                                type="button"
+                                onClick={() => { setColor(c.hex); setColorPickerOpen(false); }}
+                                className={cn(
+                                  'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] font-bold text-left transition-[background-color] duration-150',
+                                  isSelected ? 'bg-brand-primary/10 text-brand-primary' : 'text-primary hover:bg-sidebar',
+                                )}
+                                role="option"
+                                aria-selected={isSelected}
+                              >
+                                <span
+                                  className="w-5 h-5 rounded-full border-2 border-white/40 shadow-sm shrink-0"
+                                  style={{ backgroundColor: c.hex }}
+                                />
+                                <span className="truncate flex-1">{c.label}</span>
+                                {isSelected && <Check size={12} className="text-brand-primary shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="space-y-3">
@@ -371,25 +467,6 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
               </div>
             </div>
 
-            {/* Toggle Removível */}
-            <div
-              className="flex items-center justify-between p-6 bg-sidebar border-2 border-subtle rounded-3xl cursor-pointer hover:border-brand-primary/40 transition-all shadow-low"
-              onClick={() => setIsRemovable(!isRemovable)}
-            >
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-black text-primary uppercase tracking-widest leading-none">Carga Removível / Subsea</span>
-                <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter opacity-80">Item pode ser retirado durante a operação</span>
-              </div>
-              <div className={cn(
-                "w-14 h-7 rounded-full transition-all duration-500 relative shadow-inner",
-                isRemovable ? "bg-brand-primary shadow-glow" : "bg-strong/40"
-              )}>
-                <div className={cn(
-                  "absolute top-1 w-5 h-5 bg-white rounded-full shadow-high transition-all duration-300",
-                  isRemovable ? "left-8" : "left-1"
-                )} />
-              </div>
-            </div>
           </form>
         </div>
 
