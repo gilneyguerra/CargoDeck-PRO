@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { useAssistantStore } from '@/features/assistantStore';
 import { useCargoStore } from '@/features/cargoStore';
@@ -24,8 +24,15 @@ export function ChatWidget() {
   // selectedCargos: passa o conjunto atual selecionado (se houver), permitindo
   // o assistente responder com contexto. Sem seleção, lista vazia → assistente
   // responde sobre o app em geral.
-  const selectedCargos = useCargoStore(s =>
-    s.unallocatedCargoes.filter(c => s.selectedCargos.has(c.id))
+  //
+  // CUIDADO: selector zustand não pode retornar `.filter()` direto (ref nova
+  // em toda chamada → loop infinito → React error #185). Usa dois selectors
+  // primitivos com refs estáveis e deriva via useMemo.
+  const unallocatedCargoes = useCargoStore(s => s.unallocatedCargoes);
+  const selectedSet = useCargoStore(s => s.selectedCargos);
+  const selectedCargos = useMemo(
+    () => unallocatedCargoes.filter(c => selectedSet.has(c.id)),
+    [unallocatedCargoes, selectedSet],
   );
 
   return (
