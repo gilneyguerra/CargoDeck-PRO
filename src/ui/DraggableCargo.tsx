@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import type { Cargo } from '@/domain/Cargo';
 import { getCargoFontSize } from '@/lib/scaling';
 import { CargoPreview } from './CargoPreview';
-import { Edit, Trash2, LogOut, MapPin } from 'lucide-react';
+import { Edit, Trash2, LogOut, MapPin, Inbox } from 'lucide-react';
 import { useDragStore } from '@/features/dragStore';
 import { useEffect, useState, useRef, memo } from 'react';
 
@@ -30,8 +30,18 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cargo.id,
   });
-  const { deleteCargo } = useCargoStore();
+  const { deleteCargo, unallocateCargo } = useCargoStore();
   const ask = useNotificationStore(s => s.ask);
+  const notify = useNotificationStore(s => s.notify);
+
+  // Devolve a carga ao inventário (unallocatedCargoes). Só faz sentido se a
+  // carga estiver alocada — guard via cargo.bayId. Toast confirma a ação.
+  const handleUnallocate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!cargo.bayId) return;
+    unallocateCargo(cargo.id);
+    notify(`Carga ${cargo.identifier} devolvida ao inventário.`, 'success');
+  };
   const { isDragging: dragStoreIsDragging } = useDragStore();
   const [isRotated, setIsRotated] = useState(cargo.isRotated ?? false);
   const [isHovered, setIsHovered] = useState(false);
@@ -214,6 +224,15 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
             >
               <Edit size={14} />
             </button>
+            {cargo.bayId && (
+              <button
+                onClick={handleUnallocate}
+                className="bg-status-warning text-white rounded-xl w-8 h-8 flex items-center justify-center hover:scale-110 active:scale-95 shadow-high ring-2 ring-white/50 transition-all hover:brightness-110"
+                title="Devolver ao inventário"
+              >
+                <Inbox size={14} />
+              </button>
+            )}
             <button
                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
                className="bg-[#ef4444] text-white rounded-xl w-8 h-8 flex items-center justify-center hover:scale-110 active:scale-95 shadow-high ring-2 ring-white/50 transition-all hover:bg-[#dc2626]"
@@ -256,6 +275,15 @@ const DraggableCargo = memo(function DraggableCargo({ cargo, isHighlight, isDimm
                 >
                   <Edit size={16} />
                 </button>
+                {cargo.bayId && (
+                  <button
+                    onClick={handleUnallocate}
+                    className="p-2.5 text-muted hover:text-status-warning hover:bg-status-warning/10 rounded-xl transition-all hover:scale-110 active:scale-95"
+                    title="Devolver ao inventário"
+                  >
+                    <Inbox size={16} />
+                  </button>
+                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(); }}
                   className="p-2.5 text-muted hover:text-[#ef4444] hover:bg-red-500/10 rounded-xl transition-all hover:scale-110 active:scale-95"
