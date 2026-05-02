@@ -37,7 +37,7 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
             ref={setNodeRef}
             onClick={onClick}
             className={cn(
-              "px-6 py-3 text-[11px] font-extrabold tracking-widest transition-all border rounded-2xl flex items-center gap-4 uppercase shadow-low hover:shadow-medium",
+              "px-6 py-3 text-[11px] font-extrabold tracking-widest transition-[background-color,border-color,color,box-shadow,transform] duration-200 border rounded-2xl flex items-center gap-4 uppercase shadow-low hover:shadow-medium",
               isActive 
                 ? "bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20 scale-[1.02] z-10" 
                 : "bg-header/50 border-subtle text-primary hover:text-primary hover:border-strong bg-white/50 dark:bg-black/20"
@@ -71,17 +71,17 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
           </div>
           </button>
           
-          <div className="flex items-center gap-1.5 absolute -top-5 -right-3 opacity-0 group-hover:opacity-100 transition-all z-20 scale-[0.8] group-hover:scale-100 origin-bottom-left">
+          <div className="flex items-center gap-1.5 absolute -top-5 -right-3 opacity-0 group-hover:opacity-100 transition-[opacity,transform] duration-200 z-20 scale-[0.8] group-hover:scale-100 origin-bottom-left">
              <button 
                onClick={(e) => { e.stopPropagation(); onEdit(loc); }}
-               className="bg-brand-primary text-white w-8 h-8 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-all hover:bg-brand-primary/90 flex items-center justify-center"
+               className="bg-brand-primary text-white w-8 h-8 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-[background-color,transform,box-shadow] duration-200 hover:bg-brand-primary/90 flex items-center justify-center"
                title="Editar Local"
              >
                <Edit className="w-3.5 h-3.5" />
              </button>
              <button 
                onClick={(e) => { e.stopPropagation(); onDelete(loc.id); }}
-               className="bg-[#ef4444] text-white w-8 h-8 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-all hover:bg-[#dc2626] flex items-center justify-center"
+               className="bg-[#ef4444] text-white w-8 h-8 rounded-xl shadow-high border border-white/20 hover:scale-110 active:scale-95 transition-[background-color,transform,box-shadow] duration-200 hover:bg-[#dc2626] flex items-center justify-center"
                title="Excluir Local"
              >
                <Trash2 className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ const DroppableBay = memo(function DroppableBay({ bay, activeLocation, searchTer
 return (
    <div 
      className={cn(
-       "baia w-full border rounded-[16px] relative flex flex-col items-center pt-14 pb-6 transition-all min-h-[140px] shadow-medium",
+       "baia w-full border rounded-[16px] relative flex flex-col items-center pt-14 pb-6 transition-[background-color,border-color,box-shadow] duration-200 min-h-[140px] shadow-medium",
        "bg-white/50 dark:bg-black/20 border-subtle hover-glow group/bay overflow-hidden",
        "before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.05),transparent)] pointer-events-auto"
      )}
@@ -271,7 +271,7 @@ export function DeckArea() {
                   ))}
                   <button 
                     onClick={handleAddLocation}
-                    className="flex items-center gap-2 px-6 py-2.5 text-[10px] font-black text-muted hover:text-brand-primary border border-dashed border-subtle/60 rounded-xl hover:bg-brand-primary/5 hover:border-brand-primary/40 transition-all uppercase tracking-[0.2em] ml-2 shrink-0 shadow-sm"
+                    className="flex items-center gap-2 px-6 py-2.5 text-[10px] font-black text-muted hover:text-brand-primary border border-dashed border-subtle/60 rounded-xl hover:bg-brand-primary/5 hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 uppercase tracking-[0.2em] ml-2 shrink-0 shadow-sm"
                   >
                     <Plus className="w-4 h-4" /> NOVO LOCAL
                   </button>
@@ -302,20 +302,20 @@ export function DeckArea() {
                     )}
 
                     <div className="relative group">
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted group-focus-within:text-brand-primary transition-all group-focus-within:rotate-12" />
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted group-focus-within:text-brand-primary transition-[color,transform] duration-200 group-focus-within:rotate-12" />
                       <input
                         type="text"
                         placeholder="BUSCAR NO DECK..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-52 xl:w-64 pl-10 pr-3 text-[11px] font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-xl focus:outline-none focus:border-brand-primary transition-all focus:ring-2 focus:ring-brand-primary/20 placeholder:text-muted/60 text-primary uppercase shadow-low h-12"
+                        className="w-52 xl:w-64 pl-10 pr-3 text-[11px] font-black tracking-[0.1em] bg-main border-2 border-subtle rounded-xl focus:outline-none focus:border-brand-primary transition-[background-color,border-color,box-shadow] duration-200 focus:ring-2 focus:ring-brand-primary/20 placeholder:text-muted/60 text-primary uppercase shadow-low h-12"
                       />
                     </div>
 
                     <button
                       onClick={() => setShowGroupMoveModal(true)}
                       title="Movimentar Cargas em Grupo"
-                      className="flex items-center gap-2 bg-[#1A237E] hover:brightness-110 text-white px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all shadow-md hover:shadow-lg active:scale-95 h-12 shrink-0"
+                      className="flex items-center gap-2 bg-[#1A237E] hover:brightness-110 text-white px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-[filter,transform,box-shadow] duration-200 shadow-md hover:shadow-lg active:scale-95 h-12 shrink-0"
                     >
                       <Users className="w-4 h-4" />
                       <span className="hidden 2xl:inline">MOVER EM GRUPO</span>
@@ -324,7 +324,7 @@ export function DeckArea() {
 
                     <button
                       onClick={() => setIsSettingsOpen(true)}
-                      className="flex items-center gap-2 bg-header border-2 border-subtle text-primary hover:text-brand-primary hover:border-brand-primary hover:bg-brand-primary/5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all shadow-sm hover:shadow-md active:scale-95 h-12"
+                      className="flex items-center gap-2 bg-header border-2 border-subtle text-primary hover:text-brand-primary hover:border-brand-primary hover:bg-brand-primary/5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-[background-color,border-color,color,transform,box-shadow] duration-200 shadow-sm hover:shadow-md active:scale-95 h-12"
                       title="Configurar Deck"
                     >
                       <Settings className="w-4 h-4" />

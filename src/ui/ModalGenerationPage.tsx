@@ -118,7 +118,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
     <div
       onClick={() => onToggle(cargo.id)}
       className={cn(
-        'group relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col gap-3 hover:shadow-md active:scale-[0.98]',
+        'group relative p-4 rounded-2xl border-2 transition-[background-color,border-color,box-shadow,transform] duration-200 cursor-pointer flex flex-col gap-3 hover:shadow-md active:scale-[0.98]',
         selected
           ? 'border-brand-primary bg-brand-primary/5 shadow-md'
           : isHazardous || isUrgent
@@ -167,7 +167,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
       {/* Visual proporcional */}
       <div className="flex items-center justify-center bg-main rounded-xl border border-subtle/40 h-[120px] relative overflow-hidden">
         <div
-          className="border-2 rounded shadow-md flex items-center justify-center transition-all"
+          className="border-2 rounded shadow-md flex items-center justify-center transition-[background-color,border-color,transform] duration-200"
           style={{
             width: `${visualWidth}px`,
             height: `${visualHeight}px`,
@@ -212,7 +212,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
       <div className="flex items-center justify-between gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity -mt-1">
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-brand-primary/10 focus-visible:bg-brand-primary/10 text-muted hover:text-brand-primary focus-visible:text-brand-primary transition-all text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-brand-primary/10 focus-visible:bg-brand-primary/10 text-muted hover:text-brand-primary focus-visible:text-brand-primary transition-[background-color,color] duration-200 text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           title="Editar"
           aria-label={`Editar ${cargo.identifier}`}
         >
@@ -220,7 +220,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(cargo); }}
-          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-status-error/10 focus-visible:bg-status-error/10 text-muted hover:text-status-error focus-visible:text-status-error transition-all outline-none focus-visible:ring-2 focus-visible:ring-status-error/40"
+          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-status-error/10 focus-visible:bg-status-error/10 text-muted hover:text-status-error focus-visible:text-status-error transition-[background-color,color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-status-error/40"
           title="Excluir"
           aria-label={`Excluir ${cargo.identifier}`}
         >
@@ -234,7 +234,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
       {canHoldItems(cargo) && onOpenInventory && (
         <button
           onClick={(e) => { e.stopPropagation(); onOpenInventory(cargo); }}
-          className="flex items-center justify-center gap-1.5 min-h-[36px] px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-2 border-brand-primary/30 bg-brand-primary/5 text-brand-primary hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+          className="flex items-center justify-center gap-1.5 min-h-[36px] px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border-2 border-brand-primary/30 bg-brand-primary/5 text-brand-primary hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-[background-color,border-color,color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           title={danfeItemCount > 0 ? `${danfeItemCount} ${danfeItemCount === 1 ? 'item DANFE alocado' : 'itens DANFE alocados'}` : 'Sem itens DANFE'}
           aria-label={`Alocar ou desalocar itens DANFE do contentor ${cargo.identifier}`}
         >
@@ -541,7 +541,7 @@ export function ModalGenerationPage() {
           <button
             onClick={() => setContainersView(false)}
             title="Voltar para inventário de cargas offshore"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px]"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
             <ArrowLeft size={12} /> Cargas
           </button>
@@ -566,14 +566,14 @@ export function ModalGenerationPage() {
         <button
           onClick={handleBack}
           title="Voltar ao Plano de Estivagem (Deck)"
-          className="nav-cta relative flex items-center justify-center gap-3 px-5 py-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-all duration-300 group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
+          className="nav-cta relative flex items-center justify-center gap-3 px-5 py-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
         >
           {/* Anel pulsante de fundo (mesmo do botão GERAÇÃO MODAL) */}
           <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
           {/* Brilho que atravessa no hover */}
-          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-all duration-700" />
+          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
 
-          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:-rotate-3 group-hover:-translate-x-0.5 transition-all">
+          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:-rotate-3 group-hover:-translate-x-0.5 transition-[background-color,transform] duration-200">
             <ArrowLeft size={14} />
           </span>
           <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">Deck</span>
@@ -599,7 +599,7 @@ export function ModalGenerationPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar ID, descrição, manifesto…"
-              className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-all min-h-[40px]"
+              className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
             />
             {searchInput && (
               <button
@@ -616,21 +616,21 @@ export function ModalGenerationPage() {
           <button
             onClick={() => setShowEditor(true)}
             title="Editor em Grade (Excel/CSV)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px]"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
             <Table2 size={12} /> Excel
           </button>
           <button
             onClick={() => setShowManual(true)}
             title="Nova carga manual"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-all min-h-[40px] shadow-md"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shadow-md"
           >
             <Plus size={12} /> Manual
           </button>
           <button
             onClick={openContainersView}
             title="Gerenciar Contentores (cargas DANFE)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[40px]"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
             <Package size={12} /> Contentores
           </button>
@@ -640,7 +640,7 @@ export function ModalGenerationPage() {
             onClick={() => setShowAssistant(s => !s)}
             title="Assistente de Carga (IA)"
             className={cn(
-              'relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px]',
+              'relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]',
               showAssistant
                 ? 'bg-brand-primary text-white border-brand-primary shadow-md'
                 : 'bg-main border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary'
@@ -659,7 +659,7 @@ export function ModalGenerationPage() {
             onClick={() => setViewMode('modal-generation')}
             title="Gerenciar Cargas"
             disabled={unallocatedCargoes.length === 0}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 border-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/15 transition-all min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 border-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/15 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <LayoutGrid size={12} />
             Gerenciar
@@ -669,7 +669,7 @@ export function ModalGenerationPage() {
           <button
             onClick={() => setShowGroupMove(true)}
             title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-all min-h-[40px]"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
             <Users size={12} />
             Grupo
@@ -680,7 +680,7 @@ export function ModalGenerationPage() {
             <div className="flex items-center gap-2 pl-2 ml-1 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
               <button
                 onClick={handleSelectAll}
-                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar transition-all min-h-[36px]"
+                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
                 title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
               >
                 {allFilteredSelected ? <CheckSquare size={12} /> : <Square size={12} />}
@@ -695,7 +695,7 @@ export function ModalGenerationPage() {
 
               <button
                 onClick={handleAllocate}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 active:scale-95 transition-all shadow-md min-h-[36px]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 active:scale-95 transition-[filter,transform,box-shadow] duration-200 shadow-md min-h-[36px]"
                 title="Mover para Convés"
               >
                 <ArrowRight size={12} />
@@ -703,7 +703,7 @@ export function ModalGenerationPage() {
               </button>
               <button
                 onClick={openContainersView}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary transition-all min-h-[36px]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
                 title="Abrir gerenciamento de contentores DANFE"
               >
                 <Package size={12} />
@@ -711,7 +711,7 @@ export function ModalGenerationPage() {
               </button>
               <button
                 onClick={handleChangePriority}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-warning/50 text-secondary hover:text-status-warning transition-all min-h-[36px]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-warning/50 text-secondary hover:text-status-warning transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
                 title="Alterar Prioridade"
               >
                 <Flag size={12} />
@@ -719,7 +719,7 @@ export function ModalGenerationPage() {
               </button>
               <button
                 onClick={handleDeleteSelected}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-all min-h-[36px]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
                 title="Excluir Selecionadas"
               >
                 <Trash2 size={12} />
@@ -728,7 +728,7 @@ export function ModalGenerationPage() {
 
               <button
                 onClick={clearCargoSelection}
-                className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-all min-h-[36px]"
+                className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
                 title="Limpar seleção"
               >
                 <X size={14} />
@@ -748,7 +748,7 @@ export function ModalGenerationPage() {
               key="all"
               onClick={() => setFilterTab('all')}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px] shrink-0',
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shrink-0',
                 active
                   ? 'border-brand-primary bg-brand-primary/10 text-brand-primary shadow-sm'
                   : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar'
@@ -773,7 +773,7 @@ export function ModalGenerationPage() {
               key={tab.value}
               onClick={() => setFilterTab(tab.value)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px] shrink-0',
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shrink-0',
                 active
                   ? isHazardousTab
                     ? 'border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/20'
@@ -803,7 +803,7 @@ export function ModalGenerationPage() {
               key="priority"
               onClick={() => setFilterTab('priority')}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-all min-h-[40px] shrink-0',
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shrink-0',
                 active
                   ? 'border-status-error bg-status-error/10 text-status-error shadow-sm'
                   : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar'
@@ -823,7 +823,7 @@ export function ModalGenerationPage() {
             onClick={handleClearProcessed}
             disabled={unallocatedCargoes.length === 0}
             title="Remover todas as cargas do grid (cargas alocadas em conveses não serão afetadas)"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-status-error hover:bg-status-error/5 border-2 border-transparent hover:border-status-error/30 transition-all min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-status-error hover:bg-status-error/5 border-2 border-transparent hover:border-status-error/30 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Trash2 size={12} />
             Limpar Processadas

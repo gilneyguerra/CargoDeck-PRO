@@ -469,20 +469,20 @@ export function ContainerInventoryModal({
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             <button
               onClick={addEmptyRow}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-all min-h-[36px] shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px] shadow-sm"
             >
               <Plus size={11} /> Linha
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[36px]"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
             >
               <FileSpreadsheet size={11} /> Excel
             </button>
             <button
               onClick={() => pdfInputRef.current?.click()}
               disabled={extractingPdf}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
               title="Importar PDF DANFE (NF-e) via IA"
             >
               {extractingPdf ? <Loader2 size={11} className="animate-spin" /> : <FileText size={11} />}
@@ -492,7 +492,7 @@ export function ContainerInventoryModal({
               <button
                 onClick={toggleAllSelected}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition-all min-h-[36px]',
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]',
                   allSelected
                     ? 'bg-brand-primary/10 border-brand-primary text-brand-primary'
                     : 'bg-main border-subtle text-secondary hover:border-brand-primary/40 hover:text-brand-primary'
@@ -506,7 +506,7 @@ export function ContainerInventoryModal({
             {selectedCount > 0 && (
               <button
                 onClick={handleDeleteSelected}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-error/10 border-2 border-status-error/30 text-status-error hover:bg-status-error/15 transition-all min-h-[36px]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-error/10 border-2 border-status-error/30 text-status-error hover:bg-status-error/15 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
               >
                 <Trash2 size={11} /> Excluir ({selectedCount})
               </button>
@@ -514,14 +514,14 @@ export function ContainerInventoryModal({
             {onExportPdf && (
               <button
                 onClick={() => onExportPdf(container)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-all min-h-[36px]"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
               >
                 <FileText size={11} /> Exportar PDF
               </button>
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-all min-h-[36px]"
+              className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
               aria-label="Fechar"
             >
               <X size={16} />
@@ -566,7 +566,7 @@ export function ContainerInventoryModal({
               </p>
               <button
                 onClick={addEmptyRow}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-all"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-[filter,transform] duration-200"
               >
                 <Plus size={12} /> Adicionar Primeira Linha
               </button>
@@ -639,7 +639,7 @@ export function ContainerInventoryModal({
                               onChange={(e) => updateField(row.id, field, e.target.value)}
                               title={err}
                               className={cn(
-                                'w-full px-2 py-1.5 rounded text-[11px] outline-none transition-all',
+                                'w-full px-2 py-1.5 rounded text-[11px] outline-none transition-[background-color,border-color,box-shadow] duration-150',
                                 'bg-transparent border',
                                 h.numeric && 'text-right font-mono',
                                 err ? 'border-status-error bg-status-error/5 text-status-error' : 'border-transparent hover:border-subtle focus:border-brand-primary focus:bg-main',
@@ -676,14 +676,14 @@ export function ContainerInventoryModal({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted hover:text-primary hover:bg-main transition-all min-h-[40px]"
+              className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted hover:text-primary hover:bg-main transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
             >
               Fechar
             </button>
             <button
               onClick={handleSaveAll}
               disabled={saving || errorCount > 0}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[40px] shadow-md"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shadow-md"
             >
               <Save size={12} />
               {saving ? 'Salvando…' : 'Salvar Tudo'}

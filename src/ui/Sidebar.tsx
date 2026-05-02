@@ -46,18 +46,18 @@ export default function Sidebar() {
         <button
           onClick={() => setViewMode('modal-generation')}
           title="Abrir Módulo de Geração Modal de Transporte"
-          className="nav-cta relative w-full px-4 py-4 flex items-center justify-center gap-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-all duration-300 group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden"
+          className="nav-cta relative w-full px-4 py-4 flex items-center justify-center gap-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden"
         >
           {/* Anel pulsante de fundo */}
           <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
           {/* Brilho que atravessa no hover */}
-          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-all duration-700" />
+          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
 
-          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:rotate-3 transition-all">
+          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:rotate-3 transition-[background-color,transform] duration-200">
             <LayoutGrid className="w-4 h-4" />
           </span>
           <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">GERAÇÃO MODAL</span>
-          <ArrowRight className="relative w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="relative w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-[opacity,transform] duration-200" />
         </button>
       </div>
 

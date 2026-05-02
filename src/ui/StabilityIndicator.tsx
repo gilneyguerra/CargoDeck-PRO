@@ -72,11 +72,11 @@ export function StabilityIndicator({ variant = 'compact' }: StabilityIndicatorPr
             <span className="text-[11px] font-mono font-black text-primary tabular-nums w-10 text-right">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
             <div className="flex-1 h-3 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner p-0.5 relative">
               <div className="flex-1 flex justify-end">
-                <div className={cn('h-full transition-all duration-700 rounded-l-sm', isListing && totalPort > totalStarboard ? 'bg-status-error' : 'bg-brand-primary')} style={{ width: `${portRatio}%` }} />
+                <div className={cn('h-full transition-[width,background-color] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] rounded-l-sm', isListing && totalPort > totalStarboard ? 'bg-status-error' : 'bg-brand-primary')} style={{ width: `${portRatio}%` }} />
               </div>
               <div className="w-px bg-border-strong mx-0.5 z-10 opacity-30" />
               <div className="flex-1">
-                <div className={cn('h-full transition-all duration-700 rounded-r-sm', isListing && totalStarboard > totalPort ? 'bg-status-error' : 'bg-brand-primary')} style={{ width: `${starboardRatio}%` }} />
+                <div className={cn('h-full transition-[width,background-color] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] rounded-r-sm', isListing && totalStarboard > totalPort ? 'bg-status-error' : 'bg-brand-primary')} style={{ width: `${starboardRatio}%` }} />
               </div>
             </div>
             <span className="text-[11px] font-mono font-black text-primary tabular-nums w-10">{totalStarboard.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
@@ -124,21 +124,21 @@ export function StabilityIndicator({ variant = 'compact' }: StabilityIndicatorPr
       <div className="h-3 bg-main/40 border border-subtle rounded-full overflow-hidden flex shadow-inner">
         {totalPort > 0 && (
           <div
-            className={cn('h-full transition-all duration-700', portColor)}
+            className={cn('h-full transition-[width,background-color] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]', portColor)}
             style={{ width: `${portPct}%` }}
             title={`Bombordo: ${totalPort.toFixed(1)} t (${portPct.toFixed(0)}%)`}
           />
         )}
         {totalCenter > 0 && (
           <div
-            className="h-full transition-all duration-700 bg-emerald-500"
+            className="h-full transition-[width] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-emerald-500"
             style={{ width: `${centerPct}%` }}
             title={`Centro: ${totalCenter.toFixed(1)} t (${centerPct.toFixed(0)}%)`}
           />
         )}
         {totalStarboard > 0 && (
           <div
-            className={cn('h-full transition-all duration-700', starboardColor)}
+            className={cn('h-full transition-[width,background-color] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]', starboardColor)}
             style={{ width: `${starboardPct}%` }}
             title={`Boreste: ${totalStarboard.toFixed(1)} t (${starboardPct.toFixed(0)}%)`}
           />
