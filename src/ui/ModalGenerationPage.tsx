@@ -85,6 +85,9 @@ interface CargoGridCardProps {
   selected: boolean;
   /** Quantidade de itens DANFE já alocados nesta carga (apenas relevante quando category==='CONTAINER'). */
   danfeItemCount?: number;
+  /** Delay em ms para a entrada em cascade (stagger). Capped em 12*40=480ms
+   *  pelo caller — undefined = sem animation-delay aplicado. */
+  enterDelayMs?: number;
   onToggle: (id: string) => void;
   onEdit: (cargo: Cargo) => void;
   onDelete: (cargo: Cargo) => void;
@@ -92,7 +95,7 @@ interface CargoGridCardProps {
   onOpenInventory?: (cargo: Cargo) => void;
 }
 
-function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, onDelete, onOpenInventory }: CargoGridCardProps) {
+function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onToggle, onEdit, onDelete, onOpenInventory }: CargoGridCardProps) {
   const ratio = (cargo.lengthMeters || 1) / (cargo.widthMeters || 1);
   const baseSize = 80;
   const visualWidth = ratio >= 1 ? baseSize : Math.max(20, baseSize * ratio);
@@ -114,18 +117,32 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, onToggle, onEdit, 
     boxShadow: '0 0 0 1px #B71C1C40, 0 0 12px #B71C1C30',
   } : undefined;
 
+  // Combina o style de prioridade (hazardous/urgent) com o animationDelay
+  // do stagger. animationDelay é só aplicado quando enterDelayMs é passado.
+  const cardStyle = enterDelayMs !== undefined
+    ? { ...(hazardousStyle ?? urgentStyle ?? {}), animationDelay: `${enterDelayMs}ms` }
+    : (hazardousStyle ?? urgentStyle);
+
+  // Cascade de entrada (Emil's stagger): só aplicada em cards "calmos".
+  // Cards hazardous/urgent já têm `animate-pulse` e não podem ter outra
+  // animation simultânea — o pulse é mais informativo.
+  const showEnterAnimation = !isHazardous && !isUrgent;
+
   return (
     <div
       onClick={() => onToggle(cargo.id)}
       className={cn(
         'group relative p-4 rounded-2xl border-2 transition-[background-color,border-color,box-shadow,transform] duration-200 cursor-pointer flex flex-col gap-3 hover:shadow-md active:scale-[0.98]',
+        // Keyframe `cargoCardEnter` mora em src/index.css; reduced-motion
+        // neutraliza via duration override (commit anterior).
+        showEnterAnimation && 'animate-[cargoCardEnter_300ms_var(--ease-out-fast)_both]',
         selected
           ? 'border-brand-primary bg-brand-primary/5 shadow-md'
           : isHazardous || isUrgent
           ? 'animate-pulse'
           : 'border-subtle bg-sidebar/40 hover:border-strong'
       )}
-      style={hazardousStyle ?? urgentStyle}
+      style={cardStyle}
     >
       {/* Badges de status — perigosa tem prioridade visual sobre urgente */}
       {isHazardous && (
@@ -856,12 +873,15 @@ export function ModalGenerationPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {filtered.map(c => (
+            {filtered.map((c, idx) => (
               <CargoGridCard
                 key={c.id}
                 cargo={c}
                 selected={selectedCargos.has(c.id)}
                 danfeItemCount={danfeCountByCargoId.get(c.id) ?? 0}
+                /* Stagger limitado a 12 itens (480ms total) — grids grandes
+                   não devem atrasar percepção do usuário. */
+                enterDelayMs={Math.min(idx, 12) * 40}
                 onToggle={toggleCargoSelection}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

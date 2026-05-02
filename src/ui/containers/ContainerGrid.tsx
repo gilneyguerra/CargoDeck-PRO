@@ -204,17 +204,21 @@ export function ContainerGrid({ onExportSelected }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map(c => {
+            {filtered.map((c, idx) => {
               const itemCount = itemCountByCargo.get(c.id) ?? 0;
               const totalValue = totalValueByCargo.get(c.id) ?? 0;
               const selected = selectedIds.has(c.id);
               const filled = itemCount > 0;
+              /* Stagger 40ms entre os primeiros 12 cards (Emil's stagger). */
+              const enterDelayMs = Math.min(idx, 12) * 40;
               return (
                 <div
                   key={c.id}
                   onClick={() => toggleSelection(c.id)}
+                  style={{ animationDelay: `${enterDelayMs}ms` }}
                   className={cn(
-                    'group relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col gap-3 hover:shadow-md active:scale-[0.99]',
+                    'group relative p-4 rounded-2xl border-2 transition-[background-color,border-color,box-shadow,transform] duration-200 cursor-pointer flex flex-col gap-3 hover:shadow-md active:scale-[0.99]',
+                    'animate-[cargoCardEnter_300ms_var(--ease-out-fast)_both]',
                     selected ? 'border-brand-primary bg-brand-primary/5 shadow-md' : 'border-subtle bg-sidebar/40 hover:border-strong'
                   )}
                 >
