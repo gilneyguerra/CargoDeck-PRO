@@ -40,12 +40,17 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
    const { setNodeRef: setDroppableRef } = useDroppable({
      id: `tab-${loc.id}`
    });
-   // Sortable handle — reorder horizontal das tabs. DndContext aninhado em
-   // DeckArea cuida desse drag (separado do drag global de cargas).
+   // Sortable handle — reorder horizontal das tabs. Usa prefix 'sort-'
+   // pra evitar colisão com o drop target 'tab-${loc.id}' do useDroppable
+   // acima. Sem o prefix, ambos drop targets registravam IDs distintos
+   // mas no MESMO node DOM, e o collision detection do dnd-kit retornava
+   // o último registrado (loc.id sem prefix) — o handleDragOver global
+   // procura prefix 'tab-' e falhava → arrastar carga sobre tab parou
+   // de mudar a tab ativa.
    const {
      setNodeRef: setSortableRef,
      attributes, listeners, transform, transition, isDragging,
-   } = useSortable({ id: loc.id });
+   } = useSortable({ id: 'sort-' + loc.id });
 
    // Combina as duas refs no mesmo elemento — dnd-kit suporta esse padrão.
    const setRefs = (el: HTMLElement | null) => {
@@ -230,9 +235,11 @@ export function DeckArea() {
       onDragEnd: (e: DragEndEvent) => {
         const { active, over } = e;
         if (!over || active.id === over.id) return;
-        const oldIdx = locations.findIndex(l => l.id === active.id);
-        const newIdx = locations.findIndex(l => l.id === over.id);
-        // Só reage se ambos active e over forem locations conhecidas;
+        // IDs do useSortable agora têm prefix 'sort-' — decodifica antes
+        // de procurar a location correspondente.
+        const oldIdx = locations.findIndex(l => 'sort-' + l.id === active.id);
+        const newIdx = locations.findIndex(l => 'sort-' + l.id === over.id);
+        // Só reage se ambos active e over forem sortable IDs de locations;
         // qualquer outro drag (cargas, etc.) é ignorado por esse listener.
         if (oldIdx < 0 || newIdx < 0) return;
         const reordered = arrayMove(locations, oldIdx, newIdx);
@@ -323,7 +330,7 @@ export function DeckArea() {
                 title="Arraste as abas para reordenar"
               >
                   <SortableContext
-                    items={locations.map(l => l.id)}
+                    items={locations.map(l => 'sort-' + l.id)}
                     strategy={horizontalListSortingStrategy}
                   >
                     {locations.map(loc => (

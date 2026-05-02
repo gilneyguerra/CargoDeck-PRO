@@ -92,13 +92,13 @@ function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' }) {
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
-    // Guard: se o que está sendo arrastado é UMA TAB (active.id bate com
-    // alguma location.id), NÃO mudar de tab — o user está reordenando as
+    // Guard: se o que está sendo arrastado é UMA TAB (active.id começa
+    // com 'sort-'), NÃO mudar de tab — o user está reordenando as
     // próprias abas. Sem esse guard, ao arrastar a tab A sobre a tab B,
     // setActiveLocation muda activeLocation no meio do gesto → re-render
     // global → drag é cancelado e o reorder nunca completa.
     const activeId = String(active.id);
-    if (locations.some(l => l.id === activeId)) return;
+    if (activeId.startsWith('sort-')) return;
 
     const overId = String(over.id);
     if (overId.startsWith('tab-')) {
