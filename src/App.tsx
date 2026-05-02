@@ -28,11 +28,11 @@ const EditCargoModal = lazy(() =>
  * Wrapper para receber a `view` do Route. Cada rota injeta a view que o
  * Layout deve renderizar — mantém AppWithProviders agnóstico ao DOM.
  */
-function AppShell({ view }: { view: 'deck' | 'modal-generation' | 'containers' }) {
+function AppShell({ view }: { view: 'deck' | 'modal-generation' }) {
   return <AppWithProviders view={view} />;
 }
 
-function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' | 'containers' }) {
+function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' }) {
   const {
     moveCargoToBay, unallocatedCargoes, locations,
     activeLocationId, setActiveLocation,
@@ -101,7 +101,7 @@ function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' | 'conta
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <Layout>
-        {view === 'deck' ? <DeckArea /> : <ModalGenerationPage initialView={view} />}
+        {view === 'deck' ? <DeckArea /> : <ModalGenerationPage />}
       </Layout>
       <DragOverlay>
         {activeCargo ? (
@@ -196,8 +196,8 @@ function App() {
           <Route path="/" element={<LandingRoute />} />
           <Route path="/deck" element={<AppShell view="deck" />} />
           <Route path="/modais" element={<AppShell view="modal-generation" />} />
-          <Route path="/contentores" element={<AppShell view="containers" />} />
-          {/* Catch-all: rota desconhecida volta para a raiz. */}
+          {/* Catch-all: rota desconhecida (incluindo /contentores legado)
+              volta para a raiz. */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

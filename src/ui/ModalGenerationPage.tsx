@@ -1,6 +1,6 @@
 import { useState, useMemo, useDeferredValue, useEffect, lazy, Suspense } from 'react';
 import {
-  ArrowLeft, Search, Table2, Plus,
+  Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
   Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon,
   FolderOpen, Building2,
@@ -28,10 +28,8 @@ const CargoAssistant = lazy(() =>
   import('./CargoAssistant').then(m => ({ default: m.CargoAssistant }))
 );
 
-// Lazy: feature DANFE — só carrega quando o usuário entra na visão de containers.
-const ContainerGrid = lazy(() =>
-  import('./containers/ContainerGrid').then(m => ({ default: m.ContainerGrid }))
-);
+// Lazy: inventário DANFE — só carrega quando o usuário abre o popup de
+// alocar/desalocar itens em uma carga-CONTAINER.
 const ContainerInventoryModal = lazy(() =>
   import('./containers/ContainerInventoryModal').then(m => ({ default: m.ContainerInventoryModal }))
 );
@@ -271,14 +269,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
 
 // ─── Página Principal ──────────────────────────────────────────────────────────
 
-interface ModalGenerationPageProps {
-  /** Estado inicial da view interna — 'modal-generation' mostra o grid de
-   *  cargas; 'containers' já abre direto a aba Contentores. Vindo do
-   *  router para que /modais e /contentores apontem para a mesma página. */
-  initialView?: 'modal-generation' | 'containers';
-}
-
-export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalGenerationPageProps = {}) {
+export function ModalGenerationPage() {
   const {
     unallocatedCargoes, selectedCargos,
     toggleCargoSelection, selectMultipleCargos, clearCargoSelection,
@@ -296,11 +287,10 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
   const [showAssistant, setShowAssistant] = useState(false);
   const [showGroupMove, setShowGroupMove] = useState(false);
 
-  // Containers (feature DANFE) — `containersView` é DERIVADO da rota,
-  // não state local. Single source of truth: URL. Navegação interna
-  // (botão "Contentores" / voltar) usa navigate() e React re-renderiza
-  // este componente com prop `initialView` atualizada.
-  const containersView = initialView === 'containers';
+  // Container inventory (DANFE) — modal acessado via "Alocar/Desalocar
+  // Itens" inline em CargoGridCard que tem category==='CONTAINER'.
+  // Não há mais view dedicada de listing — gerenciamento é feito por
+  // cargo individual.
   const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
   const containerStore = useContainerStore();
   const danfeItems = useContainerStore(s => s.items);
@@ -459,12 +449,7 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
     setShowAllocate(true);
   };
 
-  // ─── Containers (DANFE) ─────────────────────────────────────────────────
-
-  const openContainersView = () => {
-    clearCargoSelection();
-    navigate('/contentores');
-  };
+  // ─── Container Inventory (DANFE) ────────────────────────────────────────
 
   const handleOpenInventory = async (cargo: Cargo) => {
     try {
@@ -472,44 +457,6 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
       setInventoryContainer(ensured);
     } catch {
       notify('Não foi possível abrir o inventário deste contentor.', 'error');
-    }
-  };
-
-  const handleExportContainersPdf = async (cargos: Cargo[]) => {
-    // ContainerGrid sinaliza problema (lista vazia ou sem itens) chamando
-    // onExportSelected com lista vazia — emitimos warning aqui para manter
-    // o useNotificationStore como única fonte de toasts.
-    if (cargos.length === 0) {
-      notify('Selecione ao menos 1 contentor com itens para gerar o RMD.', 'warning');
-      return;
-    }
-    try {
-      // Garante que cada cargo tenha um Container persistido (com mesmo id).
-      // Sem isso o PDF não consegue resolver itens — eles ficariam órfãos.
-      const ensured: Container[] = await Promise.all(
-        cargos.map(cargo => containerStore.ensureContainerRecord(cargo))
-      );
-      const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
-      const empresaByContainer = new Map<string, string>();
-      for (const c of ensured) {
-        itemsByContainer.set(c.id, containerStore.getItemsByContainer(c.id));
-      }
-      // Bridge cargo→container.empresa: container hoje não persiste empresa
-      // (sem migração SQL), então passamos via Map em runtime.
-      for (const cargo of cargos) {
-        if (cargo.empresa && cargo.empresa.trim()) {
-          empresaByContainer.set(cargo.id, cargo.empresa.trim());
-        }
-      }
-      await PdfGeneratorService.executeContainersExport(ensured, itemsByContainer, empresaByContainer);
-      notify(`Relatório RMD gerado com ${ensured.length} contentor(es).`, 'success');
-    } catch (err) {
-      reportException(err, {
-        title: 'Falha ao gerar PDF de containers',
-        category: 'runtime',
-        source: 'containers-pdf-export',
-      });
-      notify('Não foi possível gerar o PDF.', 'error');
     }
   };
 
@@ -563,32 +510,6 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
 
   return (
     <>
-    {containersView ? (
-      <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
-        {/* Toolbar fina com voltar */}
-        <div className="px-6 py-3 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3">
-          <button
-            onClick={() => navigate('/modais')}
-            title="Voltar para inventário de cargas offshore"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
-          >
-            <ArrowLeft size={12} /> Cargas
-          </button>
-          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted">|</span>
-          <span className="text-[10px] font-mono text-muted">Módulo DANFE · containers fiscais</span>
-        </div>
-
-        <Suspense fallback={
-          <div className="flex-1 flex items-center justify-center text-[11px] font-mono text-muted">
-            Carregando módulo de contentores…
-          </div>
-        }>
-          <ContainerGrid
-            onExportSelected={handleExportContainersPdf}
-          />
-        </Suspense>
-      </div>
-    ) : (
     <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
       {/* Toolbar Header */}
       <div className="px-6 py-4 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3 flex-wrap">
@@ -638,14 +559,6 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
           >
             <Plus size={12} /> Manual
           </button>
-          <button
-            onClick={openContainersView}
-            title="Gerenciar Contentores (cargas DANFE)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
-          >
-            <Package size={12} /> Contentores
-          </button>
-
           {/* Toggle do Assistente IA */}
           <button
             onClick={() => setShowAssistant(s => !s)}
@@ -933,9 +846,8 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
       )}
       <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
-    )}
-    {/* Inventário DANFE (Alocar/Desalocar Itens) — modal global, ativável tanto
-        a partir dos cards de Print 1 quanto da página de Contentores. */}
+    {/* Inventário DANFE — abre via "Alocar / Desalocar Itens" inline em
+        qualquer carga-CONTAINER no CargoGridCard. */}
     {inventoryContainer && (
       <Suspense fallback={null}>
         <ContainerInventoryModal
