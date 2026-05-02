@@ -68,7 +68,7 @@ export function DeckActionToolbar() {
     setSaving(true);
     try {
       await DatabaseService.saveStowagePlan();
-      notify('Manifesto salvo com sucesso!', 'success');
+      notify('Plano de carregamento salvo com sucesso.', 'success');
     } catch (err: unknown) {
       notify('Erro ao salvar: ' + String(err), 'error');
       reportException(err, {
@@ -85,7 +85,13 @@ export function DeckActionToolbar() {
   };
 
   const handleClearAll = async () => {
-    const ok = await ask('Limpar Manifestos', 'Deseja limpar todos os manifestos? Esta ação não pode ser desfeita.');
+    const ok = await ask({
+      title: 'Limpar Plano de Carga',
+      message: 'ATENÇÃO: Isso deletará todas as cargas de todas as abas de cargas de uma só vez. Você tem certeza que deseja fazer isso?',
+      variant: 'warning',
+      confirmLabel: 'Sim, limpar tudo',
+      cancelLabel: 'Cancelar',
+    });
     if (ok) useCargoStore.getState().clearAllCargoes();
   };
 

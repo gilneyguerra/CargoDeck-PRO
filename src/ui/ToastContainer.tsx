@@ -28,29 +28,40 @@ export function ToastContainer() {
         ))}
       </div>
 
-      {/* 3. Modal de Confirmação Padronizado */}
+      {/* 3. Modal de Confirmação Padronizado — variant define cor do
+          accent bar + ícone + botão Confirm. Default = azul brand;
+          'warning' = âmbar (ações de efeito amplo); 'danger' = vermelho
+          (destrutivas/irreversíveis). */}
       <StandardModal
         isOpen={confirm.isOpen}
         onClose={confirm.onCancel}
         title={confirm.title}
+        variant={confirm.variant}
         footer={
           <>
             <button
               onClick={confirm.onCancel}
-              className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-muted hover:bg-main hover:text-primary transition-all border border-transparent hover:border-subtle"
+              className="px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] text-muted hover:bg-main hover:text-primary transition-[background-color,border-color,color] duration-200 border border-transparent hover:border-subtle min-h-[40px]"
             >
-              Cancelar
+              {confirm.cancelLabel}
             </button>
             <button
               onClick={confirm.onConfirm}
-              className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-status-success hover:brightness-110 text-white transition-all shadow-md active:scale-95"
+              className={
+                'px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] text-white transition-[filter,transform,box-shadow] duration-200 shadow-md active:scale-95 hover:brightness-110 min-h-[40px] ' +
+                (confirm.variant === 'warning'
+                  ? 'bg-status-warning shadow-status-warning/30'
+                  : confirm.variant === 'danger'
+                  ? 'bg-status-error shadow-status-error/30'
+                  : 'bg-status-success shadow-status-success/30')
+              }
             >
-              Confirmar
+              {confirm.confirmLabel}
             </button>
           </>
         }
       >
-        <p className="text-primary font-medium text-center py-4">{confirm.message}</p>
+        <p className="text-primary font-medium text-center py-2 leading-relaxed">{confirm.message}</p>
       </StandardModal>
 
       {/* 4. Alert Dialog Global — Erros Críticos / Sucesso Destacado (Z-1100) */}

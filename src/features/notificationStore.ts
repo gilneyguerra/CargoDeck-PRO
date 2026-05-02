@@ -16,10 +16,19 @@ interface BannerState {
   progress?: number;
 }
 
+/** Variant do confirm dialog: muda cor do botão Confirm + ícone do header.
+ *  - 'default' (verde): ações benignas, simples confirmação.
+ *  - 'warning' (âmbar): ações com efeito amplo, ainda reversíveis.
+ *  - 'danger'  (vermelho): ações destrutivas/irreversíveis. */
+export type ConfirmVariant = 'default' | 'warning' | 'danger';
+
 interface ConfirmState {
   isOpen: boolean;
   title: string;
   message: string;
+  variant: ConfirmVariant;
+  confirmLabel: string;
+  cancelLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -60,8 +69,12 @@ interface NotificationState {
   setBanner: (message: string, progress?: number) => void;
   hideBanner: () => void;
 
-  // Confirm Dialog
-  ask: (title: string, message: string) => Promise<boolean>;
+  // Confirm Dialog — overload simples preserva backward-compat; opts version
+  // permite variant ('warning'/'danger') e labels customizados.
+  ask: {
+    (title: string, message: string): Promise<boolean>;
+    (opts: { title: string; message: string; variant?: ConfirmVariant; confirmLabel?: string; cancelLabel?: string }): Promise<boolean>;
+  };
   closeConfirm: () => void;
 
   // Alert Dialog (erros críticos / sucesso destacado)
@@ -88,6 +101,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     isOpen: false,
     title: '',
     message: '',
+    variant: 'default',
+    confirmLabel: 'Confirmar',
+    cancelLabel: 'Cancelar',
     onConfirm: () => {},
     onCancel: () => {}
   },
@@ -132,13 +148,24 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     set((state) => ({ banner: { ...state.banner, isVisible: false } }));
   },
 
-  ask: (title, message) => {
-    return new Promise((resolve) => {
+  ask: ((arg1: string | { title: string; message: string; variant?: ConfirmVariant; confirmLabel?: string; cancelLabel?: string }, arg2?: string) => {
+    // Normaliza overload: ask(title, message) | ask({...opts}) → opts unificado.
+    const opts = typeof arg1 === 'string'
+      ? { title: arg1, message: arg2 ?? '' }
+      : arg1;
+    const variant = opts.variant ?? 'default';
+    const confirmLabel = opts.confirmLabel ?? 'Confirmar';
+    const cancelLabel = opts.cancelLabel ?? 'Cancelar';
+
+    return new Promise<boolean>((resolve) => {
       set({
         confirm: {
           isOpen: true,
-          title,
-          message,
+          title: opts.title,
+          message: opts.message,
+          variant,
+          confirmLabel,
+          cancelLabel,
           onConfirm: () => {
             set((s) => ({ confirm: { ...s.confirm, isOpen: false } }));
             resolve(true);
@@ -150,7 +177,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
         }
       });
     });
-  },
+  }) as NotificationState['ask'],
 
   closeConfirm: () => {
     set((s) => ({ confirm: { ...s.confirm, isOpen: false } }));
