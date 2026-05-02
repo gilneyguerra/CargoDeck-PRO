@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X, Search, CheckCircle2, AlertTriangle, Scale,
-    ChevronRight, ChevronLeft, Shuffle, PackageCheck
+    ChevronRight, ChevronLeft, Shuffle, PackageCheck, Inbox
 } from 'lucide-react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useStabilityCalculation } from '@/hooks/useStabilityCalculation';
@@ -117,7 +117,7 @@ interface Props {
 }
 
 export function GroupMoveModal({ isOpen, onClose }: Props) {
-    const { unallocatedCargoes, locations, removeUnallocatedByIds } = useCargoStore();
+    const { unallocatedCargoes, locations, removeUnallocatedByIds, unallocateMultipleCargoes } = useCargoStore();
     const notify = useNotificationStore(s => s.notify);
     const ask = useNotificationStore(s => s.ask);
     const { execute, loading } = useCargoMovement();
@@ -558,6 +558,33 @@ export function GroupMoveModal({ isOpen, onClose }: Props) {
                                 >
                                     Cancelar
                                 </button>
+                                {/* Devolver Selecionadas — saída alternativa: em vez de
+                                    escolher destino, devolve as cargas alocadas para o
+                                    inventário (/modais). Só faz sentido quando ao menos
+                                    1 das selecionadas está alocada (tem bayId). */}
+                                {(() => {
+                                  const allocatedSelected = allCargoes
+                                    .filter(c => selectedIds.has(c.id) && c.bayId)
+                                    .map(c => c.id);
+                                  if (allocatedSelected.length === 0) return null;
+                                  return (
+                                    <button
+                                        onClick={() => {
+                                            unallocateMultipleCargoes(allocatedSelected);
+                                            notify(
+                                                `${allocatedSelected.length} carga(s) devolvida(s) ao inventário.`,
+                                                'success',
+                                            );
+                                            handleClose();
+                                        }}
+                                        title="Mover as cargas alocadas selecionadas de volta para o inventário (sem escolher novo destino)"
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-status-warning/10 text-status-warning border-2 border-status-warning/30 hover:bg-status-warning hover:text-white rounded-xl text-xs font-black transition-[background-color,border-color,color] duration-200 uppercase tracking-widest"
+                                    >
+                                        <Inbox className="w-4 h-4" />
+                                        Devolver ({allocatedSelected.length})
+                                    </button>
+                                  );
+                                })()}
                                 <button
                                     onClick={handleNext}
                                     disabled={selectedIds.size === 0}
