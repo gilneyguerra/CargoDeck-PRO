@@ -26,9 +26,16 @@ export function Layout({ children }: LayoutProps) {
         </main>
       </div>
       
-      <div className="flex items-center justify-between px-10 py-3 bg-header/80 border-t border-subtle text-[10px] text-primary shrink-0 transition-colors duration-300 font-mono tracking-[0.2em] uppercase glass">
-        <span className="font-extrabold text-primary">Professional Offshore Stowage Intelligence</span>
-        <span className="font-extrabold text-primary">BUILD V{staticVersion} • 2026</span>
+      <div className="flex items-center justify-between px-10 py-3 bg-header/80 border-t border-subtle shrink-0 transition-colors duration-300 glass">
+        {/* Left tagline — prosa em sans, tracking elegante */}
+        <span className="text-[11px] font-bold text-primary uppercase tracking-[0.25em]">
+          Professional Offshore Stowage Intelligence
+        </span>
+        {/* Right build/version — mono+tabular para harmonizar com identidade
+            técnica/numérica (versão + ano são valores estruturados). */}
+        <span className="text-[11px] font-mono font-black tabular-nums text-primary tracking-[0.18em]">
+          BUILD V{staticVersion} • 2026
+        </span>
       </div>
     </div>
   );
