@@ -71,25 +71,27 @@ export default function Sidebar() {
           </div>
           <div>
             <h3 className="text-[11px] font-black text-primary uppercase tracking-widest leading-none">Resumo de Carga</h3>
-            <p className="text-[11px] font-medium text-secondary opacity-80 mt-1">Inventário ativo</p>
+            <p className="text-[11px] font-medium text-primary opacity-80 mt-1">Inventário ativo</p>
           </div>
         </div>
 
-        {/* Cards de números principais */}
+        {/* Cards de números principais — labels em text-primary (preto/branco
+            via theme tokens). Apenas valores numéricos coloridos mantêm
+            cor semântica (brand-primary, status-success). */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-main border border-subtle rounded-xl p-3">
-            <div className="flex items-center gap-1.5 text-[9px] font-black text-muted uppercase tracking-widest mb-1.5">
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest mb-1.5">
               <Box size={10} /> Não Alocadas
             </div>
             <p className="text-xl font-mono font-black text-brand-primary leading-none">{stats.total}</p>
-            <p className="text-[12px] font-bold tabular-nums text-secondary mt-1.5">{stats.totalWeight.toFixed(1)} t</p>
+            <p className="text-[12px] font-bold tabular-nums text-primary mt-1.5">{stats.totalWeight.toFixed(1)} t</p>
           </div>
           <div className="bg-main border border-subtle rounded-xl p-3">
-            <div className="flex items-center gap-1.5 text-[9px] font-black text-muted uppercase tracking-widest mb-1.5">
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest mb-1.5">
               <Anchor size={10} /> Alocadas
             </div>
             <p className="text-xl font-mono font-black text-status-success leading-none">{stats.allocated}</p>
-            <p className="text-[12px] font-bold text-secondary mt-1.5">a bordo</p>
+            <p className="text-[12px] font-bold text-primary mt-1.5">a bordo</p>
           </div>
         </div>
 
@@ -129,13 +131,13 @@ export default function Sidebar() {
         {/* Filtros dinâmicos de categorias — grid 2 colunas (mais compacto, mais filtros visíveis) */}
         {categoryEntries.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-[9px] font-black text-muted uppercase tracking-widest">
+            <p className="text-[9px] font-black text-primary uppercase tracking-widest">
               Categorias a bordo · {categoryEntries.length} tipo(s)
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {categoryEntries.map(([cat, count]) => (
                 <div key={cat} className="flex items-center justify-between text-[11px] bg-main/40 rounded-lg px-2.5 py-2 border border-subtle/50 min-w-0">
-                  <span className="font-black text-secondary uppercase tracking-widest truncate" title={cat}>{cat}</span>
+                  <span className="font-black text-primary uppercase tracking-widest truncate" title={cat}>{cat}</span>
                   <span className="font-mono tabular-nums font-black text-primary shrink-0 ml-1.5">{count}</span>
                 </div>
               ))}
@@ -152,9 +154,9 @@ export default function Sidebar() {
       {/* Mensagem informativa final */}
       <div className="flex-1 p-5 flex flex-col items-center justify-center text-center overflow-y-auto no-scrollbar">
         <div className="w-14 h-14 rounded-full bg-main border-2 border-subtle flex items-center justify-center mb-3 opacity-50">
-          <Truck size={20} className="text-secondary" />
+          <Truck size={20} className="text-primary" />
         </div>
-        <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
+        <p className="text-[10px] text-primary leading-relaxed max-w-[240px] opacity-80">
           Painel de controle e distribuição de modais. Crie seu modal, insira as cargas nele e depois estoque no local apropriado.
         </p>
       </div>
