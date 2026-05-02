@@ -1,14 +1,16 @@
 import {
   LayoutGrid, Package, Anchor, Box, Flame, Truck, Flag, ArrowRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useMemo } from 'react';
 import { StabilityIndicator } from './StabilityIndicator';
 
 export default function Sidebar() {
   const {
-    unallocatedCargoes, setViewMode, locations
+    unallocatedCargoes, locations
   } = useCargoStore();
+  const navigate = useNavigate();
 
   // ─── Resumo Estatístico ────────────────────────────────────────────────────
 
@@ -44,7 +46,7 @@ export default function Sidebar() {
       {/* Botão de navegação principal — destaque visual proeminente */}
       <div className="p-3 border-b border-subtle bg-header/20">
         <button
-          onClick={() => setViewMode('modal-generation')}
+          onClick={() => navigate('/modais')}
           title="Abrir Módulo de Geração Modal de Transporte"
           className="nav-cta relative w-full px-4 py-4 flex items-center justify-center gap-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden"
         >

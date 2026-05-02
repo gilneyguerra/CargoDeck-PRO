@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 // BUILD_VERSION: 1.14.0-OCR-FIX-V1
 import { Header } from './Header';
 import Sidebar from './Sidebar';
-import { useCargoStore } from '@/features/cargoStore';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,10 +11,10 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   // Removido appVersion da store, pois não existe no CargoState
   const staticVersion = "1.14";
-  // Sidebar só aparece na visão "deck"; na página de Geração Modal o conteúdo
+  // Sidebar só aparece na rota /deck; em /modais e /contentores o conteúdo
   // ocupa toda a largura para a toolbar dedicada operar com mais espaço.
-  const viewMode = useCargoStore(s => s.viewMode);
-  const showSidebar = viewMode === 'deck';
+  const { pathname } = useLocation();
+  const showSidebar = pathname === '/deck';
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg text-text transition-colors duration-300 font-sans">

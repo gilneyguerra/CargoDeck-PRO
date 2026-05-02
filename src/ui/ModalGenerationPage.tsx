@@ -5,6 +5,7 @@ import {
   Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon,
   FolderOpen, Building2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 import { reportException } from '@/features/errorReporter';
@@ -281,10 +282,11 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
   const {
     unallocatedCargoes, selectedCargos,
     toggleCargoSelection, selectMultipleCargos, clearCargoSelection,
-    setViewMode, setEditingCargo, deleteCargo, deleteMultipleCargoes,
+    setEditingCargo, deleteCargo, deleteMultipleCargoes,
     clearUnallocatedCargoes
   } = useCargoStore();
   const { notify, ask } = useNotificationStore();
+  const navigate = useNavigate();
 
   // Modais
   const [showEditor, setShowEditor] = useState(false);
@@ -294,10 +296,11 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
   const [showAssistant, setShowAssistant] = useState(false);
   const [showGroupMove, setShowGroupMove] = useState(false);
 
-  // Containers (feature DANFE) — `containersView` espelha a rota:
-  // /modais → false / /contentores → true. Após o mount, navegação
-  // dentro da página usa navigate() para sincronizar com a URL.
-  const [containersView, setContainersView] = useState(initialView === 'containers');
+  // Containers (feature DANFE) — `containersView` é DERIVADO da rota,
+  // não state local. Single source of truth: URL. Navegação interna
+  // (botão "Contentores" / voltar) usa navigate() e React re-renderiza
+  // este componente com prop `initialView` atualizada.
+  const containersView = initialView === 'containers';
   const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
   const containerStore = useContainerStore();
   const danfeItems = useContainerStore(s => s.items);
@@ -407,7 +410,7 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
 
   const handleBack = () => {
     clearCargoSelection();
-    setViewMode('deck');
+    navigate('/deck');
   };
 
   const handleSelectAll = () => {
@@ -460,7 +463,7 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
 
   const openContainersView = () => {
     clearCargoSelection();
-    setContainersView(true);
+    navigate('/contentores');
   };
 
   const handleOpenInventory = async (cargo: Cargo) => {
@@ -565,7 +568,7 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
         {/* Toolbar fina com voltar */}
         <div className="px-6 py-3 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3">
           <button
-            onClick={() => setContainersView(false)}
+            onClick={() => navigate('/modais')}
             title="Voltar para inventário de cargas offshore"
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
@@ -682,7 +685,7 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
 
           {/* Gerenciar (vindo da sidebar) — re-aciona view atual; útil como atalho de scroll-to-top */}
           <button
-            onClick={() => setViewMode('modal-generation')}
+            onClick={() => navigate('/modais')}
             title="Gerenciar Cargas"
             disabled={unallocatedCargoes.length === 0}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 border-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary/15 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
