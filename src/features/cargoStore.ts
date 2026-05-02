@@ -65,6 +65,9 @@ export interface CargoState {
     getAllCargo: () => Cargo[];
     editLocation: (id: string, updates: Partial<CargoLocation>) => void;
     deleteLocation: (id: string) => void;
+    /** Reordena as locations conforme a sequência informada. Locations
+     *  ausentes do array vão para o fim em ordem original (defensivo). */
+    reorderLocations: (orderedIds: string[]) => void;
     clearAllCargoes: () => void;
     clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
@@ -480,11 +483,29 @@ export const useCargoStore = create<CargoState>()(
                     });
                 } catch (error) {
                     logger.error(`Falha ao remover localização ${id}:`, error);
-                    throw handleApplicationError(error, { 
+                    throw handleApplicationError(error, {
                         context: 'deleteLocation',
                         locationId: id
                     });
                 }
+            },
+
+            reorderLocations: (orderedIds) => {
+                set((state) => {
+                    const byId = new Map(state.locations.map(l => [l.id, l]));
+                    const ordered: CargoLocation[] = [];
+                    const seen = new Set<string>();
+                    for (const id of orderedIds) {
+                        const loc = byId.get(id);
+                        if (loc) { ordered.push(loc); seen.add(id); }
+                    }
+                    // Defensivo: locations ausentes do array (race conditions
+                    // ou IDs órfãos) vão para o fim em ordem original.
+                    for (const loc of state.locations) {
+                        if (!seen.has(loc.id)) ordered.push(loc);
+                    }
+                    return { locations: ordered };
+                });
             },
 
             clearAllCargoes: () => {

@@ -1,8 +1,15 @@
-import { useState, memo, useMemo } from 'react';
+import { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
-import { Settings, Plus, Search, Trash2, Edit, CheckCircle2, Users } from 'lucide-react';
-import { useDroppable } from '@dnd-kit/core';
+import { Settings, Plus, Search, Trash2, Edit, CheckCircle2, Users, GripVertical } from 'lucide-react';
+import {
+  useDroppable, DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, horizontalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import type { Bay } from '@/domain/Bay';
 import type { Cargo } from '@/domain/Cargo';
@@ -27,22 +34,51 @@ interface LocationTabProps {
 }
 
 function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: LocationTabProps) {
-   const { setNodeRef } = useDroppable({
+   // Drop target — recebe cargas arrastadas (DndContext global do App.tsx
+   // gerencia o drag de cargas). Mantém o comportamento de "drop carga
+   // aqui para alocar nesta área".
+   const { setNodeRef: setDroppableRef } = useDroppable({
      id: `tab-${loc.id}`
    });
+   // Sortable handle — reorder horizontal das tabs. DndContext aninhado em
+   // DeckArea cuida desse drag (separado do drag global de cargas).
+   const {
+     setNodeRef: setSortableRef,
+     attributes, listeners, transform, transition, isDragging,
+   } = useSortable({ id: loc.id });
+
+   // Combina as duas refs no mesmo elemento — dnd-kit suporta esse padrão.
+   const setRefs = (el: HTMLElement | null) => {
+     setDroppableRef(el);
+     setSortableRef(el);
+   };
+
+   const sortableStyle: React.CSSProperties = {
+     transform: CSS.Transform.toString(transform),
+     transition,
+     opacity: isDragging ? 0.4 : 1,
+     zIndex: isDragging ? 20 : undefined,
+   };
 
      return (
         <div className="relative flex items-center gap-1 group">
           <button
-            ref={setNodeRef}
+            ref={setRefs}
             onClick={onClick}
+            style={sortableStyle}
+            {...attributes}
+            {...listeners}
             className={cn(
-              "px-6 py-3 text-[11px] font-extrabold tracking-widest transition-[background-color,border-color,color,box-shadow,transform] duration-200 border rounded-2xl flex items-center gap-4 uppercase shadow-low hover:shadow-medium",
-              isActive 
-                ? "bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20 scale-[1.02] z-10" 
+              "px-6 py-3 text-[11px] font-extrabold tracking-widest transition-[background-color,border-color,color,box-shadow] duration-200 border rounded-2xl flex items-center gap-4 uppercase shadow-low hover:shadow-medium cursor-grab active:cursor-grabbing touch-none",
+              isActive
+                ? "bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20 z-10"
                 : "bg-header/50 border-subtle text-primary hover:text-primary hover:border-strong bg-white/50 dark:bg-black/20"
             )}
           >
+          {/* Drag handle visual (ícone de pegada) — pista visual de que a
+              tab é arrastável. Aparece sutilmente, fica no canto esquerdo
+              do label. */}
+          <GripVertical size={12} className={cn('shrink-0 opacity-50 group-hover:opacity-100 transition-opacity', isActive ? 'text-white/70' : 'text-muted')} />
           <div className="flex items-center gap-2">
             <span>{loc.name}</span>
             {matchCount > 0 && (
@@ -54,17 +90,18 @@ function LocationTab({ loc, isActive, onClick, onEdit, onDelete, matchCount }: L
               const totalCargoes = loc.bays.reduce((acc, bay) => acc + bay.allocatedCargoes.length, 0);
               return totalCargoes > 0 && (
                 <span className={cn(
-                  "text-[9px] px-2 py-0.5 rounded-lg font-black min-w-[20px] text-center",
-                  isActive ? "bg-white/20 text-white" : "bg-sidebar text-primary"
+                  "inline-flex items-center justify-center min-w-[24px] h-[24px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums shadow-sm",
+                  // Cores theme-aware: tab inativa usa bg-sidebar+text-primary que muda
+                  // automaticamente entre light/dark. Tab ativa (gradient) usa branco
+                  // semitransparente que contrasta nos dois modos.
+                  isActive ? "bg-white/25 text-white shadow-white/20" : "bg-sidebar text-primary border border-subtle/60"
                 )}>
                   {totalCargoes}
                 </span>
               );
             })()}
             {matchCount > 0 && (
-              <span className={cn(
-                "text-[9px] px-2 py-0.5 rounded-lg font-black min-w-[20px] text-center bg-status-warning text-white shadow-sm shadow-status-warning/30"
-              )}>
+              <span className="inline-flex items-center justify-center min-w-[24px] h-[24px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums bg-status-warning text-white shadow-sm shadow-status-warning/30 ring-2 ring-status-warning/20 animate-pulse">
                 {matchCount}
               </span>
             )}
@@ -169,12 +206,47 @@ return (
     );
 });
 
+/** Limite de localizações além do qual a UX em viewports estreitos
+ *  começa a degradar (scroll horizontal vira a única forma de ver tudo).
+ *  Notificação one-shot avisa o operador. */
+const MAX_RESPONSIVE_LOCATIONS = 6;
+
 export function DeckArea() {
-     const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, setEditingCargo, editLocation, deleteLocation } = useCargoStore();
+     const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, setEditingCargo, editLocation, deleteLocation, reorderLocations } = useCargoStore();
      const ask = useNotificationStore(s => s.ask);
+     const notify = useNotificationStore(s => s.notify);
+     const askInput = useNotificationStore(s => s.askInput);
     const activeLocation = locations.find(l => l.id === activeLocationId);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
+
+    // ─── Drag-and-drop para reordenar tabs de localização ────────────────
+    // PointerSensor com distância 8 evita drag em cliques curtos (selecionar
+    // tab continua funcionando normal).
+    const tabSensors = useSensors(
+      useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    );
+    const handleLocationDragEnd = (e: DragEndEvent) => {
+      const { active, over } = e;
+      if (!over || active.id === over.id) return;
+      const oldIdx = locations.findIndex(l => l.id === active.id);
+      const newIdx = locations.findIndex(l => l.id === over.id);
+      if (oldIdx < 0 || newIdx < 0) return;
+      const reordered = arrayMove(locations, oldIdx, newIdx);
+      reorderLocations(reordered.map(l => l.id));
+    };
+
+    // Notificação one-shot quando excede o limite responsivo.
+    const locationsOverflowNotifiedRef = useRef(false);
+    useEffect(() => {
+      if (locations.length > MAX_RESPONSIVE_LOCATIONS && !locationsOverflowNotifiedRef.current) {
+        notify(
+          `${locations.length} localizações criadas — limite recomendado é ${MAX_RESPONSIVE_LOCATIONS}. Use scroll horizontal nas abas ou consolide em menos áreas para preservar a fluidez.`,
+          'warning',
+        );
+        locationsOverflowNotifiedRef.current = true;
+      }
+    }, [locations.length, notify]);
 
     // Auxiliar para contar matches por localização
     const getMatchesForLocation = (loc: CargoLocation) => {
@@ -220,8 +292,7 @@ export function DeckArea() {
         };
     }, [searchTerm, locations]);
 
-    // Cálculo de estabilidade movido para o componente StabilityIndicator (renderizado no Sidebar)
-    const askInput = useNotificationStore(s => s.askInput);
+    // askInput já está destructured no topo do component (linha 218).
 
     const handleAddLocation = async () => {
         const name = await askInput({
@@ -239,37 +310,54 @@ export function DeckArea() {
 
     return (
         <div className="flex flex-col h-full w-full">
-             {/* Local Tabs */}
-              <div className="flex items-center gap-3 mb-10 bg-sidebar/40 p-3 px-4 rounded-3xl border border-subtle/50 w-full overflow-x-auto no-scrollbar shadow-inner">
-                  {locations.map(loc => (
-                      <LocationTab 
-                        key={loc.id} 
-                        loc={loc} 
-                        isActive={activeLocationId === loc.id} 
-                        matchCount={getMatchesForLocation(loc)}
-                        onClick={() => setActiveLocation(loc.id)}
-                        onEdit={async (editLoc) => {
-                          const name = await askInput({
-                            title: 'Editar Aba de Carga',
-                            message: 'Atualize o nome do local de armazenamento.',
-                            placeholder: 'Nome do local',
-                            defaultValue: editLoc.name,
-                            confirmLabel: 'Salvar',
-                            required: true,
-                          });
-                          if (name && name.trim() !== '') {
-                            editLocation(editLoc.id, { name: name.trim() });
-                          }
-                        }}
-                        onDelete={async (locId) => {
-                          const ok = await ask('Excluir Local', 'Tem certeza que deseja excluir este local? Todas as suas cargas alocadas serão movidas para o estoque.');
-                          if (ok) {
-                            deleteLocation(locId);
-                          }
-                        }}
-                      />
-                  ))}
-                  <button 
+             {/* Local Tabs — drag-and-drop horizontal para reordenar
+                  (estilo planilha Excel). DndContext aninhado, separado do
+                  drag global de cargas (App.tsx). Mask gradient nas bordas
+                  laterais sinaliza scroll quando há muitas tabs. */}
+              <div
+                className="flex items-center gap-3 mb-10 bg-sidebar/40 p-3 px-4 rounded-3xl border border-subtle/50 w-full overflow-x-auto no-scrollbar shadow-inner [mask-image:linear-gradient(to_right,transparent,black_24px,black_calc(100%-24px),transparent)]"
+                title="Arraste as abas para reordenar"
+              >
+                  <DndContext
+                    sensors={tabSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleLocationDragEnd}
+                  >
+                    <SortableContext
+                      items={locations.map(l => l.id)}
+                      strategy={horizontalListSortingStrategy}
+                    >
+                      {locations.map(loc => (
+                          <LocationTab
+                            key={loc.id}
+                            loc={loc}
+                            isActive={activeLocationId === loc.id}
+                            matchCount={getMatchesForLocation(loc)}
+                            onClick={() => setActiveLocation(loc.id)}
+                            onEdit={async (editLoc) => {
+                              const name = await askInput({
+                                title: 'Editar Aba de Carga',
+                                message: 'Atualize o nome do local de armazenamento.',
+                                placeholder: 'Nome do local',
+                                defaultValue: editLoc.name,
+                                confirmLabel: 'Salvar',
+                                required: true,
+                              });
+                              if (name && name.trim() !== '') {
+                                editLocation(editLoc.id, { name: name.trim() });
+                              }
+                            }}
+                            onDelete={async (locId) => {
+                              const ok = await ask('Excluir Local', 'Tem certeza que deseja excluir este local? Todas as suas cargas alocadas serão movidas para o estoque.');
+                              if (ok) {
+                                deleteLocation(locId);
+                              }
+                            }}
+                          />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                  <button
                     onClick={handleAddLocation}
                     className="flex items-center gap-2 px-6 py-2.5 text-[10px] font-black text-muted hover:text-brand-primary border border-dashed border-subtle/60 rounded-xl hover:bg-brand-primary/5 hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 uppercase tracking-[0.2em] ml-2 shrink-0 shadow-sm"
                   >
