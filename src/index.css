@@ -53,6 +53,13 @@
 
 /* CSS Variables for Light and Dark Themes - Refined Maritime Design System */
 :root {
+  /* Sinaliza ao navegador o esquema de cor do app — afeta widgets nativos
+     que não são estilizáveis por CSS (option do select, scrollbars,
+     inputs de date/time/color, etc.). Sem isso, em dark mode o popup
+     do <select> ficava com fundo branco do default do browser e o
+     texto puxava text-primary (branco) → ilegível. */
+  color-scheme: light;
+
   /* Maritime Palette Integration */
   --maritime-primary: #003366;
   --maritime-action: #0056B3;
@@ -119,8 +126,12 @@
 }
 
 .dark {
+  /* Browser passa a renderizar widgets nativos com paleta dark (popup
+     do <select> com fundo escuro + texto claro automaticamente). */
+  color-scheme: dark;
+
   /* Maritime Dark Palette Integration */
-  --maritime-primary: #60a5fa; 
+  --maritime-primary: #60a5fa;
   --maritime-text: #f8fafc;
   --maritime-text-secondary: #94a3b8;
   --maritime-bg: #020617;
@@ -155,6 +166,18 @@ html, body {
   background-color: var(--bg-main);
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
+}
+
+/* Fallback explícito para <option> dentro de <select> nativos. Em
+   plataformas que ignoram `color-scheme` (e.g. Linux/Windows com temas
+   custom), `option` herda text-primary do parent — em dark mode o
+   navegador desenha o popup com fundo branco default e o texto fica
+   branco → ilegível (bug reportado no Editor de Modais).
+   Esta regra força bg + cor que casam: fundo claro + texto escuro
+   em light, fundo escuro + texto claro em dark. */
+option {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
 }
 
 /* ─── Seleção de Texto Global ─────────────────────────────────────────────────
