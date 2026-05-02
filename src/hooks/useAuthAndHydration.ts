@@ -4,6 +4,7 @@
  * Aprimorado com tratamento de erros robusto e logging.
  */
 import { useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
 import { useCargoStore } from '@/features/cargoStore';
@@ -40,6 +41,7 @@ function clearAllUserState() {
 
 export const useAuthAndHydration = () => {
     const { hydrateFromDb, setManifestDetails, setHydrationStatus } = useCargoStore();
+    const navigate = useNavigate();
 
     const fetchUserData = useCallback(async () => {
         logger.info('Tentando buscar dados do usuario e sessao...');
@@ -122,6 +124,8 @@ export const useAuthAndHydration = () => {
                 // Reset profundo: cargos, locations, configs, logs, drafts em localStorage
                 clearAllUserState();
                 setManifestDetails(null, null, []);
+                // Volta para a landing — onde o user pode fazer login novamente.
+                navigate('/');
             }
         });
         
@@ -129,5 +133,5 @@ export const useAuthAndHydration = () => {
             subscription.unsubscribe();
             logger.debug('Unsubscribed from auth state changes.');
         };
-    }, [fetchUserData, hydrateFromDb, setManifestDetails, setHydrationStatus]);
+    }, [fetchUserData, hydrateFromDb, setManifestDetails, setHydrationStatus, navigate]);
 };

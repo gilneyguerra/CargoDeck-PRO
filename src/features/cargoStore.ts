@@ -36,6 +36,12 @@ export interface CargoState {
     searchTerm: string;
     editingCargo: Cargo | null;
     isHydratedFromCloud: boolean;
+    /**
+     * @deprecated A navegação agora é feita via URL/react-router. Esse
+     *             campo permanece apenas por compatibilidade com call
+     *             sites legados; será removido em sprint dedicado.
+     *             Use `useNavigate()` + `useLocation()` em vez disso.
+     */
     viewMode: ViewMode;
     selectedCargos: Set<string>;
 
@@ -63,6 +69,7 @@ export interface CargoState {
     clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
     setEditingCargo: (cargo: Cargo | null) => void;
+    /** @deprecated use `useNavigate()` do react-router em vez disso. */
     setViewMode: (mode: ViewMode) => void;
     toggleCargoSelection: (id: string) => void;
     selectMultipleCargos: (ids: string[]) => void;
