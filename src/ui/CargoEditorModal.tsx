@@ -792,7 +792,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
             <Table2 size={20} className="text-brand-primary" />
           </div>
           <div>
-            <h2 id={titleId} className="text-lg font-black text-primary tracking-tighter uppercase leading-none">Editor de Cargas em Grade</h2>
+            <h2 id={titleId} className="text-lg font-black text-primary tracking-tighter uppercase leading-none">Editor de Modais</h2>
             <p className="text-[9px] font-black text-secondary uppercase tracking-[0.3em] opacity-80 mt-0.5">Entrada em massa · Estilo planilha · TAB para navegar</p>
           </div>
 
@@ -889,11 +889,11 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
             <div className="relative group/dl">
               <button
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 px-4 py-2 bg-sidebar border-2 border-subtle hover:border-indigo-400/60 text-secondary hover:text-indigo-400 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
-                title="Baixar planilha modelo"
+                className="flex items-center gap-2 px-4 py-2 bg-sidebar border-2 border-subtle hover:border-indigo-400/60 text-secondary hover:text-indigo-400 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all"
+                title="Baixar planilha padrão"
               >
                 <Download size={14} />
-                Modelo
+                Baixe a planilha padrão aqui!
               </button>
               {/* Tooltip explicativo */}
               <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 w-64 opacity-0 group-hover/dl:opacity-100 transition-opacity duration-200">
@@ -910,11 +910,11 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
             {/* Botão importar planilha */}
             <button
               onClick={() => fileImportRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 bg-sidebar border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
-              title="Importar Plano de Cargas (.xlsx, .csv)"
+              className="flex items-center gap-2 px-4 py-2 bg-sidebar border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary rounded-xl text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all"
+              title="Importar Modais via Excel (.xlsx, .csv)"
             >
               <Upload size={14} />
-              Importar Plano de Cargas
+              Importar Modais via Excel
             </button>
             <input ref={fileImportRef} type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" className="hidden" onChange={handleFileImport} />
 

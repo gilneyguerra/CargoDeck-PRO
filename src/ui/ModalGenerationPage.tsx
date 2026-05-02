@@ -548,16 +548,16 @@ export function ModalGenerationPage() {
           <button
             onClick={() => setShowEditor(true)}
             title="Editor em Grade (Excel/CSV)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
-            <Table2 size={12} /> Excel
+            <Table2 size={12} /> Criar Modal via Excel
           </button>
           <button
             onClick={() => setShowManual(true)}
-            title="Nova carga manual"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary text-white hover:brightness-110 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shadow-md"
+            title="Criar modal manualmente"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap bg-brand-primary text-white hover:brightness-110 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shadow-md"
           >
-            <Plus size={12} /> Manual
+            <Plus size={12} /> Criar Modal Manualmente
           </button>
           {/* Toggle do Assistente IA */}
           <button
@@ -642,14 +642,6 @@ export function ModalGenerationPage() {
               >
                 <ArrowRight size={12} />
                 Mover
-              </button>
-              <button
-                onClick={openContainersView}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/50 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                title="Abrir gerenciamento de contentores DANFE"
-              >
-                <Package size={12} />
-                Contentores
               </button>
               <button
                 onClick={handleChangePriority}
