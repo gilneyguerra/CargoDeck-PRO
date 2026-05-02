@@ -1,5 +1,6 @@
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Layout } from '@/ui/Layout';
 import { DeckArea } from '@/ui/DeckArea';
 import { ModalGenerationPage } from '@/ui/ModalGenerationPage';
@@ -23,14 +24,21 @@ const EditCargoModal = lazy(() =>
   import('@/ui/EditCargoModal').then(m => ({ default: m.EditCargoModal }))
 );
 
-function AppWithProviders() {
+/**
+ * Wrapper para receber a `view` do Route. Cada rota injeta a view que o
+ * Layout deve renderizar — mantém AppWithProviders agnóstico ao DOM.
+ */
+function AppShell({ view }: { view: 'deck' | 'modal-generation' | 'containers' }) {
+  return <AppWithProviders view={view} />;
+}
+
+function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' | 'containers' }) {
   const {
     moveCargoToBay, unallocatedCargoes, locations,
     activeLocationId, setActiveLocation,
     deleteCargo,
     setEditingCargo,
     editingCargo,
-    viewMode
   } = useCargoStore();
 
   const [activeCargo, setActiveCargo] = useState<Cargo | null>(null);
@@ -93,7 +101,7 @@ function AppWithProviders() {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <Layout>
-        {viewMode === 'modal-generation' ? <ModalGenerationPage /> : <DeckArea />}
+        {view === 'deck' ? <DeckArea /> : <ModalGenerationPage initialView={view} />}
       </Layout>
       <DragOverlay>
         {activeCargo ? (
@@ -173,20 +181,26 @@ function AppWithProviders() {
   )
 }
 
-function AppContent() {
-  const [view, setView] = useState<'landing' | 'app'>('landing');
-
-  if (view === 'landing') {
-    return <LandingPage onEnterApp={() => setView('app')} />;
-  }
-
-  return <AppWithProviders />;
+/** Wrapper que injeta useNavigate na LandingPage (o callback original
+ *  trocava `view` local; agora navega para /deck via router). */
+function LandingRoute() {
+  const navigate = useNavigate();
+  return <LandingPage onEnterApp={() => navigate('/deck')} />;
 }
 
 function App() {
   return (
     <ErrorBoundary>
-      <AppContent />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingRoute />} />
+          <Route path="/deck" element={<AppShell view="deck" />} />
+          <Route path="/modais" element={<AppShell view="modal-generation" />} />
+          <Route path="/contentores" element={<AppShell view="containers" />} />
+          {/* Catch-all: rota desconhecida volta para a raiz. */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

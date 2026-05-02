@@ -270,7 +270,14 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
 
 // ─── Página Principal ──────────────────────────────────────────────────────────
 
-export function ModalGenerationPage() {
+interface ModalGenerationPageProps {
+  /** Estado inicial da view interna — 'modal-generation' mostra o grid de
+   *  cargas; 'containers' já abre direto a aba Contentores. Vindo do
+   *  router para que /modais e /contentores apontem para a mesma página. */
+  initialView?: 'modal-generation' | 'containers';
+}
+
+export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalGenerationPageProps = {}) {
   const {
     unallocatedCargoes, selectedCargos,
     toggleCargoSelection, selectMultipleCargos, clearCargoSelection,
@@ -287,8 +294,10 @@ export function ModalGenerationPage() {
   const [showAssistant, setShowAssistant] = useState(false);
   const [showGroupMove, setShowGroupMove] = useState(false);
 
-  // Containers (feature DANFE)
-  const [containersView, setContainersView] = useState(false);
+  // Containers (feature DANFE) — `containersView` espelha a rota:
+  // /modais → false / /contentores → true. Após o mount, navegação
+  // dentro da página usa navigate() para sincronizar com a URL.
+  const [containersView, setContainersView] = useState(initialView === 'containers');
   const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
   const containerStore = useContainerStore();
   const danfeItems = useContainerStore(s => s.items);
