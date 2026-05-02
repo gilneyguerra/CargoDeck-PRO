@@ -1,5 +1,5 @@
 import {
-  LayoutGrid, Package, Anchor, Box, Flame, Truck, Flag, ArrowRight
+  LayoutGrid, Package, Anchor, Box, Flame, Truck, Flag, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCargoStore } from '@/features/cargoStore';
@@ -55,11 +55,11 @@ export default function Sidebar() {
           {/* Brilho que atravessa no hover */}
           <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
 
+          <ArrowLeft className="relative w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:-translate-x-1 transition-[opacity,transform] duration-200" />
+          <span className="relative text-[11px] font-black uppercase tracking-[0.18em] whitespace-nowrap">Gerar Modal de Transporte</span>
           <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:rotate-3 transition-[background-color,transform] duration-200">
             <LayoutGrid className="w-4 h-4" />
           </span>
-          <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">GERAÇÃO MODAL</span>
-          <ArrowRight className="relative w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-[opacity,transform] duration-200" />
         </button>
       </div>
 
