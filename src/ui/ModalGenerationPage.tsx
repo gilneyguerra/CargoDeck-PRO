@@ -688,7 +688,9 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
 
           {/* Voltar ao Deck — mesmo design visual do botão GERAÇÃO MODAL do
               Sidebar (gradient brand-primary, ring pulsante, sweep no hover).
-              Posicionado no fim da toolbar, à direita depois do título. */}
+              Seta posicionada à DIREITA do label apontando pra frente:
+              alinhamento com a posição do botão no canto direito da toolbar e
+              com a noção de "avançar" para o deck. */}
           <button
             onClick={handleBack}
             title="Voltar ao Plano de Estivagem (Deck)"
@@ -696,10 +698,10 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
           >
             <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
             <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
-            <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:-rotate-3 group-hover:-translate-x-0.5 transition-[background-color,transform] duration-200">
-              <ArrowLeft size={14} />
-            </span>
             <span className="relative text-[11px] font-black uppercase tracking-[0.18em] whitespace-nowrap">Ver área de estiva</span>
+            <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:rotate-3 group-hover:translate-x-0.5 transition-[background-color,transform] duration-200">
+              <ArrowRight size={14} />
+            </span>
           </button>
 
           {/* Action Bar inline — aparece quando há seleção */}
