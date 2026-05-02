@@ -69,7 +69,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h3 className="text-[11px] font-black text-primary uppercase tracking-widest leading-none">Resumo de Carga</h3>
-            <p className="text-[9px] font-bold text-secondary opacity-70 mt-0.5">Inventário ativo</p>
+            <p className="text-[11px] font-medium text-secondary opacity-80 mt-1">Inventário ativo</p>
           </div>
         </div>
 
@@ -80,14 +80,14 @@ export default function Sidebar() {
               <Box size={10} /> Não Alocadas
             </div>
             <p className="text-xl font-mono font-black text-brand-primary leading-none">{stats.total}</p>
-            <p className="text-[10px] font-mono font-black text-secondary mt-1">{stats.totalWeight.toFixed(1)} t</p>
+            <p className="text-[12px] font-bold tabular-nums text-secondary mt-1.5">{stats.totalWeight.toFixed(1)} t</p>
           </div>
           <div className="bg-main border border-subtle rounded-xl p-3">
             <div className="flex items-center gap-1.5 text-[9px] font-black text-muted uppercase tracking-widest mb-1.5">
               <Anchor size={10} /> Alocadas
             </div>
             <p className="text-xl font-mono font-black text-status-success leading-none">{stats.allocated}</p>
-            <p className="text-[10px] font-mono font-black text-secondary mt-1">a bordo</p>
+            <p className="text-[12px] font-bold text-secondary mt-1.5">a bordo</p>
           </div>
         </div>
 

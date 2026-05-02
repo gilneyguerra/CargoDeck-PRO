@@ -462,7 +462,7 @@ export function ContainerInventoryModal({
             <h2 id={titleId} className="text-base font-montserrat font-black text-primary tracking-tighter uppercase leading-none truncate">
               {container.name}
             </h2>
-            <p className="text-[9px] font-mono text-secondary mt-1 truncate">
+            <p className="text-[12px] font-medium text-secondary mt-1.5 truncate">
               {rows.length} item(ns) · {totals.qtde.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} qtde · R$ {totals.vlTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
@@ -667,7 +667,7 @@ export function ContainerInventoryModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-subtle bg-sidebar shrink-0 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-4 text-[10px] font-mono">
+          <div className="flex items-center gap-4 text-[12px] tabular-nums">
             <span className="text-muted">Qtde: <span className="font-black text-primary">{totals.qtde.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</span></span>
             <span className="text-muted">Total: <span className="font-black text-status-success">R$ {totals.vlTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
             <span className="text-muted hidden md:inline">ICMS: <span className="font-black text-primary">R$ {totals.vlIcms.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>

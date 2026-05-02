@@ -114,10 +114,10 @@ export function StabilityIndicator({ variant = 'compact' }: StabilityIndicatorPr
       </div>
 
       {/* Valores numéricos — mesma grid, alinhados sob a label correspondente */}
-      <div className="grid grid-cols-3 gap-1 text-[10px] font-mono font-black tabular-nums text-primary">
-        <span className="text-left">{totalPort.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
-        <span className="text-center">{totalCenter.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
-        <span className="text-right">{totalStarboard.toFixed(0)}<small className="opacity-50 ml-0.5">t</small></span>
+      <div className="grid grid-cols-3 gap-1 text-[12px] font-black tabular-nums text-primary">
+        <span className="text-left">{totalPort.toFixed(0)}<small className="opacity-60 ml-0.5">t</small></span>
+        <span className="text-center">{totalCenter.toFixed(0)}<small className="opacity-60 ml-0.5">t</small></span>
+        <span className="text-right">{totalStarboard.toFixed(0)}<small className="opacity-60 ml-0.5">t</small></span>
       </div>
 
       {/* Barra integrada 3-segmentos — soma = 100% do peso total */}
@@ -146,12 +146,12 @@ export function StabilityIndicator({ variant = 'compact' }: StabilityIndicatorPr
       </div>
 
       {/* Total + flag de banda */}
-      <div className="flex items-center justify-between text-[9px] font-mono pt-0.5">
+      <div className="flex items-center justify-between text-[11px] tabular-nums pt-1">
         <span className="text-muted">
           Total: <span className="text-primary font-black">{totalAll.toFixed(0)}t</span>
         </span>
         {isListing && (
-          <span className="text-status-error font-black uppercase tracking-widest animate-pulse">
+          <span className="text-[10px] text-status-error font-black uppercase tracking-widest animate-pulse">
             ⚠ Banda &gt; 50t
           </span>
         )}
