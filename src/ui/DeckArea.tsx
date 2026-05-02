@@ -3,7 +3,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
 import { Settings, Plus, Search, Trash2, Edit, CheckCircle2, Users, GripVertical } from 'lucide-react';
 import {
-  useDroppable, DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  useDroppable, useDndMonitor,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -221,20 +221,24 @@ export function DeckArea() {
     const [showGroupMoveModal, setShowGroupMoveModal] = useState(false);
 
     // ─── Drag-and-drop para reordenar tabs de localização ────────────────
-    // PointerSensor com distância 8 evita drag em cliques curtos (selecionar
-    // tab continua funcionando normal).
-    const tabSensors = useSensors(
-      useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    );
-    const handleLocationDragEnd = (e: DragEndEvent) => {
-      const { active, over } = e;
-      if (!over || active.id === over.id) return;
-      const oldIdx = locations.findIndex(l => l.id === active.id);
-      const newIdx = locations.findIndex(l => l.id === over.id);
-      if (oldIdx < 0 || newIdx < 0) return;
-      const reordered = arrayMove(locations, oldIdx, newIdx);
-      reorderLocations(reordered.map(l => l.id));
-    };
+    // Antes tínhamos um DndContext aninhado, mas conflitava com o DndContext
+    // global do App.tsx (que gerencia drag de cargas para baias). Agora
+    // usamos useDndMonitor — escuta os eventos do contexto global e reage
+    // SOMENTE quando o drag é de uma tab (active.id === alguma location.id).
+    // SortableContext continua envolvendo as tabs e dá horizontal-strategy.
+    useDndMonitor({
+      onDragEnd: (e: DragEndEvent) => {
+        const { active, over } = e;
+        if (!over || active.id === over.id) return;
+        const oldIdx = locations.findIndex(l => l.id === active.id);
+        const newIdx = locations.findIndex(l => l.id === over.id);
+        // Só reage se ambos active e over forem locations conhecidas;
+        // qualquer outro drag (cargas, etc.) é ignorado por esse listener.
+        if (oldIdx < 0 || newIdx < 0) return;
+        const reordered = arrayMove(locations, oldIdx, newIdx);
+        reorderLocations(reordered.map(l => l.id));
+      },
+    });
 
     // Notificação one-shot quando excede o limite responsivo.
     const locationsOverflowNotifiedRef = useRef(false);
@@ -318,45 +322,39 @@ export function DeckArea() {
                 className="flex items-center gap-3 mb-10 bg-sidebar/40 p-3 px-4 rounded-3xl border border-subtle/50 w-full overflow-x-auto no-scrollbar shadow-inner [mask-image:linear-gradient(to_right,transparent,black_24px,black_calc(100%-24px),transparent)]"
                 title="Arraste as abas para reordenar"
               >
-                  <DndContext
-                    sensors={tabSensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleLocationDragEnd}
+                  <SortableContext
+                    items={locations.map(l => l.id)}
+                    strategy={horizontalListSortingStrategy}
                   >
-                    <SortableContext
-                      items={locations.map(l => l.id)}
-                      strategy={horizontalListSortingStrategy}
-                    >
-                      {locations.map(loc => (
-                          <LocationTab
-                            key={loc.id}
-                            loc={loc}
-                            isActive={activeLocationId === loc.id}
-                            matchCount={getMatchesForLocation(loc)}
-                            onClick={() => setActiveLocation(loc.id)}
-                            onEdit={async (editLoc) => {
-                              const name = await askInput({
-                                title: 'Editar Aba de Carga',
-                                message: 'Atualize o nome do local de armazenamento.',
-                                placeholder: 'Nome do local',
-                                defaultValue: editLoc.name,
-                                confirmLabel: 'Salvar',
-                                required: true,
-                              });
-                              if (name && name.trim() !== '') {
-                                editLocation(editLoc.id, { name: name.trim() });
-                              }
-                            }}
-                            onDelete={async (locId) => {
-                              const ok = await ask('Excluir Local', 'Tem certeza que deseja excluir este local? Todas as suas cargas alocadas serão movidas para o estoque.');
-                              if (ok) {
-                                deleteLocation(locId);
-                              }
-                            }}
-                          />
-                      ))}
-                    </SortableContext>
-                  </DndContext>
+                    {locations.map(loc => (
+                        <LocationTab
+                          key={loc.id}
+                          loc={loc}
+                          isActive={activeLocationId === loc.id}
+                          matchCount={getMatchesForLocation(loc)}
+                          onClick={() => setActiveLocation(loc.id)}
+                          onEdit={async (editLoc) => {
+                            const name = await askInput({
+                              title: 'Editar Aba de Carga',
+                              message: 'Atualize o nome do local de armazenamento.',
+                              placeholder: 'Nome do local',
+                              defaultValue: editLoc.name,
+                              confirmLabel: 'Salvar',
+                              required: true,
+                            });
+                            if (name && name.trim() !== '') {
+                              editLocation(editLoc.id, { name: name.trim() });
+                            }
+                          }}
+                          onDelete={async (locId) => {
+                            const ok = await ask('Excluir Local', 'Tem certeza que deseja excluir este local? Todas as suas cargas alocadas serão movidas para o estoque.');
+                            if (ok) {
+                              deleteLocation(locId);
+                            }
+                          }}
+                        />
+                    ))}
+                  </SortableContext>
                   <button
                     onClick={handleAddLocation}
                     className="flex items-center gap-2 px-6 py-2.5 text-[10px] font-black text-muted hover:text-brand-primary border border-dashed border-subtle/60 rounded-xl hover:bg-brand-primary/5 hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 uppercase tracking-[0.2em] ml-2 shrink-0 shadow-sm"
