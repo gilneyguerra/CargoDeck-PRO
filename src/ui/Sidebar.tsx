@@ -153,8 +153,7 @@ export default function Sidebar() {
           <Truck size={20} className="text-secondary" />
         </div>
         <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
-          Importação de manifestos (PDF/IA/Excel), gerenciamento e movimentação em lote ficam na página dedicada de
-          <span className="text-brand-primary font-black"> Geração Modal de Transporte</span>.
+          Painel de controle e distriuição de modais. Crie seu modal, insira as cargas nele e depois estoque no local apropriado.
         </p>
       </div>
 

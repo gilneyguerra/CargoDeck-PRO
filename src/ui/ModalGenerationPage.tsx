@@ -840,9 +840,9 @@ export function ModalGenerationPage() {
             </div>
             {unallocatedCargoes.length === 0 ? (
               <>
-                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhuma carga no inventário</h3>
+                <h3 className="text-base font-black text-primary uppercase tracking-widest mb-2">Nenhum Modal de Transporte no Inventário</h3>
                 <p className="text-[11px] text-secondary leading-relaxed">
-                  Use os botões acima para importar manifestos via Excel ou criar cargas manualmente.
+                  Use os botões acima para importar seus modais de transporte via Excel ou Crie seus modais de transporte manualmente.
                 </p>
               </>
             ) : (
