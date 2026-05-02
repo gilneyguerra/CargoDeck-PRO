@@ -698,10 +698,10 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
           <button
             onClick={() => setShowGroupMove(true)}
             title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
           >
             <Users size={12} />
-            Grupo
+            Movimentar Modais em Grupo
           </button>
 
           {/* Action Bar inline — aparece quando há seleção */}
