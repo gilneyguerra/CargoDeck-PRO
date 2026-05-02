@@ -690,7 +690,10 @@ export function ModalGenerationPage() {
             >
               <Layers size={13} />
               Todas
-              <span className={cn('text-[9px] font-mono px-1.5 py-0.5 rounded-md', active ? 'bg-brand-primary text-white' : 'bg-subtle text-muted')}>
+              <span className={cn(
+                'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums shadow-sm',
+                active ? 'bg-brand-primary text-white' : 'bg-subtle text-muted'
+              )}>
                 {totalCount}
               </span>
             </button>
@@ -718,7 +721,7 @@ export function ModalGenerationPage() {
               <Icon size={13} className={isHazardousTab && !active ? 'text-purple-500' : ''} />
               {tab.label}
               <span className={cn(
-                'text-[9px] font-mono px-1.5 py-0.5 rounded-md',
+                'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums shadow-sm',
                 active
                   ? isHazardousTab ? 'bg-purple-500 text-white' : 'bg-brand-primary text-white'
                   : 'bg-subtle text-muted'
@@ -745,7 +748,10 @@ export function ModalGenerationPage() {
             >
               <Flame size={13} className={active ? '' : 'text-status-error'} />
               Prioridade Máxima
-              <span className={cn('text-[9px] font-mono px-1.5 py-0.5 rounded-md', active ? 'bg-status-error text-white' : 'bg-subtle text-muted')}>
+              <span className={cn(
+                'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums shadow-sm',
+                active ? 'bg-status-error text-white' : 'bg-subtle text-muted'
+              )}>
                 {priorityCount}
               </span>
             </button>
