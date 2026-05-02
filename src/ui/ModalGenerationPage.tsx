@@ -170,7 +170,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
           ) : (
             <Square size={18} className="text-muted/50 shrink-0" />
           )}
-          <span className="text-[10px] font-mono font-black text-secondary truncate max-w-[100px]" title={cargo.identifier}>
+          <span className="text-[12px] font-mono font-black text-secondary truncate max-w-[110px]" title={cargo.identifier}>
             {cargo.identifier}
           </span>
         </div>
@@ -193,7 +193,7 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
             borderColor: cargo.color || '#3b82f6',
           }}
         >
-          <span className="text-[8px] font-mono font-black text-primary px-1 truncate">
+          <span className="text-[10px] font-mono font-black text-primary px-1 truncate tabular-nums">
             {cargo.lengthMeters?.toFixed(1)}×{cargo.widthMeters?.toFixed(1)}m
           </span>
         </div>
@@ -204,23 +204,23 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
         {cargo.description}
       </h4>
 
-      {/* Empresa proprietária — exibido apenas quando informado. Linha discreta
-          em mono, não compete visualmente com a descrição. */}
+      {/* Empresa proprietária — exibido apenas quando informado. Linha discreta,
+          prosa em font-sans (não compete com numéricos do card). */}
       {cargo.empresa && cargo.empresa.trim() && (
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-secondary -mt-1" title={`Empresa: ${cargo.empresa}`}>
-          <Building2 size={10} className="text-muted shrink-0" />
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-secondary -mt-1" title={`Empresa: ${cargo.empresa}`}>
+          <Building2 size={11} className="text-muted shrink-0" />
           <span className="truncate">{cargo.empresa}</span>
         </div>
       )}
 
-      {/* Métricas */}
-      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest pt-2 border-t border-subtle/40">
+      {/* Métricas — labels em uppercase tracking + números em mono tabular */}
+      <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest pt-2 border-t border-subtle/40">
         <span className="text-secondary">
-          <span className="font-mono text-brand-primary">{cargo.weightTonnes.toFixed(2)}</span>
+          <span className="font-mono tabular-nums text-brand-primary">{cargo.weightTonnes.toFixed(2)}</span>
           <span className="text-muted"> t</span>
         </span>
         {cargo.destinoCarga && (
-          <span className="text-status-success/80 font-mono truncate max-w-[80px]" title={cargo.destinoCarga}>
+          <span className="text-status-success/80 font-mono tabular-nums truncate max-w-[90px]" title={cargo.destinoCarga}>
             → {cargo.destinoCarga}
           </span>
         )}

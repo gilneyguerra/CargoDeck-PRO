@@ -134,9 +134,9 @@ export default function Sidebar() {
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {categoryEntries.map(([cat, count]) => (
-                <div key={cat} className="flex items-center justify-between text-[10px] bg-main/40 rounded-lg px-2 py-1.5 border border-subtle/50 min-w-0">
+                <div key={cat} className="flex items-center justify-between text-[11px] bg-main/40 rounded-lg px-2.5 py-2 border border-subtle/50 min-w-0">
                   <span className="font-black text-secondary uppercase tracking-widest truncate" title={cat}>{cat}</span>
-                  <span className="font-mono font-black text-primary shrink-0 ml-1.5">{count}</span>
+                  <span className="font-mono tabular-nums font-black text-primary shrink-0 ml-1.5">{count}</span>
                 </div>
               ))}
             </div>
