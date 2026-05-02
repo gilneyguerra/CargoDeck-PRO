@@ -106,21 +106,21 @@ async function readItemsPerPage(file: File): Promise<PositionedItem[]> {
  * (com/sem ponto, "DESCRIÇÃO" com/sem "DO PRODUTO").
  */
 const HEADER_RECOGNIZERS: { regex: RegExp; key: ColumnKey }[] = [
-  { regex: /^COD\.?\s*PROD/i,              key: 'codProd' },
-  { regex: /^DESCRI[ÇC][ÃA]O/i,            key: 'descricao' },
-  { regex: /^NCM/i,                        key: 'ncmSh' },
-  { regex: /^CST/i,                        key: 'cst' },
-  { regex: /^CFOP/i,                       key: 'cfop' },
-  { regex: /^UNID/i,                       key: 'unid' },
-  { regex: /^QTDE/i,                       key: 'qtde' },
-  { regex: /^VL\.?\s*UNIT[ÁA]RIO|^VL\.?\s*UNIT/i, key: 'vlUnitario' },
-  { regex: /^VL\.?\s*TOTAL/i,              key: 'vlTotal' },
-  { regex: /^VL\.?\s*DESCONTO|^DESCONTO/i, key: 'vlDesconto' },
-  { regex: /^BC\.?\s*ICMS/i,               key: 'bcIcms' },
-  { regex: /^VL\.?\s*ICMS/i,               key: 'vlIcms' },
-  { regex: /^V\.?\s*IPI|^VL\.?\s*IPI/i,    key: 'vlIpi' },
-  { regex: /^AL[IÍ]Q\.?\s*ICMS/i,          key: 'aliqIcms' },
-  { regex: /^AL[IÍ]Q\.?\s*IPI/i,           key: 'aliqIpi' },
+  { regex: /^COD\.?\s*PROD|^C[ÓO]DIGO\s*DO\s*PRODUTO/i,    key: 'codProd' },
+  { regex: /^DESCRI[ÇC][ÃA]O|^PRODUTO\s*\/\s*SERVI/i,      key: 'descricao' },
+  { regex: /^NCM/i,                                         key: 'ncmSh' },
+  { regex: /^CST|^CSOSN/i,                                  key: 'cst' },
+  { regex: /^CFOP/i,                                        key: 'cfop' },
+  { regex: /^UNID|^UN\b|^UN\.?\b/i,                         key: 'unid' },
+  { regex: /^QTD[E]?|^QUANTIDADE/i,                         key: 'qtde' },
+  { regex: /^VL\.?\s*UNIT|^V\.?\s*UNIT|^PRE[ÇC]O\s*UNIT|^VALOR\s*UNIT/i, key: 'vlUnitario' },
+  { regex: /^VL\.?\s*TOTAL|^VALOR\s*TOTAL/i,                key: 'vlTotal' },
+  { regex: /^VL\.?\s*DESCONTO|^DESCONTO|^DESC\.?\b/i,       key: 'vlDesconto' },
+  { regex: /^BC\.?\s*ICMS|^BASE\s*C[AÁ]LC\.?\s*ICMS/i,      key: 'bcIcms' },
+  { regex: /^VL\.?\s*ICMS|^V\.?\s*ICMS/i,                   key: 'vlIcms' },
+  { regex: /^V\.?\s*IPI|^VL\.?\s*IPI/i,                     key: 'vlIpi' },
+  { regex: /^AL[IÍ]Q\.?\s*ICMS|^AL[IÍ]Q\s*ICMS/i,           key: 'aliqIcms' },
+  { regex: /^AL[IÍ]Q\.?\s*IPI|^AL[IÍ]Q\s*IPI/i,             key: 'aliqIpi' },
 ];
 
 function recognizeHeader(str: string): ColumnKey | null {
@@ -131,14 +131,23 @@ function recognizeHeader(str: string): ColumnKey | null {
   return null;
 }
 
+interface DetectedHeader {
+  layout: ColumnLayout;
+  headerY: number;
+  page: number;
+  /** Quantas colunas reconhecidas — usado para escolher o "canonical layout"
+   *  quando há múltiplos headers (continuação multi-página). */
+  score: number;
+}
+
 /**
- * Localiza a header row da tabela "DADOS DO PRODUTO / SERVIÇO" e devolve
- * o layout de colunas (X de cada uma). Retorna null se a tabela não
- * for identificada.
+ * Encontra TODAS as ocorrências do header da tabela em todas as páginas.
+ * DANFEs multi-página repetem o header em cada página; cada repetição
+ * abre uma nova região de itens que precisa ser extraída.
+ *
+ * Critério: row com >= 8 columns reconhecidas (de 15 ideais).
  */
-function detectColumnLayout(items: PositionedItem[]): { layout: ColumnLayout; headerY: number; page: number } | null {
-  // Agrupa items por (page, y aprox) e busca por uma row que contenha
-  // a maioria dos headers conhecidos.
+function detectAllTableHeaders(items: PositionedItem[]): DetectedHeader[] {
   const yTolerance = 3;
   const buckets = new Map<string, PositionedItem[]>();
   for (const it of items) {
@@ -149,82 +158,71 @@ function detectColumnLayout(items: PositionedItem[]): { layout: ColumnLayout; he
     buckets.set(k, arr);
   }
 
-  let bestRow: PositionedItem[] | null = null;
-  let bestScore = 0;
-  let bestY = 0;
-  let bestPage = 0;
-
+  const found: DetectedHeader[] = [];
   for (const arr of buckets.values()) {
     const matches = arr.map(it => ({ it, key: recognizeHeader(it.str) })).filter(m => m.key);
-    // Considera header válido apenas se >= 8 colunas reconhecidas (15 ideais)
-    if (matches.length >= 8 && matches.length > bestScore) {
-      bestScore = matches.length;
-      bestRow = arr;
-      bestY = arr[0].y;
-      bestPage = arr[0].page;
+    if (matches.length < 8) continue;
+
+    const byKey = new Map<ColumnKey, number>();
+    for (const it of arr) {
+      const key = recognizeHeader(it.str);
+      if (!key) continue;
+      const prev = byKey.get(key);
+      if (prev === undefined || it.x < prev) byKey.set(key, it.x);
     }
+    const layout: ColumnLayout = Array.from(byKey.entries())
+      .map(([key, x]) => ({ key, x }))
+      .sort((a, b) => a.x - b.x);
+
+    found.push({ layout, headerY: arr[0].y, page: arr[0].page, score: matches.length });
   }
 
-  if (!bestRow) return null;
-
-  // Constrói layout consolidando duplicatas (ex.: "DESCRIÇÃO" + "DO PRODUTO"
-  // em fragmentos separados) — fica com o X mínimo.
-  const byKey = new Map<ColumnKey, number>();
-  for (const it of bestRow) {
-    const key = recognizeHeader(it.str);
-    if (!key) continue;
-    const prev = byKey.get(key);
-    if (prev === undefined || it.x < prev) byKey.set(key, it.x);
-  }
-
-  const layout: ColumnLayout = Array.from(byKey.entries())
-    .map(([key, x]) => ({ key, x }))
-    .sort((a, b) => a.x - b.x);
-
-  return { layout, headerY: bestY, page: bestPage };
+  // Ordena por (página, Y descendente). DANFEs lêem top-down em PDF →
+  // header da página vem com Y maior. Ordem natural: página crescente, Y
+  // decrescente dentro da página.
+  found.sort((a, b) => a.page - b.page || b.headerY - a.headerY);
+  return found;
 }
 
 // ─── Bounds da tabela ────────────────────────────────────────────────────────
 
+/**
+ * Marcadores de fim da tabela. Lista expandida para tolerar variações
+ * que aparecem em DANFEs reais — alguns geradores omitem ISSQN, outros
+ * usam labels diferentes. A regra é: o que aparece IMEDIATAMENTE após
+ * a última linha de dados, encerrando a região tabular.
+ */
 const TABLE_END_RES = [
   /C[ÁA]LCULO\s+DO\s+ISSQN/i,
+  /C[ÁA]LCULO\s+DO\s+ISS\b/i,
   /DADOS\s+ADICIONAIS/i,
   /INFORMA[ÇC][ÕO]ES\s+COMPLEMENTARES/i,
   /VALOR\s+TOTAL\s+DOS\s+SERVI[ÇC]OS/i,
+  /VALOR\s+APROXIMADO\s+DOS?\s+TRIBUTOS?/i,
+  /RESERVADO\s+AO\s+FISCO/i,
 ];
 
 /**
- * Encontra a Y do primeiro marcador de fim de tabela em qualquer página
- * a partir do header.
+ * Para um header específico, encontra a Y do PRÓXIMO marcador de fim
+ * NA MESMA PÁGINA (com Y < headerY). Em DANFEs multi-página, cada
+ * página tem seu próprio rodapé "DADOS ADICIONAIS" — não pegar o
+ * rodapé da página 1 quando o header está na página 2 (causa do bug
+ * que perdia ~50% dos itens em DANFEs longos).
+ *
+ * Se não houver marcador na página, retorna `Number.NEGATIVE_INFINITY`
+ * (significa "vai até o fim da página"). Aí o filtro de bounding box
+ * pega tudo abaixo do header.
  */
-function findTableEnd(items: PositionedItem[], headerPage: number, headerY: number): { page: number; y: number } {
-  // Em PDFs, Y maior = topo da página. Conteúdo da tabela tem Y < headerY.
-  // O marcador de fim aparece com Y < headerY (na mesma página) ou em
-  // página posterior (qualquer Y).
-  let bestPage = Number.POSITIVE_INFINITY;
+function findEndForHeader(items: PositionedItem[], headerPage: number, headerY: number): number {
   let bestY = Number.NEGATIVE_INFINITY;
-
   for (const it of items) {
+    if (it.page !== headerPage) continue;
+    if (it.y >= headerY) continue; // só conta o que está abaixo do header
     if (!TABLE_END_RES.some(re => re.test(it.str))) continue;
-    // Critério: precisa estar DEPOIS do header (em página posterior, OU
-    // mesma página mas Y menor que o header).
-    const isAfterHeader =
-      it.page > headerPage ||
-      (it.page === headerPage && it.y < headerY);
-    if (!isAfterHeader) continue;
-    // Pega o que está mais "perto" do header (menor distância vertical):
-    // página mais baixa primeiro, depois Y maior dentro daquela página.
-    if (it.page < bestPage || (it.page === bestPage && it.y > bestY)) {
-      bestPage = it.page;
-      bestY = it.y;
-    }
+    // Y maior = mais próximo do header (logo abaixo). Pega o mais alto.
+    if (it.y > bestY) bestY = it.y;
   }
-
-  if (!Number.isFinite(bestPage)) {
-    // Sem marcador de fim → considera o documento inteiro
-    return { page: Number.MAX_SAFE_INTEGER, y: Number.NEGATIVE_INFINITY };
-  }
-  return { page: bestPage, y: bestY };
+  return bestY;
 }
 
 // ─── Atribuição posicional ───────────────────────────────────────────────────
@@ -244,35 +242,31 @@ function columnForX(layout: ColumnLayout, x: number): ColumnKey | null {
 }
 
 /**
- * Dentro do bounds da tabela, agrupa items por Y proximity, atribui cada
- * fragment à coluna pela posição X, e devolve uma lista de RowDrafts
- * preservando a ordem visual (top-down + por página).
+ * Coleta RowDrafts de UMA região tabular (uma página, do header até o
+ * marcador de fim ou bottom da página). Chamada uma vez por header
+ * detectado — em DANFEs multi-página, é chamada N vezes.
+ *
+ * `endY` = Y do marcador de fim na mesma página, ou `-Infinity` para
+ * pegar até o final.
  */
-function collectRowDrafts(
+function collectRowDraftsForRange(
   items: PositionedItem[],
   layout: ColumnLayout,
-  headerPage: number,
+  page: number,
   headerY: number,
-  endPage: number,
-  endY: number
+  endY: number,
 ): RowDraft[] {
-  // Filtra items dentro da bounding box da tabela
-  const inTable = items.filter(it => {
-    if (it.page < headerPage) return false;
-    if (it.page === headerPage && it.y >= headerY) return false; // header e acima
-    if (it.page > endPage) return false;
-    if (it.page === endPage && it.y <= endY) return false; // fora da tabela
-    // Filtra também o próprio header repetido em páginas seguintes
-    // (mesmo padrão de Y se for tabela contínua) — recognizeHeader pega.
-    if (recognizeHeader(it.str)) return false;
-    // Ignora items à esquerda da primeira coluna (margens, números de página)
-    if (it.x + 3 < layout[0].x) return false;
+  const inRange = items.filter(it => {
+    if (it.page !== page) return false;
+    if (it.y >= headerY) return false; // acima ou no header
+    if (it.y <= endY) return false; // abaixo do marcador de fim
+    if (recognizeHeader(it.str)) return false; // ignora header repetido
+    if (it.x + 3 < layout[0].x) return false; // ignora margens / números de página
     return true;
   });
 
-  // Ordena: por página, depois por Y descendente (top-down), depois por X
-  inTable.sort((a, b) => {
-    if (a.page !== b.page) return a.page - b.page;
+  // Top-down dentro da página: Y descendente, depois X
+  inRange.sort((a, b) => {
     if (a.y !== b.y) return b.y - a.y;
     return a.x - b.x;
   });
@@ -281,18 +275,14 @@ function collectRowDrafts(
   const drafts: RowDraft[] = [];
   let currentDraft: RowDraft | null = null;
   let currentY = Number.POSITIVE_INFINITY;
-  let currentPage = -1;
 
-  for (const it of inTable) {
-    const newRow =
-      it.page !== currentPage ||
-      Math.abs(it.y - currentY) > yTolerance;
+  for (const it of inRange) {
+    const newRow = Math.abs(it.y - currentY) > yTolerance;
 
     if (newRow) {
       if (currentDraft) drafts.push(currentDraft);
       currentDraft = { page: it.page, y: it.y, cells: {} };
       currentY = it.y;
-      currentPage = it.page;
     }
 
     const col = columnForX(layout, it.x);
@@ -441,10 +431,14 @@ export async function parseDanfeStructured(file: File): Promise<ParsedDanfe | nu
 
   if (allItems.length < 10) return null; // PDF sem texto extraível
 
-  const detected = detectColumnLayout(allItems);
-  if (!detected) return null;
+  const headers = detectAllTableHeaders(allItems);
+  if (headers.length === 0) return null;
 
-  const { layout, headerY, page: headerPage } = detected;
+  // Layout canônico = o header com mais colunas reconhecidas. Em DANFEs
+  // multi-página o layout é idêntico entre páginas (continuação visual);
+  // se houver micro-variação de X entre páginas, o canônico fica estável.
+  const canonical = headers.reduce((a, b) => (b.score > a.score ? b : a), headers[0]);
+  const layout = canonical.layout;
 
   // Sanity check: precisamos pelo menos das colunas críticas
   const keys = new Set(layout.map(c => c.key));
@@ -452,9 +446,16 @@ export async function parseDanfeStructured(file: File): Promise<ParsedDanfe | nu
     return null;
   }
 
-  const end = findTableEnd(allItems, headerPage, headerY);
-  const drafts = collectRowDrafts(allItems, layout, headerPage, headerY, end.page, end.y);
-  const merged = mergeRows(drafts);
+  // Coleta drafts de CADA header detectado (uma região por página).
+  // mergeRows depois junta tudo em ordem, anexando continuações de
+  // descrição que cruzam quebra de página corretamente.
+  const allDrafts: RowDraft[] = [];
+  for (const h of headers) {
+    const endY = findEndForHeader(allItems, h.page, h.headerY);
+    const drafts = collectRowDraftsForRange(allItems, layout, h.page, h.headerY, endY);
+    allDrafts.push(...drafts);
+  }
+  const merged = mergeRows(allDrafts);
 
   if (merged.length === 0) return null;
 
