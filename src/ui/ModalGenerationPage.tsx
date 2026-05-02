@@ -852,7 +852,7 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
             onClick={handleClearProcessed}
             disabled={unallocatedCargoes.length === 0}
             title="Remover todas as cargas do grid (cargas alocadas em conveses não serão afetadas)"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-status-error hover:bg-status-error/5 border-2 border-transparent hover:border-status-error/30 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-status-error/10 text-status-error border-2 border-status-error/30 hover:bg-status-error hover:text-white hover:border-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Trash2 size={12} />
             Limpar Processadas
