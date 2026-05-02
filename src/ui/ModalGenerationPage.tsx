@@ -592,24 +592,6 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
     <div className="flex-1 flex flex-col bg-main overflow-hidden relative">
       {/* Toolbar Header */}
       <div className="px-6 py-4 border-b-2 border-subtle bg-sidebar/50 shrink-0 flex items-center gap-3 flex-wrap">
-        <button
-          onClick={handleBack}
-          title="Voltar ao Plano de Estivagem (Deck)"
-          className="nav-cta relative flex items-center justify-center gap-3 px-5 py-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
-        >
-          {/* Anel pulsante de fundo (mesmo do botão GERAÇÃO MODAL) */}
-          <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
-          {/* Brilho que atravessa no hover */}
-          <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
-
-          <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:-rotate-3 group-hover:-translate-x-0.5 transition-[background-color,transform] duration-200">
-            <ArrowLeft size={14} />
-          </span>
-          <span className="relative text-[11px] font-black uppercase tracking-[0.18em]">Deck</span>
-        </button>
-
-        <div className="h-8 w-px bg-subtle" />
-
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
             <Boxes size={20} className="text-brand-primary" />
@@ -702,6 +684,22 @@ export function ModalGenerationPage({ initialView = 'modal-generation' }: ModalG
           >
             <Users size={12} />
             Movimentar Modais em Grupo
+          </button>
+
+          {/* Voltar ao Deck — mesmo design visual do botão GERAÇÃO MODAL do
+              Sidebar (gradient brand-primary, ring pulsante, sweep no hover).
+              Posicionado no fim da toolbar, à direita depois do título. */}
+          <button
+            onClick={handleBack}
+            title="Voltar ao Plano de Estivagem (Deck)"
+            className="nav-cta relative flex items-center justify-center gap-3 px-4 py-4 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
+          >
+            <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
+            <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
+            <span className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white/15 group-hover:bg-white/25 group-hover:-rotate-3 group-hover:-translate-x-0.5 transition-[background-color,transform] duration-200">
+              <ArrowLeft size={14} />
+            </span>
+            <span className="relative text-[11px] font-black uppercase tracking-[0.18em] whitespace-nowrap">Ver área de estiva</span>
           </button>
 
           {/* Action Bar inline — aparece quando há seleção */}
