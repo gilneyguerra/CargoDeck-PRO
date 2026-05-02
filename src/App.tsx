@@ -17,6 +17,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './ui/ToastContainer';
 import { ErrorReportTray } from '@/ui/ErrorReportTray';
 import { LandingPage } from '@/ui/LandingPage';
+import { ChatWidget } from '@/ui/ChatWidget';
 
 // Lazy-loaded para reduzir o bundle inicial — só baixa quando o usuário
 // realmente abre o modal de edição (editingCargo != null).
@@ -200,6 +201,10 @@ function App() {
               volta para a raiz. */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {/* Chat widget flutuante — FAB global acessível em qualquer rota.
+            Estado em assistantStore (Zustand). CargoAssistant é lazy-loaded
+            só quando o usuário abre pela primeira vez. */}
+        <ChatWidget />
       </BrowserRouter>
     </ErrorBoundary>
   );
