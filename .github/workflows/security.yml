@@ -11,10 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        # v5 (ago/2025) roda em Node.js 24 — atualizado em razão da
+        # deprecação do Node.js 20 nos runners do GitHub Actions
+        # (https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/).
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        # v5 (ago/2025) também roda em Node.js 24 internamente.
+        uses: actions/setup-node@v5
         with:
           node-version: 24
 
@@ -27,8 +31,10 @@ jobs:
       - name: Dependency Check (npm audit)
         run: npm audit --audit-level=high
 
-      - name: Run Secret Scanner (TruffleHog or similar)
-        uses: trufflesecurity/trufflehog@main
+      - name: Run Secret Scanner (TruffleHog)
+        # Pin em tag versionada (era @main — referência mutável, vetor de
+        # supply-chain attack se a branch principal do repo for comprometida).
+        uses: trufflesecurity/trufflehog@v3.90.5
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
