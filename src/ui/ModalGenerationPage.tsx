@@ -1,10 +1,18 @@
-import { useState, useMemo, useDeferredValue, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useDeferredValue, useEffect, useRef, lazy, Suspense } from 'react';
 import {
   Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
   Boxes, Flame, Layers, Flag, Zap, Sparkles, LayoutGrid, Users, AlertOctagon,
   FolderOpen, Building2,
 } from 'lucide-react';
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, horizontalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router-dom';
 import { useCargoStore } from '@/features/cargoStore';
 import { useNotificationStore } from '@/features/notificationStore';
@@ -42,6 +50,12 @@ const ContainerInventoryModal = lazy(() =>
 type FilterTab = string;
 
 const FILTER_STORAGE_KEY = 'cargodeck-modal-generation-filter';
+const TAB_ORDER_STORAGE_KEY = 'cargodeck-tab-order';
+
+/** Limite de tabs dinâmicas além do qual a UX em viewports estreitos
+ *  começa a degradar (scroll horizontal vira a única forma de ver todas).
+ *  Notificação (toast warning + uma vez por sessão) avisa o usuário. */
+const MAX_RESPONSIVE_TABS = 8;
 
 // Mapa de ícone por categoria conhecida; categorias livres caem no fallback Layers.
 const CATEGORY_ICONS: Record<string, typeof Boxes> = {
@@ -75,6 +89,60 @@ function categoryLabel(cat: string): string {
 
 function categoryIcon(cat: string): typeof Boxes {
   return CATEGORY_ICONS[cat] ?? Layers;
+}
+
+// ─── SortableDynamicTab ────────────────────────────────────────────────────────
+
+interface SortableDynamicTabProps {
+  id: string; // rawCategory (ex.: 'CONTAINER')
+  active: boolean;
+  isHazardousTab: boolean;
+  label: string;
+  count: number;
+  Icon: typeof Boxes;
+  onSelect: () => void;
+}
+
+/** Tab dinâmica draggable. Estilo igual ao botão original, com cursor-grab
+ *  e elevação durante drag para feedback visual. dnd-kit aplica transform
+ *  CSS via setNodeRef + style. */
+function SortableDynamicTab({ id, active, isHazardousTab, label, count, Icon, onSelect }: SortableDynamicTabProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onSelect}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow] duration-200 min-h-[40px] shrink-0 cursor-grab active:cursor-grabbing touch-none',
+        active
+          ? isHazardousTab
+            ? 'border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/20'
+            : 'border-brand-primary bg-brand-primary/10 text-brand-primary shadow-sm'
+          : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar',
+      )}
+    >
+      <Icon size={13} className={isHazardousTab && !active ? 'text-purple-500' : ''} />
+      {label}
+      <span className={cn(
+        'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums shadow-sm',
+        active
+          ? isHazardousTab ? 'bg-purple-500 text-white' : 'bg-brand-primary text-white'
+          : 'bg-subtle text-muted',
+      )}>
+        {count}
+      </span>
+    </button>
+  );
 }
 
 // ─── CargoGridCard ─────────────────────────────────────────────────────────────
@@ -329,23 +397,86 @@ export function ModalGenerationPage() {
   const deferredSearch = useDeferredValue(searchInput);
 
   // Tabs dinâmicas: derivadas das categorias presentes nas cargas
+  // Ordem custom das tabs dinâmicas — reordenável por drag-and-drop.
+  // Persistida em localStorage para manter o gosto do usuário entre sessões.
+  // Categorias novas (não presentes no array) entram no fim em ordem natural.
+  const [tabOrder, setTabOrder] = useState<string[]>(() => {
+    try {
+      const v = localStorage.getItem(TAB_ORDER_STORAGE_KEY);
+      if (v) return JSON.parse(v) as string[];
+    } catch { /* noop */ }
+    return [];
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(TAB_ORDER_STORAGE_KEY, JSON.stringify(tabOrder)); } catch { /* noop */ }
+  }, [tabOrder]);
+
   const dynamicTabs = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of unallocatedCargoes) {
       const k = c.category || 'OTHER';
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
-    // Ordena por quantidade decrescente, depois alfabético
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([cat, count]) => ({
-        value: `cat:${cat}` as FilterTab,
-        label: categoryLabel(cat),
-        icon: categoryIcon(cat),
-        count,
-        rawCategory: cat,
-      }));
-  }, [unallocatedCargoes]);
+
+    // Ordem natural: por quantidade decrescente, depois alfabético
+    const naturalOrder = Array.from(counts.keys())
+      .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b));
+
+    // Aplica ordem persistida: categorias na tabOrder vêm primeiro (na ordem
+    // do user), depois categorias novas em ordem natural.
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    for (const cat of tabOrder) {
+      if (counts.has(cat)) {
+        ordered.push(cat);
+        seen.add(cat);
+      }
+    }
+    for (const cat of naturalOrder) {
+      if (!seen.has(cat)) ordered.push(cat);
+    }
+
+    return ordered.map(cat => ({
+      value: `cat:${cat}` as FilterTab,
+      label: categoryLabel(cat),
+      icon: categoryIcon(cat),
+      count: counts.get(cat) ?? 0,
+      rawCategory: cat,
+    }));
+  }, [unallocatedCargoes, tabOrder]);
+
+  // ─── Drag-and-drop para reordenar tabs dinâmicas ────────────────────────
+  // PointerSensor com distância mínima evita "drag" em cliques curtos.
+  const tabSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+  const handleTabDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setTabOrder(prev => {
+      const ids = dynamicTabs.map(t => t.rawCategory);
+      const oldIdx = ids.indexOf(String(active.id));
+      const newIdx = ids.indexOf(String(over.id));
+      if (oldIdx < 0 || newIdx < 0) return prev;
+      return arrayMove(ids, oldIdx, newIdx);
+    });
+  };
+
+  // Notificação one-shot por sessão quando excede o limite responsivo.
+  // Ao atingir o teto, avisa o operador que a UX começa a degradar (scroll
+  // horizontal) — não bloqueia, só informa.
+  const tabsOverflowNotifiedRef = useRef(false);
+  useEffect(() => {
+    const totalTabs = 1 + dynamicTabs.length + (unallocatedCargoes.some(c => c.priority === 'urgent') ? 1 : 0);
+    if (totalTabs > MAX_RESPONSIVE_TABS && !tabsOverflowNotifiedRef.current) {
+      notify(
+        `Quantidade de abas (${totalTabs}) ultrapassou o limite recomendado (${MAX_RESPONSIVE_TABS}). Use scroll horizontal ou reorganize as cargas em menos categorias para melhor responsividade.`,
+        'warning',
+      );
+      tabsOverflowNotifiedRef.current = true;
+    }
+  }, [dynamicTabs.length, unallocatedCargoes, notify]);
 
   // Filtragem completa
   const filtered = useMemo(() => {
@@ -673,7 +804,10 @@ export function ModalGenerationPage() {
       </div>
 
       {/* Tabs de Filtragem */}
-      <div className="px-6 py-3 border-b-2 border-subtle bg-main shrink-0 flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <div
+        className="relative px-6 py-3 border-b-2 border-subtle bg-main shrink-0 flex items-center gap-2 overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,transparent,black_24px,black_calc(100%-24px),transparent)]"
+        title="Arraste as abas de categoria para reordenar"
+      >
         {/* Tab fixa: Todas */}
         {(() => {
           const active = filterTab === 'all';
@@ -700,37 +834,26 @@ export function ModalGenerationPage() {
           );
         })()}
 
-        {/* Tabs dinâmicas: uma por categoria presente */}
-        {dynamicTabs.map(tab => {
-          const Icon = tab.icon;
-          const active = filterTab === tab.value;
-          const isHazardousTab = tab.rawCategory === 'HAZARDOUS';
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setFilterTab(tab.value)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shrink-0',
-                active
-                  ? isHazardousTab
-                    ? 'border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/20'
-                    : 'border-brand-primary bg-brand-primary/10 text-brand-primary shadow-sm'
-                  : 'border-transparent text-secondary hover:text-primary hover:bg-sidebar'
-              )}
-            >
-              <Icon size={13} className={isHazardousTab && !active ? 'text-purple-500' : ''} />
-              {tab.label}
-              <span className={cn(
-                'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-mono font-black tabular-nums shadow-sm',
-                active
-                  ? isHazardousTab ? 'bg-purple-500 text-white' : 'bg-brand-primary text-white'
-                  : 'bg-subtle text-muted'
-              )}>
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
+        {/* Tabs dinâmicas: uma por categoria presente. Drag-and-drop horizontal
+            permite reordenar (estilo planilha Excel). dnd-kit aplica transform
+            CSS no SortableDynamicTab; ordem persiste em localStorage via
+            `tabOrder` state. */}
+        <DndContext sensors={tabSensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
+          <SortableContext items={dynamicTabs.map(t => t.rawCategory)} strategy={horizontalListSortingStrategy}>
+            {dynamicTabs.map(tab => (
+              <SortableDynamicTab
+                key={tab.rawCategory}
+                id={tab.rawCategory}
+                active={filterTab === tab.value}
+                isHazardousTab={tab.rawCategory === 'HAZARDOUS'}
+                label={tab.label}
+                count={tab.count}
+                Icon={tab.icon}
+                onSelect={() => setFilterTab(tab.value)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
 
         {/* Tab fixa: Prioridade Máxima — só aparece se houver urgentes */}
         {priorityCount > 0 && (() => {
