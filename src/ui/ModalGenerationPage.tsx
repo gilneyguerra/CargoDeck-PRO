@@ -157,11 +157,15 @@ interface CargoGridCardProps {
   onToggle: (id: string) => void;
   onEdit: (cargo: Cargo) => void;
   onDelete: (cargo: Cargo) => void;
+  /** Move ESTA carga (single) — abre AllocateCargoModal com 1 ID. */
+  onMove: (cargo: Cargo) => void;
+  /** Altera prioridade DESTA carga (single) — abre PriorityModal com 1 ID. */
+  onChangePriority: (cargo: Cargo) => void;
   /** Acionado pelo botão "Alocar / Desalocar Itens" — apenas para cargas-CONTENTOR. */
   onOpenInventory?: (cargo: Cargo) => void;
 }
 
-function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onToggle, onEdit, onDelete, onOpenInventory }: CargoGridCardProps) {
+function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onToggle, onEdit, onDelete, onMove, onChangePriority, onOpenInventory }: CargoGridCardProps) {
   const ratio = (cargo.lengthMeters || 1) / (cargo.widthMeters || 1);
   const baseSize = 80;
   const visualWidth = ratio >= 1 ? baseSize : Math.max(20, baseSize * ratio);
@@ -291,11 +295,32 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
         )}
       </div>
 
-      {/* Ações: hover no desktop, sempre visível em mobile, e foco do teclado revela (a11y) */}
-      <div className="flex items-center justify-between gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity -mt-1">
+      {/* Ações da carga — SEMPRE visíveis (sem ocultar via hover). 4 botões
+          inline: Mover (verde), Prioridade (âmbar), Editar (brand), Excluir
+          (vermelho). Mover/Prioridade abrem os mesmos modais que antes
+          rodavam só em batch — agora também por carga individual. */}
+      <div className="grid grid-cols-4 gap-1 -mt-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); onMove(cargo); }}
+          className="min-h-[36px] px-1.5 py-1.5 rounded-md flex items-center justify-center gap-1 bg-status-success/10 text-status-success hover:bg-status-success hover:text-white border border-status-success/30 transition-[background-color,border-color,color] duration-200 text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-status-success/40"
+          title="Mover para um convés"
+          aria-label={`Mover ${cargo.identifier} para um convés`}
+        >
+          <ArrowRight size={11} />
+          Mover
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onChangePriority(cargo); }}
+          className="min-h-[36px] px-1.5 py-1.5 rounded-md flex items-center justify-center gap-1 bg-status-warning/10 text-status-warning hover:bg-status-warning hover:text-white border border-status-warning/30 transition-[background-color,border-color,color] duration-200 text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-status-warning/40"
+          title="Alterar Prioridade"
+          aria-label={`Alterar prioridade de ${cargo.identifier}`}
+        >
+          <Flag size={11} />
+          Prior
+        </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(cargo); }}
-          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-brand-primary/10 focus-visible:bg-brand-primary/10 text-muted hover:text-brand-primary focus-visible:text-brand-primary transition-[background-color,color] duration-200 text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+          className="min-h-[36px] px-1.5 py-1.5 rounded-md flex items-center justify-center hover:bg-brand-primary/10 text-muted hover:text-brand-primary border border-transparent hover:border-brand-primary/30 transition-[background-color,border-color,color] duration-200 text-[9px] font-black uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           title="Editar"
           aria-label={`Editar ${cargo.identifier}`}
         >
@@ -303,11 +328,11 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(cargo); }}
-          className="flex-1 min-h-[44px] p-1.5 rounded-md hover:bg-status-error/10 focus-visible:bg-status-error/10 text-muted hover:text-status-error focus-visible:text-status-error transition-[background-color,color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-status-error/40"
+          className="min-h-[36px] px-1.5 py-1.5 rounded-md flex items-center justify-center hover:bg-status-error/10 text-muted hover:text-status-error border border-transparent hover:border-status-error/30 transition-[background-color,border-color,color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-status-error/40"
           title="Excluir"
           aria-label={`Excluir ${cargo.identifier}`}
         >
-          <Trash2 size={12} className="mx-auto" />
+          <Trash2 size={12} />
         </button>
       </div>
 
@@ -358,6 +383,10 @@ export function ModalGenerationPage() {
   // Não há mais view dedicada de listing — gerenciamento é feito por
   // cargo individual.
   const [inventoryContainer, setInventoryContainer] = useState<Container | null>(null);
+  // IDs alvo das ações de Mover/Prioridade — pode vir de uma seleção batch
+  // OU de uma carga individual (botão inline no CargoGridCard). null = não
+  // definido (modal não está aberto). Limpa quando o modal fecha.
+  const [actionIds, setActionIds] = useState<string[] | null>(null);
   const containerStore = useContainerStore();
   const danfeItems = useContainerStore(s => s.items);
   const fetchAllContainers = useContainerStore(s => s.fetchAll);
@@ -570,12 +599,16 @@ export function ModalGenerationPage() {
     clearCargoSelection();
   };
 
-  const handleAllocate = () => {
-    if (selectedCount === 0) {
-      notify('Selecione pelo menos uma carga.', 'warning');
-      return;
-    }
+  // Mover/Prioridade agora vivem em cada CargoGridCard (botões inline,
+  // sempre visíveis). Os handlers single abrem os mesmos modais de antes
+  // — apenas o conjunto de IDs muda (1 carga em vez do batch).
+  const handleMoveSingle = (cargo: Cargo) => {
+    setActionIds([cargo.id]);
     setShowAllocate(true);
+  };
+  const handleChangePrioritySingle = (cargo: Cargo) => {
+    setActionIds([cargo.id]);
+    setShowPriority(true);
   };
 
   // ─── Container Inventory (DANFE) ────────────────────────────────────────
@@ -625,14 +658,6 @@ export function ModalGenerationPage() {
       });
       notify('Não foi possível gerar o PDF.', 'error');
     }
-  };
-
-  const handleChangePriority = () => {
-    if (selectedCount === 0) {
-      notify('Selecione ao menos uma carga.', 'warning');
-      return;
-    }
-    setShowPriority(true);
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -718,40 +743,18 @@ export function ModalGenerationPage() {
             </span>
           </button>
 
-          {/* Action Bar inline — aparece quando há seleção */}
+          {/* Action Bar inline — aparece apenas quando há seleção em batch.
+              Mover/Prioridade saíram daqui (agora vivem em cada card). Esta
+              barra concentra só ações destrutivas/informativas que ainda
+              fazem sentido em batch: contagem total e Excluir Selecionadas. */}
           {selectedCount > 0 && (
             <div className="flex items-center gap-2 pl-2 ml-1 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
-              <button
-                onClick={handleSelectAll}
-                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
-              >
-                {allFilteredSelected ? <CheckSquare size={12} /> : <Square size={12} />}
-                {allFilteredSelected ? 'Desmarcar' : 'Tudo'}
-              </button>
-
               <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest">
                 <span className="text-brand-primary font-mono">{selectedCount}</span>
                 <span className="text-muted">·</span>
                 <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
               </div>
 
-              <button
-                onClick={handleAllocate}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-status-success text-white hover:brightness-110 active:scale-95 transition-[filter,transform,box-shadow] duration-200 shadow-md min-h-[36px]"
-                title="Mover para Convés"
-              >
-                <ArrowRight size={12} />
-                Mover
-              </button>
-              <button
-                onClick={handleChangePriority}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-warning/50 text-secondary hover:text-status-warning transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                title="Alterar Prioridade"
-              >
-                <Flag size={12} />
-                Prior.
-              </button>
               <button
                 onClick={handleDeleteSelected}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
@@ -892,7 +895,24 @@ export function ModalGenerationPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+          <>
+            {/* Header do grid — botão "Selecionar Tudo / Desmarcar" no canto
+                superior esquerdo, fora da action bar inline. Sempre visível
+                quando há cargas no grid (não depende de seleção prévia). */}
+            <div className="flex items-center mb-4">
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar border-2 border-subtle hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 min-h-[36px]"
+                title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
+              >
+                {allFilteredSelected ? <CheckSquare size={13} /> : <Square size={13} />}
+                {allFilteredSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
+                <span className="inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[9px] font-mono font-black tabular-nums bg-subtle text-muted">
+                  {filtered.length}
+                </span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {filtered.map((c, idx) => (
               <CargoGridCard
                 key={c.id}
@@ -905,10 +925,13 @@ export function ModalGenerationPage() {
                 onToggle={toggleCargoSelection}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onMove={handleMoveSingle}
+                onChangePriority={handleChangePrioritySingle}
                 onOpenInventory={handleOpenInventory}
               />
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -921,14 +944,14 @@ export function ModalGenerationPage() {
       <ManualCargoModal isOpen={showManual} onClose={() => setShowManual(false)} />
       <AllocateCargoModal
         isOpen={showAllocate}
-        onClose={() => setShowAllocate(false)}
-        selectedCargoIds={selectedIds}
+        onClose={() => { setShowAllocate(false); setActionIds(null); }}
+        selectedCargoIds={actionIds ?? selectedIds}
         onSuccess={() => { /* handled inside */ }}
       />
       <PriorityModal
         isOpen={showPriority}
-        onClose={() => setShowPriority(false)}
-        selectedCargoIds={selectedIds}
+        onClose={() => { setShowPriority(false); setActionIds(null); }}
+        selectedCargoIds={actionIds ?? selectedIds}
       />
       <GroupMoveModal isOpen={showGroupMove} onClose={() => setShowGroupMove(false)} />
     </div>
