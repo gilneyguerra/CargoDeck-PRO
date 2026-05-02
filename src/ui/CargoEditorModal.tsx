@@ -924,7 +924,7 @@ export function CargoEditorModal({ isOpen, onClose }: Props) {
                 {totalWeight > 0 && <span className="text-brand-primary">{totalWeight.toFixed(2)} t</span>}
               </div>
             )}
-            <button onClick={handleClose} className="p-2 hover:bg-sidebar rounded-xl text-muted hover:text-primary transition-all">
+            <button onClick={handleClose} className="btn-close-inline" aria-label="Fechar">
               <X size={20} />
             </button>
           </div>

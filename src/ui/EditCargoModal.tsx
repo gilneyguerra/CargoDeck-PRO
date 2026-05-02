@@ -70,8 +70,8 @@ export function EditCargoModal({ isOpen, cargo, onClose }: EditCargoModalProps) 
         
         {/* Header Section */}
         <div className="px-10 pt-10 pb-8 border-b border-subtle shrink-0">
-            <button onClick={onClose} className="absolute top-8 right-10 text-primary hover:text-brand-primary p-2 hover:bg-main rounded-full transition-all">
-                <X className="w-7 h-7" />
+            <button onClick={onClose} className="btn-close" aria-label="Fechar">
+                <X className="w-5 h-5" />
             </button>
             <div className="flex flex-col gap-2">
                 <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Editar Carga</h2>

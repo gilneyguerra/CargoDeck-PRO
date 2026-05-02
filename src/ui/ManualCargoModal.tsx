@@ -103,8 +103,8 @@ export function ManualCargoModal({ isOpen, onClose }: { isOpen: boolean, onClose
 
         {/* Cabeçalho */}
         <div className="px-8 pt-10 pb-8 border-b border-subtle shrink-0">
-          <button onClick={onClose} className="absolute top-7 right-8 text-muted hover:text-primary p-2 hover:bg-main rounded-xl transition-all">
-            <X className="w-6 h-6" />
+          <button onClick={onClose} className="btn-close" aria-label="Fechar">
+            <X className="w-5 h-5" />
           </button>
           <div className="flex flex-col gap-2">
             <h2 id={titleId} className="text-3xl font-black text-primary tracking-tighter uppercase leading-none">Nova Carga Manual</h2>

@@ -521,7 +521,7 @@ export function ContainerInventoryModal({
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+              className="btn-close-inline"
               aria-label="Fechar"
             >
               <X size={16} />

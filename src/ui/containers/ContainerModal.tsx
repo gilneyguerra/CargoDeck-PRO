@@ -108,7 +108,7 @@ export function ContainerModal({ isOpen, onClose, editing }: Props) {
           <button
             onClick={onClose}
             type="button"
-            className="ml-auto p-2 hover:bg-sidebar rounded-xl text-muted hover:text-primary transition-all"
+            className="ml-auto btn-close-inline"
             aria-label="Fechar"
           >
             <X size={20} />
