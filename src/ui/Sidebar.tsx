@@ -153,7 +153,7 @@ export default function Sidebar() {
           <Truck size={20} className="text-secondary" />
         </div>
         <p className="text-[10px] text-muted leading-relaxed max-w-[240px]">
-          Painel de controle e distriuição de modais. Crie seu modal, insira as cargas nele e depois estoque no local apropriado.
+          Painel de controle e distribuição de modais. Crie seu modal, insira as cargas nele e depois estoque no local apropriado.
         </p>
       </div>
 
