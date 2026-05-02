@@ -68,6 +68,12 @@ export interface CargoState {
     /** Reordena as locations conforme a sequência informada. Locations
      *  ausentes do array vão para o fim em ordem original (defensivo). */
     reorderLocations: (orderedIds: string[]) => void;
+    /** Devolve uma carga alocada de volta ao inventário (`unallocatedCargoes`).
+     *  Limpa campos de alocação (bayId, positionInBay, x, y, isRotated) e
+     *  marca status='UNALLOCATED'. No-op se a carga não estiver alocada. */
+    unallocateCargo: (cargoId: string) => void;
+    /** Versão batch — só percorre o estado uma vez para todas as cargas. */
+    unallocateMultipleCargoes: (cargoIds: string[]) => void;
     clearAllCargoes: () => void;
     clearUnallocatedCargoes: () => Promise<void>;
     hydrateFromDb: (payload: Partial<CargoState>) => void;
@@ -505,6 +511,63 @@ export const useCargoStore = create<CargoState>()(
                         if (!seen.has(loc.id)) ordered.push(loc);
                     }
                     return { locations: ordered };
+                });
+            },
+
+            unallocateCargo: (cargoId) => {
+                get().unallocateMultipleCargoes([cargoId]);
+            },
+
+            unallocateMultipleCargoes: (cargoIds) => {
+                if (cargoIds.length === 0) return;
+                const idSet = new Set(cargoIds);
+                set((state) => {
+                    const released: Cargo[] = [];
+                    const updatedLocations = state.locations.map(loc => ({
+                        ...loc,
+                        bays: loc.bays.map(bay => {
+                            const keep: Cargo[] = [];
+                            for (const c of bay.allocatedCargoes) {
+                                if (idSet.has(c.id)) {
+                                    // Limpa campos de alocação — carga volta a ser
+                                    // "livre" para reposicionamento ou edição DANFE.
+                                    released.push({
+                                        ...c,
+                                        bayId: undefined,
+                                        positionInBay: undefined,
+                                        x: undefined,
+                                        y: undefined,
+                                        isRotated: undefined,
+                                        status: 'UNALLOCATED',
+                                    });
+                                } else {
+                                    keep.push(c);
+                                }
+                            }
+                            return { ...bay, allocatedCargoes: keep };
+                        }),
+                    }));
+
+                    if (released.length === 0) return state;
+
+                    // Evita duplicatas no inventário caso a carga já esteja lá
+                    // (paranoia defensiva — não deveria acontecer com o domain
+                    // atual, mas o custo é zero).
+                    const existingIds = new Set(state.unallocatedCargoes.map(c => c.id));
+                    const newUnallocated = [
+                        ...state.unallocatedCargoes,
+                        ...released.filter(c => !existingIds.has(c.id)),
+                    ];
+
+                    logger.info('Cargas devolvidas ao inventário.', {
+                        count: released.length,
+                        ids: released.map(c => c.id),
+                    });
+
+                    return {
+                        locations: updatedLocations,
+                        unallocatedCargoes: newUnallocated,
+                    };
                 });
             },
 
