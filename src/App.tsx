@@ -79,17 +79,35 @@ function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' }) {
     const handleDragEnd = (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveCargo(null);
-      
-      if (over && over.id) {
-        const fullId = String(over.id);
-        // Extract the bay ID and side from format "{bayId}-{side}" where side is port/center/starboard
-        if (fullId.endsWith('-port') || fullId.endsWith('-center') || fullId.endsWith('-starboard')) {
-          const lastHyphenIndex = fullId.lastIndexOf('-');
-          if (lastHyphenIndex > 0) {
-            const bayId = fullId.substring(0, lastHyphenIndex);
-            const side = fullId.substring(lastHyphenIndex + 1) as 'port' | 'center' | 'starboard';
-            moveCargoToBay(String(active.id), bayId, side);
-          }
+
+      if (!over || !over.id) return;
+      const fullId = String(over.id);
+      const cargoId = String(active.id);
+
+      // Drop sobre a TAB de uma location: handleDragOver troca o
+      // activeLocation durante o drag, mas se o usuário solta com o
+      // cursor ainda sobre a tab (não desceu até uma baia), o over.id
+      // resolve como `tab-{locId}` — antes isso era um no-op e a carga
+      // fazia snap-back. Agora movemos para a primeira baia da location
+      // de destino com side='center' (operador ajusta posição depois).
+      // Cobre tanto: (a) carga não-alocada arrastada para uma aba; (b)
+      // carga alocada movida entre abas via drag (issue 2).
+      if (fullId.startsWith('tab-')) {
+        const targetLocId = fullId.replace('tab-', '');
+        const targetLoc = locations.find(l => l.id === targetLocId);
+        if (!targetLoc || targetLoc.bays.length === 0) return;
+        const targetBay = targetLoc.bays[0];
+        moveCargoToBay(cargoId, targetBay.id, 'center');
+        return;
+      }
+
+      // Drop em um lado específico de baia: formato {bayId}-{side}.
+      if (fullId.endsWith('-port') || fullId.endsWith('-center') || fullId.endsWith('-starboard')) {
+        const lastHyphenIndex = fullId.lastIndexOf('-');
+        if (lastHyphenIndex > 0) {
+          const bayId = fullId.substring(0, lastHyphenIndex);
+          const side = fullId.substring(lastHyphenIndex + 1) as 'port' | 'center' | 'starboard';
+          moveCargoToBay(cargoId, bayId, side);
         }
       }
     };
