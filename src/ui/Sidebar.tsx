@@ -33,8 +33,9 @@ export default function Sidebar() {
     const hazardous = allocatedCargoes.filter(c => c.isHazardous || c.category === 'HAZARDOUS').length;
 
     const allocated = allocatedCargoes.length;
+    const allocatedWeight = allocatedCargoes.reduce((s, c) => s + (c.weightTonnes || 0), 0);
 
-    return { total, totalWeight, byCategory, urgent, high, hazardous, allocated };
+    return { total, totalWeight, byCategory, urgent, high, hazardous, allocated, allocatedWeight };
   }, [unallocatedCargoes, locations]);
 
   const categoryEntries = Object.entries(stats.byCategory).sort(([, a], [, b]) => b - a);
@@ -80,18 +81,18 @@ export default function Sidebar() {
             cor semântica (brand-primary, status-success). */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-main border border-subtle rounded-xl p-3">
-            <div className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest mb-1.5">
+            <div className="flex items-center justify-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest mb-1.5">
               <Box size={10} /> Não Alocadas
             </div>
-            <p className="text-xl font-mono font-black text-brand-primary leading-none">{stats.total}</p>
-            <p className="text-[12px] font-bold tabular-nums text-primary mt-1.5">{stats.totalWeight.toFixed(1)} t</p>
+            <p className="text-xl font-mono font-black text-brand-primary leading-none text-center">{stats.total}</p>
+            <p className="text-[12px] font-bold tabular-nums text-primary mt-1.5 text-center">{stats.totalWeight.toFixed(1)} t</p>
           </div>
           <div className="bg-main border border-subtle rounded-xl p-3">
-            <div className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest mb-1.5">
+            <div className="flex items-center justify-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest mb-1.5">
               <Anchor size={10} /> Alocadas
             </div>
-            <p className="text-xl font-mono font-black text-status-success leading-none">{stats.allocated}</p>
-            <p className="text-[12px] font-bold text-primary mt-1.5">a bordo</p>
+            <p className="text-xl font-mono font-black text-status-success leading-none text-center">{stats.allocated}</p>
+            <p className="text-[12px] font-bold tabular-nums text-primary mt-1.5 text-center">{stats.allocatedWeight.toFixed(1)} t</p>
           </div>
         </div>
 

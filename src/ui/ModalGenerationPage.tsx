@@ -743,36 +743,6 @@ export function ModalGenerationPage() {
             </span>
           </button>
 
-          {/* Action Bar inline — aparece apenas quando há seleção em batch.
-              Mover/Prioridade saíram daqui (agora vivem em cada card). Esta
-              barra concentra só ações destrutivas/informativas que ainda
-              fazem sentido em batch: contagem total e Excluir Selecionadas. */}
-          {selectedCount > 0 && (
-            <div className="flex items-center gap-2 pl-2 ml-1 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
-              <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest">
-                <span className="text-brand-primary font-mono">{selectedCount}</span>
-                <span className="text-muted">·</span>
-                <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
-              </div>
-
-              <button
-                onClick={handleDeleteSelected}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                title="Excluir Selecionadas"
-              >
-                <Trash2 size={12} />
-                Excluir
-              </button>
-
-              <button
-                onClick={clearCargoSelection}
-                className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                title="Limpar seleção"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -896,10 +866,11 @@ export function ModalGenerationPage() {
           </div>
         ) : (
           <>
-            {/* Header do grid — botão "Selecionar Tudo / Desmarcar" no canto
-                superior esquerdo, fora da action bar inline. Sempre visível
-                quando há cargas no grid (não depende de seleção prévia). */}
-            <div className="flex items-center mb-4">
+            {/* Header do grid — Selecionar Tudo + Action Bar inline lado a
+                lado. Selecionar Tudo é sempre visível; Action Bar aparece à
+                direita (ml-auto) quando há seleção em batch. Coloca a UI
+                de batch próxima do gesto de seleção em vez de no topo. */}
+            <div className="flex items-center mb-4 gap-3">
               <button
                 onClick={handleSelectAll}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar border-2 border-subtle hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 min-h-[36px]"
@@ -911,6 +882,33 @@ export function ModalGenerationPage() {
                   {filtered.length}
                 </span>
               </button>
+
+              {selectedCount > 0 && (
+                <div className="ml-auto flex items-center gap-2 pl-2 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
+                  <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-brand-primary font-mono">{selectedCount}</span>
+                    <span className="text-muted">·</span>
+                    <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
+                  </div>
+
+                  <button
+                    onClick={handleDeleteSelected}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+                    title="Excluir Selecionadas"
+                  >
+                    <Trash2 size={12} />
+                    Excluir
+                  </button>
+
+                  <button
+                    onClick={clearCargoSelection}
+                    className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+                    title="Limpar seleção"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {filtered.map((c, idx) => (
