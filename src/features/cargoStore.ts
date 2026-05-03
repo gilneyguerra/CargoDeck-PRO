@@ -36,6 +36,11 @@ export interface CargoState {
     searchTerm: string;
     editingCargo: Cargo | null;
     isHydratedFromCloud: boolean;
+    /** Flag volátil — true enquanto o auto-save está em andamento.
+     *  NÃO persistida (sempre começa false ao recarregar). */
+    isSaving: boolean;
+    /** Timestamp epoch-ms do último save bem-sucedido. NÃO persistida. */
+    lastSavedAt: number | null;
     /**
      * @deprecated A navegação agora é feita via URL/react-router. Esse
      *             campo permanece apenas por compatibilidade com call
@@ -85,6 +90,10 @@ export interface CargoState {
     clearCargoSelection: () => void;
     setPriorityBatch: (cargoIds: string[], priority: 'normal' | 'high' | 'urgent') => void;
     setHydrationStatus: (status: boolean) => void;
+    /** Marca início do auto-save (spinner aparece no SaveIndicator). */
+    setSaving: (v: boolean) => void;
+    /** Marca conclusão bem-sucedida do save: limpa isSaving e seta timestamp. */
+    markSaved: () => void;
     /** Reseta todo o estado para o "Default" (estágio inicial pós-logout / primeira abertura). */
     resetToDefault: () => void;
 }
@@ -122,6 +131,8 @@ export const useCargoStore = create<CargoState>()(
             searchTerm: '',
             editingCargo: null,
             isHydratedFromCloud: false,
+            isSaving: false,
+            lastSavedAt: null,
             viewMode: 'deck' as ViewMode,
             selectedCargos: new Set<string>(),
 
@@ -165,6 +176,8 @@ export const useCargoStore = create<CargoState>()(
                 })),
             })),
             setHydrationStatus: (status) => set({ isHydratedFromCloud: status }),
+            setSaving: (v) => set({ isSaving: v }),
+            markSaved: () => set({ isSaving: false, lastSavedAt: Date.now() }),
 
             /**
              * Reset completo do estado para "Default" — usado:
@@ -192,6 +205,8 @@ export const useCargoStore = create<CargoState>()(
                     searchTerm: '',
                     editingCargo: null,
                     isHydratedFromCloud: false,
+                    isSaving: false,
+                    lastSavedAt: null,
                     viewMode: 'deck' as ViewMode,
                     selectedCargos: new Set<string>(),
                 });

@@ -5,6 +5,7 @@ import { useCargoStore } from '@/features/cargoStore';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AuthModal } from './AuthModal';
+import { SaveIndicator } from './SaveIndicator';
 import type { User } from '@supabase/supabase-js';
 
 export function Header() {
@@ -92,6 +93,13 @@ export function Header() {
             <span className="text-[10px] text-brand-primary font-black uppercase tracking-[0.2em] mb-1 opacity-80">Payload Total</span>
             <span className="text-primary font-black text-xl tabular-nums leading-none">{currentTotalWeight.toFixed(1)} <sub className="text-[11px] font-bold bottom-0 uppercase ml-1 opacity-50">Ton</sub></span>
           </div>
+
+          {/* Indicador de auto-save — só renderiza algo durante "salvando…"
+              ou nos 4s pós-save bem-sucedido. Em idle / signed-out, retorna
+              null. Reduz ansiedade do operador em turnos longos: confirmação
+              visual de que o trabalho está persistido sem precisar abrir
+              DevTools. */}
+          <SaveIndicator />
 
           <div className="h-10 w-px bg-border-subtle hidden lg:block" />
 
