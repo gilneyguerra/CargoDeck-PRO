@@ -52,11 +52,6 @@ type FilterTab = string;
 const FILTER_STORAGE_KEY = 'cargodeck-modal-generation-filter';
 const TAB_ORDER_STORAGE_KEY = 'cargodeck-tab-order';
 
-/** Limite de tabs dinâmicas além do qual a UX em viewports estreitos
- *  começa a degradar (scroll horizontal vira a única forma de ver todas).
- *  Notificação (toast warning + uma vez por sessão) avisa o usuário. */
-const MAX_RESPONSIVE_TABS = 8;
-
 // Mapa de ícone por categoria conhecida; categorias livres caem no fallback Layers.
 const CATEGORY_ICONS: Record<string, typeof Boxes> = {
   CONTAINER: Package,
@@ -523,21 +518,6 @@ export function ModalGenerationPage() {
       return arrayMove(ids, oldIdx, newIdx);
     });
   };
-
-  // Notificação one-shot por sessão quando excede o limite responsivo.
-  // Ao atingir o teto, avisa o operador que a UX começa a degradar (scroll
-  // horizontal) — não bloqueia, só informa.
-  const tabsOverflowNotifiedRef = useRef(false);
-  useEffect(() => {
-    const totalTabs = 1 + dynamicTabs.length + (unallocatedCargoes.some(c => c.priority === 'urgent') ? 1 : 0);
-    if (totalTabs > MAX_RESPONSIVE_TABS && !tabsOverflowNotifiedRef.current) {
-      notify(
-        `Quantidade de abas (${totalTabs}) ultrapassou o limite recomendado (${MAX_RESPONSIVE_TABS}). Use scroll horizontal ou reorganize as cargas em menos categorias para melhor responsividade.`,
-        'warning',
-      );
-      tabsOverflowNotifiedRef.current = true;
-    }
-  }, [dynamicTabs.length, unallocatedCargoes, notify]);
 
   // Filtragem completa
   const filtered = useMemo(() => {
