@@ -560,6 +560,14 @@ export function ModalGenerationPage() {
     navigate('/deck');
   };
 
+  // Toda troca de aba feita pelo usuário também limpa a busca. Sem isso, o
+  // operador trocava de aba com filtro residual e via "Nenhum resultado",
+  // parecendo bug — quando na verdade era a busca da aba anterior aplicada.
+  const handleTabChange = (tab: FilterTab) => {
+    setFilterTab(tab);
+    if (searchInput) setSearchInput('');
+  };
+
   const handleSelectAll = () => {
     if (allFilteredSelected) clearCargoSelection();
     else selectMultipleCargos(filtered.map(c => c.id));
@@ -697,7 +705,7 @@ export function ModalGenerationPage() {
           return (
             <button
               key="all"
-              onClick={() => setFilterTab('all')}
+              onClick={() => handleTabChange('all')}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shrink-0',
                 active
@@ -732,7 +740,7 @@ export function ModalGenerationPage() {
                 label={tab.label}
                 count={tab.count}
                 Icon={tab.icon}
-                onSelect={() => setFilterTab(tab.value)}
+                onSelect={() => handleTabChange(tab.value)}
               />
             ))}
           </SortableContext>
@@ -744,7 +752,7 @@ export function ModalGenerationPage() {
           return (
             <button
               key="priority"
-              onClick={() => setFilterTab('priority')}
+              onClick={() => handleTabChange('priority')}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border-2 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] shrink-0',
                 active
