@@ -22,7 +22,7 @@ const SIDE_OPTIONS: { value: Side; label: string; helper: string }[] = [
 ];
 
 export function AllocateCargoModal({ isOpen, onClose, selectedCargoIds, onSuccess }: Props) {
-  const { locations, moveCargoToBay, unallocatedCargoes, clearCargoSelection } = useCargoStore();
+  const { locations, moveCargoToBay, unallocatedCargoes, clearCargoSelection, setActiveLocation } = useCargoStore();
   const { notify } = useNotificationStore();
   const titleId = useId();
   const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
@@ -80,13 +80,27 @@ export function AllocateCargoModal({ isOpen, onClose, selectedCargoIds, onSucces
         return;
       }
 
+      // Sincroniza activeLocation com o destino escolhido. Sem isso, ao
+      // clicar "Ver área de estiva" o operador caía na location ativa
+      // anterior (geralmente "Convés Principal") e não via a carga — que
+      // estava em outro convés. Resultado: parecia que o move tinha falhado.
+      setActiveLocation(selectedLocationId);
+
+      // Toast informativo cita destino explícito — operador valida
+      // visualmente onde a carga aterrissou sem precisar caçar.
+      const locationName = currentLocation?.name ?? 'Convés';
+      const bayLabel = currentLocation?.bays.find(b => b.id === selectedBayId);
+      const bayName = bayLabel ? `Baia ${bayLabel.number}` : 'Baia';
+      const sideName = SIDE_OPTIONS.find(s => s.value === selectedSide)?.label ?? selectedSide;
+      const destination = `${locationName} · ${bayName} · ${sideName}`;
+
       if (failed > 0) {
         notify(
-          `${succeeded} carga(s) movida(s). ${failed} bloqueada(s) — verifique avisos.`,
+          `${succeeded} carga(s) alocada(s) em ${destination}. ${failed} bloqueada(s) — verifique avisos.`,
           'warning',
         );
       } else {
-        notify(`${succeeded} carga(s) alocada(s) com sucesso!`, 'success');
+        notify(`${succeeded} carga(s) alocada(s) em ${destination}.`, 'success');
       }
 
       clearCargoSelection();

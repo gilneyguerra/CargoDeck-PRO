@@ -28,6 +28,7 @@ export function useCargoMovement(): CargoMovementResult {
     const [movedCount, setMovedCount] = useState(0);
 
     const moveCargoToBay = useCargoStore(s => s.moveCargoToBay);
+    const setActiveLocation = useCargoStore(s => s.setActiveLocation);
     const notify = useNotificationStore(s => s.notify);
 
     const execute = useCallback(async ({ cargoIds, targetLocationId, targetBayId, targetSide }: MovementOptions): Promise<boolean> => {
@@ -76,6 +77,11 @@ export function useCargoMovement(): CargoMovementResult {
                 return false;
             }
 
+            // Sincroniza activeLocation com destino escolhido. Sem isso, o
+            // operador clica "Ver área de estiva" e cai numa aba diferente
+            // da que ele escolheu para o move — parece que nada aconteceu.
+            setActiveLocation(targetLocationId);
+
             if (failed > 0) {
                 notify(
                     `${succeeded} carga(s) movida(s) para ${targetLocation.name}${sideNote}. ${failed} bloqueada(s) — verifique avisos.`,
@@ -91,7 +97,7 @@ export function useCargoMovement(): CargoMovementResult {
         } finally {
             setLoading(false);
         }
-    }, [moveCargoToBay, notify]);
+    }, [moveCargoToBay, setActiveLocation, notify]);
 
     return { execute, loading, movedCount };
 }
