@@ -25,6 +25,17 @@ import { findDuplicateOnboard, calculateBayStats } from '../utils/cargoUtils';
  */
 export type ViewMode = 'deck' | 'modal-generation';
 
+/**
+ * Resultado de uma tentativa de mover uma carga para uma baia. Antes era
+ * `void` — caminhos de falha ficavam silenciosos (cargo não-encontrado,
+ * duplicidade de identifier, bayId inexistente) e os callers em loop
+ * disparavam toast de "sucesso" enganoso. Agora callers podem inspecionar
+ * o resultado e relatar honestidade ao operador.
+ */
+export type MoveResult =
+  | { success: true }
+  | { success: false; reason: 'not-found' | 'duplicate' | 'invalid-bay'; message: string };
+
 export interface CargoState {
     manifestsLoaded: boolean;
     unallocatedCargoes: Cargo[];
@@ -58,7 +69,7 @@ export interface CargoState {
     updateCargo: (id: string, updates: Partial<Cargo>) => void;
     setActiveLocation: (id: string) => void;
     updateActiveLocationConfig: (config: Partial<DeckConfig>) => void;
-    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard', x?: number, y?: number, isRotated?: boolean) => void;
+    moveCargoToBay: (cargoId: string, bayId: string, positionInBay?: 'port' | 'center' | 'starboard', x?: number, y?: number, isRotated?: boolean) => MoveResult;
     updateCargoPosition: (cargoId: string, x: number, y: number, isRotated?: boolean) => void;
     deleteCargo: (cargoId: string) => Promise<void>;
     deleteMultipleCargoes: (cargoIds: string[]) => Promise<void>;
@@ -677,11 +688,11 @@ export const useCargoStore = create<CargoState>()(
                 }
             },
 
-            moveCargoToBay: (cargoId, bayId, positionInBay, x, y, isRotated) => {
+            moveCargoToBay: (cargoId, bayId, positionInBay, x, y, isRotated): MoveResult => {
                 try {
                     const state = get();
                     let cargoToMove: Cargo | undefined;
-                    
+
                     // 1. Localizar a carga (em não alocadas ou em qualquer baia)
                     cargoToMove = state.unallocatedCargoes.find(c => c.id === cargoId);
                     if (!cargoToMove) {
@@ -698,8 +709,9 @@ export const useCargoStore = create<CargoState>()(
                     }
 
                     if (!cargoToMove) {
-                        logger.warn(`Tentativa de mover carga inexistente: ${cargoId}`);
-                        return;
+                        const message = `Carga ${cargoId} não encontrada no estado atual.`;
+                        logger.warn(message);
+                        return { success: false, reason: 'not-found', message };
                     }
 
                     // 2. Validação de Duplicidade (Identificador)
@@ -710,7 +722,7 @@ export const useCargoStore = create<CargoState>()(
                             useNotificationStore.getState().notify(message, 'warning', 8000);
                             // Força um refresh do estado para garantir que o Draggable snap-back ocorra
                             set({ ...state });
-                            return;
+                            return { success: false, reason: 'duplicate', message };
                         }
                     }
 
@@ -718,14 +730,14 @@ export const useCargoStore = create<CargoState>()(
                     set((state) => {
                         // Remover de unallocated
                         const nextUnallocated = state.unallocatedCargoes.filter(c => c.id !== cargoId);
-                        
+
                         // Remover de todas as baias e adicionar na baia alvo
                         const nextLocations = state.locations.map(loc => ({
                             ...loc,
                             bays: loc.bays.map(bay => {
                                 // Primeiro, removemos a carga se ela estava aqui (garante não duplicidade)
                                 let updatedCargoes = bay.allocatedCargoes.filter(c => c.id !== cargoId);
-                                
+
                                 // Depois, se esta for a baia de destino, adicionamos a carga
                                 if (bay.id === bayId) {
                                     updatedCargoes = [...updatedCargoes, {
@@ -753,10 +765,41 @@ export const useCargoStore = create<CargoState>()(
                         };
                     });
 
+                    // 4. Verificação pós-set: confirma que a carga realmente
+                    //    aterrissou na baia alvo. Se bayId for inválido (baia
+                    //    deletada), o `set` acima removeu a carga de unallocated
+                    //    mas o `if (bay.id === bayId)` nunca casou — carga
+                    //    desaparecia silenciosamente. Aqui detectamos isso e
+                    //    revertemos: re-empurra a carga para unallocated.
+                    const postState = get();
+                    let cargoLanded = false;
+                    for (const loc of postState.locations) {
+                        for (const bay of loc.bays) {
+                            if (bay.id === bayId && bay.allocatedCargoes.some(c => c.id === cargoId)) {
+                                cargoLanded = true;
+                                break;
+                            }
+                        }
+                        if (cargoLanded) break;
+                    }
+                    if (!cargoLanded) {
+                        const message = `Baia ${bayId} não encontrada — carga ${cargoId} restaurada ao inventário.`;
+                        logger.warn(message);
+                        // Restaura: devolve para unallocated
+                        set((state) => ({
+                            unallocatedCargoes: state.unallocatedCargoes.some(c => c.id === cargoId)
+                                ? state.unallocatedCargoes
+                                : [...state.unallocatedCargoes, { ...cargoToMove!, status: 'UNALLOCATED' as const, bayId: undefined }],
+                        }));
+                        return { success: false, reason: 'invalid-bay', message };
+                    }
+
                     logger.info(`Carga ${cargoId} movida com sucesso para baia ${bayId}.`);
+                    return { success: true };
                 } catch (error) {
                     logger.error(`Erro ao mover carga ${cargoId}:`, error);
                     handleApplicationError(error, { context: 'moveCargoToBay', cargoId, bayId });
+                    return { success: false, reason: 'not-found', message: 'Erro inesperado ao mover carga.' };
                 }
             },
 
@@ -889,13 +932,17 @@ export const useCargoStore = create<CargoState>()(
                         const finalUnallocated = state.unallocatedCargoes.filter(c => !validCargoesToMove.find(vc => vc.id === c.id));
 
 
-                        // Sliced distributions
+                        // Sliced distributions — usa validCargoesToMove (não
+                        // cargoesToMove). Antes, se houvesse duplicates entre
+                        // os candidatos, eles ainda apareciam nas slices port/
+                        // center/starboard e eram alocados em baias mesmo após
+                        // serem filtrados de validCargoesToMove. Bug silencioso.
                         let currentIndex = 0;
-                        const portGroup = cargoesToMove.slice(currentIndex, currentIndex + sideCounts.port);
+                        const portGroup = validCargoesToMove.slice(currentIndex, currentIndex + sideCounts.port);
                         currentIndex += sideCounts.port;
-                        const centerGroup = cargoesToMove.slice(currentIndex, currentIndex + sideCounts.center);
+                        const centerGroup = validCargoesToMove.slice(currentIndex, currentIndex + sideCounts.center);
                         currentIndex += sideCounts.center;
-                        const starboardGroup = cargoesToMove.slice(currentIndex, currentIndex + sideCounts.starboard);
+                        const starboardGroup = validCargoesToMove.slice(currentIndex, currentIndex + sideCounts.starboard);
 
                         const distributionMap = [
                             { side: 'port' as const, cargoes: portGroup },
