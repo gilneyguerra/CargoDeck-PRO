@@ -109,8 +109,16 @@ function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' }) {
     }
   };
 
+  // dnd-kit dispara onDragCancel em Esc e em outros caminhos de cancelamento
+  // (scroll, tab-switch). Sem este handler, activeCargo ficava pendurado no
+  // overlay até o próximo click — o drag visual continuava no cursor mesmo
+  // após o gesto ter sido cancelado.
+  const handleDragCancel = () => {
+    setActiveCargo(null);
+  };
+
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <Layout>
         {view === 'deck' ? <DeckArea /> : <ModalGenerationPage />}
       </Layout>
