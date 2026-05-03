@@ -460,6 +460,7 @@ const TEMPLATE_HEADERS = [
   'Comprimento (m)',
   'Largura (m)',
   'Altura (m)',
+  'Unitizador',
 ];
 
 const TEMPLATE_HINTS = [
@@ -475,6 +476,7 @@ const TEMPLATE_HINTS = [
   'Ex: 6.05',
   'Ex: 2.43',
   'Ex: 2.59',
+  'SIM se este modal pode receber itens fiscais (DANFE) por dentro. Vazio = automático por categoria (CONTAINER e BASKET = SIM).',
 ];
 
 const TEMPLATE_EXAMPLE = [
@@ -490,6 +492,7 @@ const TEMPLATE_EXAMPLE = [
   '6.05',
   '2.43',
   '2.59',
+  'SIM',
 ];
 
 async function downloadTemplate() {
@@ -506,12 +509,12 @@ async function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, TEMPLATE_HINTS, TEMPLATE_EXAMPLE]);
 
-    // Larguras de coluna (12 colunas: descrição, id, empresa, perigosa,
-    // categoria, origem, destino, qtd, peso, comp, larg, alt).
+    // Larguras de coluna (13 colunas: descrição, id, empresa, perigosa,
+    // categoria, origem, destino, qtd, peso, comp, larg, alt, unitizador).
     ws['!cols'] = [
       { wch: 50 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 52 },
       { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 14 }, { wch: 12 }, { wch: 12 },
+      { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Plano de Carga');
