@@ -9,6 +9,7 @@ import type {
 import { computeVlTotal } from '@/domain/Container';
 import { ContainerDatabaseService } from '@/infrastructure/ContainerDatabaseService';
 import { reportException } from '@/features/errorReporter';
+import { supabase } from '@/lib/supabase';
 
 /**
  * @file Store Zustand para containers (unidades de transporte fiscais) e
@@ -97,6 +98,19 @@ export const useContainerStore = create<ContainerState>((set, get) => ({
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   fetchAll: async () => {
+    // Guard: não autenticado é estado válido (operador na LandingPage,
+    // sessão expirada, primeira visita). Antes, fetchAll era chamado
+    // do useEffect de ModalGenerationPage e gerava um falso-positivo no
+    // ErrorReportTray ("Usuário não autenticado") — ruído sem ação útil
+    // pro usuário. Marcamos loaded=true silenciosamente; quando o login
+    // ocorrer, o auth listener em useAuthAndHydration pode disparar
+    // fetchAll novamente.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      set({ loaded: true });
+      return;
+    }
+
     set({ loading: true });
     try {
       const [containers, items] = await Promise.all([
