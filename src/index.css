@@ -421,4 +421,53 @@ option {
            hover:bg-main/80 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40
            transition-[background-color,color] duration-200;
   }
+
+  /* ───── Variantes de botão (UI/UX pass) ─────────────────────────────────
+     Disponibilizam classes nomeadas para os 3 padrões semânticos. NÃO
+     migram automaticamente os botões existentes — uso é opt-in. CTAs
+     novos devem preferir estas classes para evitar drift visual. */
+
+  /* Primário: ações de fluxo principal (Salvar, Criar, Confirmar). */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px]
+           rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap
+           bg-brand-primary text-white shadow-md
+           hover:brightness-110 active:scale-[0.98]
+           transition-[filter,transform,box-shadow,background-color] duration-200
+           outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)];
+  }
+
+  /* Secundário: navegação e opções auxiliares (Voltar, Importar, Filtros). */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px]
+           rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap
+           bg-main border-2 border-subtle text-secondary
+           hover:border-brand-primary/40 hover:text-brand-primary hover:bg-sidebar/40
+           transition-[background-color,border-color,color] duration-200
+           outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)];
+  }
+
+  /* Destrutivo: ações irreversíveis (Excluir, Limpar, Reset). */
+  .btn-destructive {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px]
+           rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap
+           bg-status-error/10 text-status-error border-2 border-status-error/30
+           hover:bg-status-error hover:text-white hover:border-status-error
+           transition-[background-color,border-color,color] duration-200
+           outline-none focus-visible:ring-2 focus-visible:ring-status-error/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)];
+  }
+
+  /* Card de superfície neutro — agrupamento de conteúdo dentro de páginas
+     (não confundir com modal__card que é específico de overlays). */
+  .surface-card {
+    @apply bg-sidebar/40 border border-subtle rounded-2xl shadow-sm;
+  }
+
+  /* Anel de foco "polido" — ring que segue border-radius (ao contrário do
+     outline global retangular). Opt-in em CTAs principais que se beneficiam
+     do visual mais refinado; demais elementos continuam com o outline
+     global definido em *:focus-visible. */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)];
+  }
 }
