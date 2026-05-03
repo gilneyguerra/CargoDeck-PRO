@@ -62,10 +62,33 @@ export function AllocateCargoModal({ isOpen, onClose, selectedCargoIds, onSucces
     }
     setSubmitting(true);
     try {
-      for (const id of selectedCargoIds) {
-        moveCargoToBay(id, selectedBayId, selectedSide);
+      // Coletar resultados — moveCargoToBay agora retorna MoveResult e podemos
+      // distinguir caminho feliz, duplicate-bloqueado, baia-inválida etc.
+      // Antes era um loop "void" que sempre disparava toast de sucesso, mesmo
+      // quando 100% dos moves falhavam silenciosamente.
+      const results = selectedCargoIds.map(id =>
+        moveCargoToBay(id, selectedBayId, selectedSide)
+      );
+      const succeeded = results.filter(r => r.success).length;
+      const failed = results.length - succeeded;
+
+      if (succeeded === 0) {
+        // Tudo bloqueado. moveCargoToBay já dispara notify warning específico
+        // por cada duplicate; aqui complementamos com um banner geral para o
+        // operador entender que a operação não progrediu.
+        notify('Nenhuma carga foi movida — verifique avisos sobre duplicatas ou baia inválida.', 'warning');
+        return;
       }
-      notify(`${selectedCargoIds.length} carga(s) alocada(s) com sucesso!`, 'success');
+
+      if (failed > 0) {
+        notify(
+          `${succeeded} carga(s) movida(s). ${failed} bloqueada(s) — verifique avisos.`,
+          'warning',
+        );
+      } else {
+        notify(`${succeeded} carga(s) alocada(s) com sucesso!`, 'success');
+      }
+
       clearCargoSelection();
       onSuccess();
       onClose();
