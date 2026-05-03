@@ -49,7 +49,8 @@ export function useCargoMovement(): CargoMovementResult {
             const bays = targetLocation.bays;
             let bayIndex = 0;
             let sideIndex = 0;
-            let moved = 0;
+            let succeeded = 0;
+            let failed = 0;
 
             for (const cargoId of cargoIds) {
                 const resolvedBayId = targetBayId === 'distribute'
@@ -60,15 +61,29 @@ export function useCargoMovement(): CargoMovementResult {
                     ? SIDE_ROTATION[sideIndex % SIDE_ROTATION.length]
                     : targetSide;
 
-                moveCargoToBay(cargoId, resolvedBayId, resolvedSide);
+                const result = moveCargoToBay(cargoId, resolvedBayId, resolvedSide);
+                if (result.success) succeeded++;
+                else failed++;
                 bayIndex++;
                 sideIndex++;
-                moved++;
             }
 
-            setMovedCount(moved);
+            setMovedCount(succeeded);
             const sideNote = targetSide === 'distribute-sides' ? ' (distribuição balanceada por bordo)' : '';
-            notify(`${moved} carga(s) movida(s) com sucesso para ${targetLocation.name}${sideNote}.`, 'success');
+
+            if (succeeded === 0) {
+                notify('Nenhuma carga foi movida — verifique avisos sobre duplicatas ou baia inválida.', 'warning');
+                return false;
+            }
+
+            if (failed > 0) {
+                notify(
+                    `${succeeded} carga(s) movida(s) para ${targetLocation.name}${sideNote}. ${failed} bloqueada(s) — verifique avisos.`,
+                    'warning',
+                );
+            } else {
+                notify(`${succeeded} carga(s) movida(s) com sucesso para ${targetLocation.name}${sideNote}.`, 'success');
+            }
             return true;
         } catch {
             notify('Erro ao mover cargas. Tente novamente.', 'error');
