@@ -712,7 +712,7 @@ export function ModalGenerationPage() {
           <button
             onClick={handleBack}
             title="Voltar ao Plano de Estivagem (Deck)"
-            className="nav-cta relative flex items-center justify-center gap-3 px-4 py-4 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
+            className="focus-ring nav-cta relative flex items-center justify-center gap-3 px-4 py-4 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden shrink-0"
           >
             <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />
             <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-[left] duration-700" />
@@ -817,7 +817,7 @@ export function ModalGenerationPage() {
           {filtered.length > 0 && (
             <button
               onClick={handleSelectAll}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar border-2 border-subtle hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 min-h-[36px]"
+              className="focus-ring flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar border-2 border-subtle hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 min-h-[36px]"
               title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
             >
               {allFilteredSelected ? <CheckSquare size={13} /> : <Square size={13} />}
@@ -844,7 +844,7 @@ export function ModalGenerationPage() {
                 }
               }}
               placeholder="Buscar (/) ID, descrição, manifesto…"
-              className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+              className="focus-ring w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
             />
             {searchInput && (
               <button
@@ -863,21 +863,21 @@ export function ModalGenerationPage() {
           <button
             onClick={() => setShowEditor(true)}
             title="Editor em Grade (Excel/CSV)"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+            className="focus-ring flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
           >
             <Table2 size={12} /> Criar Modal via Excel
           </button>
           <button
             onClick={() => setShowManual(true)}
             title="Criar modal manualmente"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap bg-brand-primary text-white hover:brightness-110 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px] shadow-md"
+            className="focus-ring flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap bg-brand-primary text-white hover:brightness-110 transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px] shadow-md"
           >
             <Plus size={12} /> Criar Modal Manualmente
           </button>
           <button
             onClick={() => setShowGroupMove(true)}
             title="Movimentar Cargas em Grupo (Alocadas + Não Alocadas)"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+            className="focus-ring flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap text-white bg-[#1A237E] hover:brightness-110 shadow-md transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
           >
             <Users size={12} />
             Movimentar Modais em Grupo

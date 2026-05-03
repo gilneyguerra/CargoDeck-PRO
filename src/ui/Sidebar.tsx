@@ -51,7 +51,7 @@ export default function Sidebar() {
         <button
           onClick={() => navigate('/modais')}
           title="Abrir Módulo de Geração Modal de Transporte"
-          className="nav-cta relative w-full px-4 py-4 flex items-center justify-center gap-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden"
+          className="focus-ring nav-cta relative w-full px-4 py-4 flex items-center justify-center gap-3 bg-gradient-to-br from-brand-primary to-indigo-600 text-white rounded-2xl transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group cursor-pointer min-h-[48px] shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] overflow-hidden"
         >
           {/* Anel pulsante de fundo */}
           <span className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-brand-primary/40 animate-ping opacity-30" />

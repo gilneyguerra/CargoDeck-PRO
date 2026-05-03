@@ -108,13 +108,13 @@ export function Header() {
             <button
               onClick={() => setIsDark(prev => !prev)}
               title={isDark ? "Alternar para Modo Claro" : "Alternar para Modo Escuro"}
-              className="p-3 text-secondary hover:bg-sidebar rounded-2xl border border-transparent hover:border-subtle transition-all"
+              className="focus-ring p-3 text-secondary hover:bg-sidebar rounded-2xl border border-transparent hover:border-subtle transition-all"
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
             {user ? (
-              <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-3 p-1.5 pr-4 bg-status-success/10 border border-status-success/20 rounded-full hover:bg-status-success/20 transition-all">
+              <button onClick={() => supabase.auth.signOut()} className="focus-ring flex items-center gap-3 p-1.5 pr-4 bg-status-success/10 border border-status-success/20 rounded-full hover:bg-status-success/20 transition-all">
                 <UserCircle className="w-9 h-9 text-status-success" />
                 <div className="flex flex-col items-start leading-none gap-1">
                   <span className="text-[10px] font-black text-status-success uppercase tracking-widest">Active</span>
@@ -122,7 +122,7 @@ export function Header() {
                 </div>
               </button>
             ) : (
-              <button onClick={() => setIsAuthOpen(true)} className="p-3 text-secondary hover:text-brand-primary hover:bg-brand-primary/10 rounded-2xl transition-all">
+              <button onClick={() => setIsAuthOpen(true)} className="focus-ring p-3 text-secondary hover:text-brand-primary hover:bg-brand-primary/10 rounded-2xl transition-all">
                 <LogIn size={20} />
               </button>
             )}
