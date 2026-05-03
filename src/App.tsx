@@ -34,13 +34,18 @@ function AppShell({ view }: { view: 'deck' | 'modal-generation' }) {
 }
 
 function AppWithProviders({ view }: { view: 'deck' | 'modal-generation' }) {
-  const {
-    moveCargoToBay, unallocatedCargoes, locations,
-    activeLocationId, setActiveLocation,
-    deleteCargo,
-    setEditingCargo,
-    editingCargo,
-  } = useCargoStore();
+  // Selectors granulares — sem isso, AppWithProviders re-renderizava em
+  // qualquer mudança do store (inclusive durante drag, tick de auto-save,
+  // toggle de seleção). Como AppWithProviders é o pai de Layout/DeckArea/
+  // ModalGenerationPage, a economia se propaga para a árvore inteira.
+  const moveCargoToBay = useCargoStore(s => s.moveCargoToBay);
+  const unallocatedCargoes = useCargoStore(s => s.unallocatedCargoes);
+  const locations = useCargoStore(s => s.locations);
+  const activeLocationId = useCargoStore(s => s.activeLocationId);
+  const setActiveLocation = useCargoStore(s => s.setActiveLocation);
+  const deleteCargo = useCargoStore(s => s.deleteCargo);
+  const setEditingCargo = useCargoStore(s => s.setEditingCargo);
+  const editingCargo = useCargoStore(s => s.editingCargo);
 
   const [activeCargo, setActiveCargo] = useState<Cargo | null>(null);
 

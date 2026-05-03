@@ -217,7 +217,21 @@ return (
 const MAX_RESPONSIVE_LOCATIONS = 6;
 
 export function DeckArea() {
-     const { locations, activeLocationId, setActiveLocation, addLocation, searchTerm, setSearchTerm, setEditingCargo, editLocation, deleteLocation, reorderLocations } = useCargoStore();
+     // Selectors granulares: cada campo só dispara re-render quando seu próprio
+     // valor muda. Antes, qualquer mudança no store (ex.: toggle de seleção em
+     // /modais via tab pendurada, tick de auto-save) re-renderizava DeckArea
+     // inteiro — incluindo todas as DroppableBay e LocationTab. Em conveses
+     // com 50+ cargas isso era o maior dreno de fluidez.
+     const locations = useCargoStore(s => s.locations);
+     const activeLocationId = useCargoStore(s => s.activeLocationId);
+     const searchTerm = useCargoStore(s => s.searchTerm);
+     const setActiveLocation = useCargoStore(s => s.setActiveLocation);
+     const addLocation = useCargoStore(s => s.addLocation);
+     const setSearchTerm = useCargoStore(s => s.setSearchTerm);
+     const setEditingCargo = useCargoStore(s => s.setEditingCargo);
+     const editLocation = useCargoStore(s => s.editLocation);
+     const deleteLocation = useCargoStore(s => s.deleteLocation);
+     const reorderLocations = useCargoStore(s => s.reorderLocations);
      const ask = useNotificationStore(s => s.ask);
      const notify = useNotificationStore(s => s.notify);
      const askInput = useNotificationStore(s => s.askInput);

@@ -7,9 +7,11 @@ import { useMemo } from 'react';
 import { StabilityIndicator } from './StabilityIndicator';
 
 export default function Sidebar() {
-  const {
-    unallocatedCargoes, locations
-  } = useCargoStore();
+  // Selectors granulares: re-renderiza só quando estes campos mudam.
+  // Antes, qualquer alteração no store (ex.: toggle de seleção em /modais)
+  // re-renderizava o Sidebar inteiro inclusive o cálculo de stats.
+  const unallocatedCargoes = useCargoStore(s => s.unallocatedCargoes);
+  const locations = useCargoStore(s => s.locations);
   const navigate = useNavigate();
 
   // ─── Resumo Estatístico ────────────────────────────────────────────────────

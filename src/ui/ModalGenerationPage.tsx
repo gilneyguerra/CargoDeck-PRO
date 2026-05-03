@@ -362,11 +362,19 @@ function CargoGridCard({ cargo, selected, danfeItemCount = 0, enterDelayMs, onTo
 // ─── Página Principal ──────────────────────────────────────────────────────────
 
 export function ModalGenerationPage() {
-  const {
-    unallocatedCargoes, selectedCargos,
-    toggleCargoSelection, selectMultipleCargos, clearCargoSelection,
-    setEditingCargo, deleteCargo, deleteMultipleCargoes,
-  } = useCargoStore();
+  // Selectors granulares: cada campo só dispara re-render quando seu próprio
+  // valor muda. Antes, o destructure massivo re-renderizava a página inteira
+  // (e os 50+ CargoGridCard) a cada toggle de seleção, drag de cargas no
+  // /deck, ou tick do auto-save de 3s. Actions são refs estáveis em Zustand,
+  // então selecioná-las uma a uma não custa nada extra além das linhas.
+  const unallocatedCargoes = useCargoStore(s => s.unallocatedCargoes);
+  const selectedCargos = useCargoStore(s => s.selectedCargos);
+  const toggleCargoSelection = useCargoStore(s => s.toggleCargoSelection);
+  const selectMultipleCargos = useCargoStore(s => s.selectMultipleCargos);
+  const clearCargoSelection = useCargoStore(s => s.clearCargoSelection);
+  const setEditingCargo = useCargoStore(s => s.setEditingCargo);
+  const deleteCargo = useCargoStore(s => s.deleteCargo);
+  const deleteMultipleCargoes = useCargoStore(s => s.deleteMultipleCargoes);
   const { notify, ask } = useNotificationStore();
   const navigate = useNavigate();
 
