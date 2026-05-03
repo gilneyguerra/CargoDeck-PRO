@@ -429,6 +429,29 @@ export function ModalGenerationPage() {
   // Busca com debounce via useDeferredValue
   const [searchInput, setSearchInput] = useState('');
   const deferredSearch = useDeferredValue(searchInput);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Atalho global: "/" foca a busca (padrão comum em apps profissionais).
+  // Guard `activeElement` evita roubar foco quando user já está digitando
+  // em outro campo (input/textarea/contenteditable). Esc dentro do próprio
+  // input limpa — handler local, abaixo no JSX.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/') return;
+      const ae = document.activeElement;
+      const isTyping = ae instanceof HTMLElement && (
+        ae.tagName === 'INPUT' ||
+        ae.tagName === 'TEXTAREA' ||
+        ae.isContentEditable
+      );
+      if (isTyping) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Tabs dinâmicas: derivadas das categorias presentes nas cargas
   // Ordem custom das tabs dinâmicas — reordenável por drag-and-drop.
@@ -808,10 +831,19 @@ export function ModalGenerationPage() {
           <div className="relative w-[200px] sm:w-[240px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
+              ref={searchInputRef}
               type="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Buscar ID, descrição, manifesto…"
+              onKeyDown={(e) => {
+                // Esc dentro do input limpa em vez de fechar modal global —
+                // mantém o foco no campo para o operador continuar digitando.
+                if (e.key === 'Escape' && searchInput) {
+                  e.preventDefault();
+                  setSearchInput('');
+                }
+              }}
+              placeholder="Buscar (/) ID, descrição, manifesto…"
               className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
             />
             {searchInput && (
