@@ -366,7 +366,6 @@ export function ModalGenerationPage() {
     unallocatedCargoes, selectedCargos,
     toggleCargoSelection, selectMultipleCargos, clearCargoSelection,
     setEditingCargo, deleteCargo, deleteMultipleCargoes,
-    clearUnallocatedCargoes
   } = useCargoStore();
   const { notify, ask } = useNotificationStore();
   const navigate = useNavigate();
@@ -588,17 +587,6 @@ export function ModalGenerationPage() {
     clearCargoSelection();
   };
 
-  const handleClearProcessed = async () => {
-    const ok = await ask(
-      'Limpar Cargas Processadas',
-      `Remover todas as ${unallocatedCargoes.length} carga(s) do grid? As cargas alocadas em conveses não serão afetadas.`
-    );
-    if (!ok) return;
-    await clearUnallocatedCargoes();
-    notify('Grid limpo.', 'success');
-    clearCargoSelection();
-  };
-
   // Mover/Prioridade agora vivem em cada CargoGridCard (botões inline,
   // sempre visíveis). Os handlers single abrem os mesmos modais de antes
   // — apenas o conjunto de IDs muda (1 carga em vez do batch).
@@ -672,32 +660,11 @@ export function ModalGenerationPage() {
             <Boxes size={20} className="text-brand-primary" />
           </div>
           <div>
-            <h1 className="text-base font-montserrat font-black text-primary tracking-tighter uppercase leading-none">Geração Modal de Transporte</h1>
+            <h1 className="text-base font-montserrat font-black text-primary tracking-tighter uppercase leading-none">Criação do Modal de Transporte</h1>
           </div>
         </div>
 
         <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-          {/* Busca */}
-          <div className="relative w-[200px] sm:w-[240px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Buscar ID, descrição, manifesto…"
-              className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2.5 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px]"
-            />
-            {searchInput && (
-              <button
-                onClick={() => setSearchInput('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-sidebar text-muted hover:text-primary"
-                title="Limpar busca"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
-
           {/* Botões padrão de import / criação */}
           <button
             onClick={() => setShowEditor(true)}
@@ -824,21 +791,81 @@ export function ModalGenerationPage() {
           );
         })()}
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={handleClearProcessed}
-            disabled={unallocatedCargoes.length === 0}
-            title="Remover todas as cargas do grid (cargas alocadas em conveses não serão afetadas)"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-status-error/10 text-status-error border-2 border-status-error/30 hover:bg-status-error hover:text-white hover:border-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={12} />
-            Limpar Processadas
-          </button>
-        </div>
       </div>
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto p-6">
+        {/* Header do grid — Selecionar Tudo + Busca + Action Bar lado a lado.
+            Renderiza sempre que houver cargas no inventário (mesmo se o filtro
+            atual mostrar 0 resultados, para que a busca permaneça acessível).
+            Selecionar Tudo só aparece se a aba atual tem cargas; Action Bar
+            só aparece quando há seleção em batch (empurrada à direita por
+            ml-auto). */}
+        {unallocatedCargoes.length > 0 && (
+          <div className="flex items-center mb-4 gap-3">
+            {filtered.length > 0 && (
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar border-2 border-subtle hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 min-h-[36px]"
+                title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
+              >
+                {allFilteredSelected ? <CheckSquare size={13} /> : <Square size={13} />}
+                {allFilteredSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
+                <span className="inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[9px] font-mono font-black tabular-nums bg-subtle text-muted">
+                  {filtered.length}
+                </span>
+              </button>
+            )}
+
+            <div className="relative w-[200px] sm:w-[240px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar ID, descrição, manifesto…"
+                className="w-full bg-main border-2 border-subtle rounded-xl pl-9 pr-9 py-2 text-xs font-bold text-primary outline-none focus:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-sidebar text-muted hover:text-primary"
+                  title="Limpar busca"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {selectedCount > 0 && (
+              <div className="ml-auto flex items-center gap-2 pl-2 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
+                <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-brand-primary font-mono">{selectedCount}</span>
+                  <span className="text-muted">·</span>
+                  <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
+                </div>
+
+                <button
+                  onClick={handleDeleteSelected}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+                  title="Excluir Selecionadas"
+                >
+                  <Trash2 size={12} />
+                  Excluir
+                </button>
+
+                <button
+                  onClick={clearCargoSelection}
+                  className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+                  title="Limpar seleção"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {filtered.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto">
             <div className="w-24 h-24 rounded-full bg-sidebar border-2 border-subtle flex items-center justify-center mb-5 shadow-inner">
@@ -865,52 +892,7 @@ export function ModalGenerationPage() {
             )}
           </div>
         ) : (
-          <>
-            {/* Header do grid — Selecionar Tudo + Action Bar inline lado a
-                lado. Selecionar Tudo é sempre visível; Action Bar aparece à
-                direita (ml-auto) quando há seleção em batch. Coloca a UI
-                de batch próxima do gesto de seleção em vez de no topo. */}
-            <div className="flex items-center mb-4 gap-3">
-              <button
-                onClick={handleSelectAll}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-secondary hover:text-brand-primary hover:bg-sidebar border-2 border-subtle hover:border-brand-primary/40 transition-[background-color,border-color,color] duration-200 min-h-[36px]"
-                title={allFilteredSelected ? 'Desmarcar tudo' : 'Selecionar tudo'}
-              >
-                {allFilteredSelected ? <CheckSquare size={13} /> : <Square size={13} />}
-                {allFilteredSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
-                <span className="inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[9px] font-mono font-black tabular-nums bg-subtle text-muted">
-                  {filtered.length}
-                </span>
-              </button>
-
-              {selectedCount > 0 && (
-                <div className="ml-auto flex items-center gap-2 pl-2 border-l-2 border-brand-primary/30 bg-main/40 rounded-r-xl py-1 pr-1 animate-in slide-in-from-right-2 fade-in duration-200">
-                  <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-brand-primary font-mono">{selectedCount}</span>
-                    <span className="text-muted">·</span>
-                    <span className="text-status-success font-mono">{selectedWeight.toFixed(2)} t</span>
-                  </div>
-
-                  <button
-                    onClick={handleDeleteSelected}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                    title="Excluir Selecionadas"
-                  >
-                    <Trash2 size={12} />
-                    Excluir
-                  </button>
-
-                  <button
-                    onClick={clearCargoSelection}
-                    className="p-2 rounded-lg text-muted hover:text-primary hover:bg-sidebar transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-                    title="Limpar seleção"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {filtered.map((c, idx) => (
               <CargoGridCard
                 key={c.id}
@@ -928,8 +910,7 @@ export function ModalGenerationPage() {
                 onOpenInventory={handleOpenInventory}
               />
             ))}
-            </div>
-          </>
+          </div>
         )}
       </div>
 
