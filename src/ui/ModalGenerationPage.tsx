@@ -26,6 +26,7 @@ import { GroupMoveModal } from './GroupMoveModal';
 import { canHoldItems, type Cargo } from '@/domain/Cargo';
 import type { Container } from '@/domain/Container';
 import { cn } from '@/lib/utils';
+import { GridSkeleton } from './Skeleton';
 
 // Lazy: parsers Excel/CSV (SheetJS via CDN) e LLM Assistant ficam fora do
 // bundle inicial — só carregam quando o usuário abre cada modal.
@@ -375,6 +376,9 @@ export function ModalGenerationPage() {
   const setEditingCargo = useCargoStore(s => s.setEditingCargo);
   const deleteCargo = useCargoStore(s => s.deleteCargo);
   const deleteMultipleCargoes = useCargoStore(s => s.deleteMultipleCargoes);
+  // Gating do skeleton (ver bloco antes do return).
+  const isHydratedFromCloud = useCargoStore(s => s.isHydratedFromCloud);
+  const locations = useCargoStore(s => s.locations);
   const { notify, ask } = useNotificationStore();
   const navigate = useNavigate();
 
@@ -688,6 +692,14 @@ export function ModalGenerationPage() {
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
+
+  // Skeleton de hidratação: aparece se Supabase ainda está carregando E não há
+  // cache local. Operadores reincidentes veem o conteúdo direto. Mascara o
+  // "Nenhum Modal de Transporte no Inventário" temporário do primeiro login.
+  const allBaysEmpty = locations.every(loc => loc.bays.every(b => b.allocatedCargoes.length === 0));
+  if (!isHydratedFromCloud && unallocatedCargoes.length === 0 && allBaysEmpty) {
+    return <GridSkeleton />;
+  }
 
   return (
     <>

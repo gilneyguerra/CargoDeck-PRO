@@ -16,6 +16,7 @@ import type { Cargo } from '@/domain/Cargo';
 import type { CargoLocation } from '@/domain/Location';
 import { DeckSettingsModal } from './DeckSettingsModal';
 import { GroupMoveModal } from './GroupMoveModal';
+import { DeckSkeleton } from './Skeleton';
 import type { DeckConfig } from '@/domain/DeckConfig';
 import DraggableCargo from './DraggableCargo';
 import { metersToPixels } from '@/lib/scaling';
@@ -232,6 +233,9 @@ export function DeckArea() {
      const editLocation = useCargoStore(s => s.editLocation);
      const deleteLocation = useCargoStore(s => s.deleteLocation);
      const reorderLocations = useCargoStore(s => s.reorderLocations);
+     // Gating do skeleton de hidratação (ver bloco "if (showSkeleton)" abaixo).
+     const isHydratedFromCloud = useCargoStore(s => s.isHydratedFromCloud);
+     const unallocatedCargoes = useCargoStore(s => s.unallocatedCargoes);
      const ask = useNotificationStore(s => s.ask);
      const notify = useNotificationStore(s => s.notify);
      const askInput = useNotificationStore(s => s.askInput);
@@ -329,6 +333,15 @@ export function DeckArea() {
         });
         if (name) addLocation(name);
     };
+
+    // Skeleton só aparece se ESTAMOS hidratando E não temos dados locais
+    // (cache do localStorage). Operadores reincidentes veem o convés direto.
+    // No primeiro login (cache vazio + load do Supabase em curso) o skeleton
+    // mascara o "Nenhum local ativo" temporário e dá feedback de progresso.
+    const allBaysEmpty = locations.every(loc => loc.bays.every(b => b.allocatedCargoes.length === 0));
+    if (!isHydratedFromCloud && unallocatedCargoes.length === 0 && allBaysEmpty) {
+        return <DeckSkeleton />;
+    }
 
     if (!activeLocation) return <div className="text-primary dark:text-white p-6">Nenhum local ativo.</div>;
     const { bays } = activeLocation;
