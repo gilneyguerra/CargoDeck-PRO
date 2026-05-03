@@ -19,8 +19,6 @@ interface Props {
   isOpen: boolean;
   container: Container | null;
   onClose: () => void;
-  /** Disparado pelo botão "Exportar PDF". Wiring real é Fase 8. */
-  onExportPdf?: (container: Container) => void;
 }
 
 // ─── Tipos internos ──────────────────────────────────────────────────────────
@@ -190,7 +188,6 @@ export function ContainerInventoryModal({
   isOpen,
   container,
   onClose,
-  onExportPdf,
 }: Props) {
   const titleId = useId();
   const containerRef = useFocusTrap<HTMLDivElement>({ isActive: isOpen, onEscape: onClose });
@@ -511,14 +508,9 @@ export function ContainerInventoryModal({
                 <Trash2 size={11} /> Excluir ({selectedCount})
               </button>
             )}
-            {onExportPdf && (
-              <button
-                onClick={() => onExportPdf(container)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-brand-primary/40 text-secondary hover:text-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
-              >
-                <FileText size={11} /> Exportar PDF
-              </button>
-            )}
+            {/* "Exportar PDF" foi movido para a action bar inline em /modais
+                (aparece quando há cargas selecionadas) — permite gerar 1 PDF
+                consolidado com TODOS os containers selecionados + seus itens. */}
             <button
               onClick={onClose}
               className="btn-close-inline"

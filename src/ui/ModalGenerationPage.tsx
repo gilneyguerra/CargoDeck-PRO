@@ -3,7 +3,7 @@ import {
   Search, Table2, Plus,
   ArrowRight, CheckSquare, Square, Trash2, Package, X,
   Boxes, Flame, Layers, Flag, Zap, Users, AlertOctagon,
-  FolderOpen, Building2,
+  FolderOpen, Building2, FileText,
 } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -633,39 +633,74 @@ export function ModalGenerationPage() {
     }
   };
 
-  /** Export PDF de um único container já hidratado (chamada a partir do
-   *  inventário aberto). Bypassa o passo de ensureContainerRecord — o
-   *  registro já existe porque o usuário abriu este inventário. */
-  const handleExportSingleContainer = async (c: Container) => {
+  /** Export PDF consolidado de TODOS os containers cujo cargo está
+   *  selecionado em /modais E que são unitizadores (`canHoldItems`).
+   *  Garante o registro de container para cada um (ensureContainerRecord)
+   *  antes de coletar os itens. PdfGeneratorService.executeContainersExport
+   *  gera um único PDF com seções por container.
+   *
+   *  Acionado pelo botão "Exportar PDF" na action bar do /modais (visível
+   *  quando há cargas selecionadas). Substitui o antigo botão per-container
+   *  no header do ContainerInventoryModal. */
+  const handleExportSelectedContainers = async () => {
+    if (selectedIds.length === 0) {
+      notify('Selecione pelo menos uma carga unitizadora.', 'warning');
+      return;
+    }
+
+    // 1. Filtrar selecionadas que SÃO unitizadoras. Cargas não-unitizadoras
+    //    não viram container — se tudo na seleção for não-unitizador, aborta.
+    const cargoState = useCargoStore.getState();
+    const allCargos: Cargo[] = [
+      ...cargoState.unallocatedCargoes,
+      ...cargoState.locations.flatMap(loc => loc.bays.flatMap(b => b.allocatedCargoes)),
+    ];
+    const selectedSet = new Set(selectedIds);
+    const candidates = allCargos.filter(c => selectedSet.has(c.id) && canHoldItems(c));
+
+    if (candidates.length === 0) {
+      notify('Nenhum modal unitizador na seleção. Marque a coluna "Unitizador" no Excel ou use cargas CONTAINER/BASKET.', 'warning');
+      return;
+    }
+
     try {
-      const items = containerStore.getItemsByContainer(c.id);
-      if (items.length === 0) {
-        notify('Adicione ao menos 1 item antes de exportar.', 'warning');
+      // 2. Garantir record de container para cada candidato (idempotente).
+      const containers: Container[] = [];
+      for (const cargo of candidates) {
+        const ensured = await containerStore.ensureContainerRecord(cargo);
+        containers.push(ensured);
+      }
+
+      // 3. Coletar itens DANFE por container. Containers sem itens são
+      //    avisados mas NÃO bloqueiam o export (PDF mostra container vazio).
+      const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
+      const empresaByContainer = new Map<string, string>();
+      let containersWithItems = 0;
+      for (const c of containers) {
+        const items = containerStore.getItemsByContainer(c.id);
+        itemsByContainer.set(c.id, items);
+        if (items.length > 0) containersWithItems++;
+        const matched = candidates.find(cg => cg.id === c.id);
+        if (matched?.empresa && matched.empresa.trim()) {
+          empresaByContainer.set(c.id, matched.empresa.trim());
+        }
+      }
+
+      if (containersWithItems === 0) {
+        notify('Nenhum dos containers selecionados tem itens DANFE. Adicione itens antes de exportar.', 'warning');
         return;
       }
-      const itemsByContainer = new Map<string, ReturnType<typeof containerStore.getItemsByContainer>>();
-      itemsByContainer.set(c.id, items);
 
-      // Resolve empresa via cargo.id === container.id (relação 1:1
-      // estabelecida em ensureContainerRecord). Lookup direto no cargoStore.
-      const empresaByContainer = new Map<string, string>();
-      const cargoState = useCargoStore.getState();
-      const allCargos: Cargo[] = [
-        ...cargoState.unallocatedCargoes,
-        ...cargoState.locations.flatMap(loc => loc.bays.flatMap(b => b.allocatedCargoes)),
-      ];
-      const matched = allCargos.find(cg => cg.id === c.id);
-      if (matched?.empresa && matched.empresa.trim()) {
-        empresaByContainer.set(c.id, matched.empresa.trim());
-      }
-
-      await PdfGeneratorService.executeContainersExport([c], itemsByContainer, empresaByContainer);
-      notify('Relatório RMD gerado.', 'success');
+      await PdfGeneratorService.executeContainersExport(containers, itemsByContainer, empresaByContainer);
+      notify(
+        `Relatório RMD gerado com ${containers.length} container(s).`,
+        'success',
+      );
     } catch (err) {
       reportException(err, {
-        title: 'Falha ao gerar PDF do contentor',
+        title: 'Falha ao gerar PDF dos contentores selecionados',
         category: 'runtime',
-        source: 'container-single-pdf-export',
+        source: 'container-batch-pdf-export',
       });
       notify('Não foi possível gerar o PDF.', 'error');
     }
@@ -884,6 +919,15 @@ export function ModalGenerationPage() {
               </div>
 
               <button
+                onClick={handleExportSelectedContainers}
+                className="focus-ring flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-brand-primary/10 border-2 border-brand-primary/30 text-brand-primary hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
+                title="Exportar PDF consolidado dos containers unitizadores selecionados (com seus itens DANFE)"
+              >
+                <FileText size={12} />
+                Exportar PDF
+              </button>
+
+              <button
                 onClick={handleDeleteSelected}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-main border-2 border-subtle hover:border-status-error/50 text-secondary hover:text-status-error transition-[background-color,border-color,color,box-shadow,transform] duration-200 min-h-[36px]"
                 title="Excluir Selecionadas"
@@ -979,7 +1023,6 @@ export function ModalGenerationPage() {
           isOpen={!!inventoryContainer}
           container={inventoryContainer}
           onClose={() => setInventoryContainer(null)}
-          onExportPdf={handleExportSingleContainer}
         />
       </Suspense>
     )}
