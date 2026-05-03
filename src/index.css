@@ -407,9 +407,13 @@ option {
 @layer components {
   /* Close-X dos modais — antes havia 3 estilos divergentes (top/right
      diferentes, p-2 vs p-3, rounded-xl vs rounded-full). Padroniza o
-     feedback hover/focus. O scale(0.97) :active vem da regra global. */
+     feedback hover/focus. O scale(0.97) :active vem da regra global.
+     min-h/min-w garantem touch target ≥44px (WCAG 2.5.5) sem mudar o
+     padding visível do ícone. */
   .btn-close {
-    @apply absolute top-3 right-3 p-2 rounded-full text-muted hover:text-primary
+    @apply absolute top-3 right-3 p-2 min-h-[44px] min-w-[44px]
+           flex items-center justify-center
+           rounded-full text-muted hover:text-primary
            hover:bg-main/80 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40
            transition-[background-color,color] duration-200;
   }
@@ -417,7 +421,9 @@ option {
   /* Variante para X que não é posicionado absolutamente (e.g.: dentro de
      toolbar com ml-auto). Mesma identidade visual sem o positioning. */
   .btn-close-inline {
-    @apply p-2 rounded-full text-muted hover:text-primary
+    @apply p-2 min-h-[44px] min-w-[44px]
+           flex items-center justify-center
+           rounded-full text-muted hover:text-primary
            hover:bg-main/80 outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40
            transition-[background-color,color] duration-200;
   }
